@@ -357,3 +357,292 @@
                     const priceInput = document.getElementById('histPrice').value;
 
                     if (!date || !symbol) {
+                        alert("請填寫完整的日期與代號");
+                        return;
+                    }
+                    const priceVal = parseFloat(priceInput);
+                    if (isNaN(priceVal) || priceVal <= 0) {
+                        alert("請輸入有效的收盤價格");
+                        return;
+                    }
+
+                    if (!historicalPrices[date]) {
+                        historicalPrices[date] = {};
+                    }
+                    historicalPrices[date][symbol] = priceVal;
+                    localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
+
+                    const today = new Date().toISOString().split('T')[0];
+                    if (date === today) {
+                        currentPrices[symbol] = priceVal;
+                        localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
+                    }
+
+                    calculateAndRender();
+                    alert(`已記錄 ${date} [${symbol}] 收盤價為 ${priceVal} 元`);
+                    histForm.reset();
+                    if (histDateInputEl) histDateInputEl.value = new Date().toISOString().split('T')[0];
+                } catch (err) {
+                    alert("補登失敗: " + err.message);
+                }
+            });
+        }
+
+        // 刪除歷史紀錄
+        window.deleteTx = function(id) {
+            transactions = transactions.filter(tx => tx.id !== id);
+            saveData();
+            render();
+        };
+
+        // 手動變更目前市價
+        window.updateCurrentPrice = function(symbol, value) {
+            const parsedVal = parseFloat(value);
+            const price = isNaN(parsedVal) ? 0 : parsedVal;
+            currentPrices[symbol] = price;
+            localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
+
+            const today = new Date().toISOString().split('T')[0];
+            if (!historicalPrices[today]) {
+                historicalPrices[today] = {};
+            }
+            historicalPrices[today][symbol] = price;
+            localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
+
+            calculateAndRender();
+        };
+
+        // --- 【大升級】連線 Yahoo Finance 取得盤中/收盤即時股價，且無上限支援上市/上櫃 ---
+        window.fetchTwsePrices = async function() {
+            const btn = document.getElementById('fetchPriceBtn');
+            const status = document.getElementById('apiStatus');
+            if (!btn || !status) return;
+
+            const activeSymbols = getActiveSymbols();
+            if (activeSymbols.length === 0) {
+                status.innerText = "目前庫存無持股";
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "連線中...";
+            status.innerText = "正向 Yahoo 讀取最新報價...";
+
+            const today = new Date().toISOString().split('T')[0];
+            if (!historicalPrices[today]) {
+                historicalPrices[today] = {};
+            }
+
+            let updatedCount = 0;
+
+            // 遍歷當前持股，進行針對性輕量查詢
+            for (const sym of activeSymbols) {
+                status.innerText = `讀取 ${sym} 股價中...`;
+                let success = false;
+                
+                // 台股後綴：.TW (上市股票/大部分ETF) 與 .TWO (上櫃股票)
+                const suffixes = ['.TW', '.TWO'];
+
+                for (const suffix of suffixes) {
+                    if (success) break;
+
+                    const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}${suffix}`;
+                    // 改用高速且純淨直通的 corsproxy.io 解決行動裝置/電腦 CORS 跨域阻擋問題
+                    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+
+                    try {
+                        const response = await fetch(proxyUrl);
+                        if (!response.ok) continue; // 失敗則嘗試下一個後綴
+
+                        const data = await response.json();
+                        const result = data?.chart?.result?.[0];
+
+                        if (result && result.meta && result.meta.regularMarketPrice !== undefined) {
+                            const price = parseFloat(result.meta.regularMarketPrice);
+                            if (!isNaN(price) && price > 0) {
+                                currentPrices[sym] = price;
+                                historicalPrices[today][sym] = price; // 同步寫入當日歷史庫
+                                
+                                // 嘗試更新中文名稱（如果 Yahoo 有回傳中文名稱）
+                                if (result.meta.shortName && !result.meta.shortName.match(/^[a-zA-Z0-9]/)) {
+                                    stockNames[sym] = result.meta.shortName;
+                                }
+
+                                updatedCount++;
+                                success = true;
+                            }
+                        }
+                    } catch (err) {
+                        // 異常時，靜默進行下一個嘗試
+                    }
+                }
+            }
+
+            // 更新存檔
+            localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
+            localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
+            localStorage.setItem('stock_v6_names', JSON.stringify(stockNames));
+
+            calculateAndRender();
+
+            const now = new Date();
+            status.innerText = `Yahoo 成功更新 ${updatedCount} 檔持股 (${now.toLocaleTimeString()})`;
+            btn.disabled = false;
+            btn.innerText = "更新今日收盤價";
+        };
+
+        function getActiveSymbols() {
+            const holdings = {};
+            transactions.forEach(tx => {
+                if (tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW') return;
+                const sym = tx.symbol || 'UNKNOWN';
+                const qty = Number(tx.quantity) || 0;
+                if (!holdings[sym]) holdings[sym] = 0;
+                holdings[sym] += (tx.type === 'BUY' ? qty : -qty);
+            });
+            return Object.keys(holdings).filter(sym => holdings[sym] > 0);
+        }
+
+        // 核心庫存計算
+        function calculateAndRender() {
+            let cash = 0;
+            let stockMarketValue = 0;
+            let totalUnrealizedPnl = 0;
+            let totalRealizedPnl = 0;
+            const holdings = {};
+
+            transactions.forEach(tx => {
+                const price = Number(tx.price) || 0;
+                const quantity = Number(tx.quantity) || 0;
+                const cost = price * quantity;
+
+                if (tx.type === 'DEPOSIT') {
+                    cash += price; 
+                } else if (tx.type === 'WITHDRAW') {
+                    cash -= price;
+                } else if (tx.type === 'BUY') {
+                    cash -= cost; 
+                    
+                    if (!holdings[tx.symbol]) holdings[tx.symbol] = { qty: 0, totalCost: 0, avgCost: 0 };
+                    holdings[tx.symbol].qty += quantity;
+                    holdings[tx.symbol].totalCost += cost;
+                    holdings[tx.symbol].avgCost = holdings[tx.symbol].qty > 0 ? (holdings[tx.symbol].totalCost / holdings[tx.symbol].qty) : 0;
+                } else if (tx.type === 'SELL') {
+                    cash += cost; 
+                    
+                    const hold = holdings[tx.symbol];
+                    if (hold && hold.qty > 0) {
+                        const realized = (price - (hold.avgCost || 0)) * quantity;
+                        totalRealizedPnl += realized;
+
+                        hold.qty -= quantity;
+                        hold.totalCost = hold.qty * (hold.avgCost || 0);
+                    }
+                }
+            });
+
+            if (holdingsTable) {
+                holdingsTable.innerHTML = '';
+                Object.keys(holdings).forEach(sym => {
+                    const hold = holdings[sym];
+                    if (hold.qty > 0) {
+                        const currentPrice = Number(currentPrices[sym]) || 0;
+                        const marketVal = hold.qty * currentPrice;
+                        const costVal = hold.qty * (hold.avgCost || 0);
+                        const unrealized = currentPrice > 0 ? (marketVal - costVal) : 0;
+                        const percent = costVal > 0 ? ((unrealized / costVal) * 100) : 0;
+
+                        if (currentPrice > 0) {
+                            stockMarketValue += marketVal;
+                            totalUnrealizedPnl += unrealized;
+                        }
+
+                        let pnlClass = "text-gray-600";
+                        let pnlSign = "";
+                        if (currentPrice > 0) {
+                            if (unrealized > 0) { 
+                                pnlClass = "text-red-600 font-semibold"; 
+                                pnlSign = "+"; 
+                            } else if (unrealized < 0) { 
+                                pnlClass = "text-green-600 font-semibold"; 
+                            }
+                        }
+
+                        const nameText = stockNames[sym] ? `<span class="text-xs text-gray-400 block">${stockNames[sym]}</span>` : '';
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="px-4 py-2 font-medium text-gray-700">
+                                <div>${sym}${nameText}</div>
+                            </td>
+                            <td class="px-4 py-2">${hold.qty.toLocaleString()}</td>
+                            <td class="px-4 py-2">NT$ ${(hold.avgCost || 0).toFixed(2)}</td>
+                            <td class="px-4 py-2">
+                                <input type="number" step="0.01" value="${currentPrice || ''}" placeholder="輸入市價" onchange="updateCurrentPrice('${sym}', this.value)" class="w-20 border rounded px-1.5 py-0.5 text-xs">
+                            </td>
+                            <td class="px-4 py-2 ${pnlClass}">
+                                ${currentPrice > 0 ? `${pnlSign}${unrealized.toLocaleString('zh-TW', {maximumFractionDigits: 0})} (${pnlSign}${percent.toFixed(2)}%)` : '--'}
+                            </td>
+                        `;
+                        holdingsTable.appendChild(tr);
+                    }
+                });
+            }
+
+            const elCash = document.getElementById('currentCash');
+            const elMarket = document.getElementById('stockMarketValue');
+            const elUnrealized = document.getElementById('totalUnrealizedPnl');
+            const elRealized = document.getElementById('totalRealizedPnl');
+
+            if (elCash) elCash.innerText = `NT$ ${cash.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+            if (elMarket) elMarket.innerText = `NT$ ${stockMarketValue.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+            if (elUnrealized) formatColorText(elUnrealized, totalUnrealizedPnl);
+            if (elRealized) formatColorText(elRealized, totalRealizedPnl);
+
+            return { cash, stockMarketValue, totalUnrealizedPnl };
+        }
+
+        function formatColorText(el, val) {
+            if (!el) return;
+            el.innerText = `NT$ ${val.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+            if (val > 0) el.className = "text-xl font-bold text-red-600";
+            else if (val < 0) el.className = "text-xl font-bold text-green-600";
+            else el.className = "text-xl font-bold text-gray-800";
+        }
+
+        // 歷史交易明細渲染
+        function renderHistory() {
+            if (!txHistoryTable) return;
+            txHistoryTable.innerHTML = '';
+            [...transactions].reverse().forEach(tx => {
+                let typeText = "", typeClass = "", changeText = "";
+                const price = Number(tx.price) || 0;
+                const quantity = Number(tx.quantity) || 0;
+                const total = price * quantity;
+
+                if (tx.type === 'BUY') {
+                    typeText = "買入股票"; typeClass = "bg-red-50 text-red-700"; changeText = `-NT$ ${total.toLocaleString()}`;
+                } else if (tx.type === 'SELL') {
+                    typeText = "賣出股票"; typeClass = "bg-green-50 text-green-700"; changeText = `+NT$ ${total.toLocaleString()}`;
+                } else if (tx.type === 'DEPOSIT') {
+                    typeText = "帳戶入金"; typeClass = "bg-blue-50 text-blue-700"; changeText = `+NT$ ${price.toLocaleString()}`;
+                } else if (tx.type === 'WITHDRAW') {
+                    typeText = "帳戶出金"; typeClass = "bg-yellow-50 text-yellow-700"; changeText = `-NT$ ${price.toLocaleString()}`;
+                }
+
+                let itemText = tx.symbol === 'CASH' ? '現金往來' : tx.symbol;
+                if (tx.symbol !== 'CASH' && stockNames[tx.symbol]) {
+                    itemText = `<div>${tx.symbol}<span class="text-xs text-gray-400 block">${stockNames[tx.symbol]}</span></div>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-gray-500">${tx.date}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-1 rounded text-xs ${typeClass}">${typeText}</span></td>
+                    <td class="px-4 py-3 font-medium text-gray-700">${itemText}</td>
+                    <td class="px-4 py-3">NT$ ${price.toLocaleString()}</td>
+                    <td class="px-4 py-3">${tx.type==='DEPOSIT'||tx.type==='WITHDRAW' ? '--' : quantity.toLocaleString()}</td>
+                    <td class="px-4 py-3 font-semibold ${changeText.startsWith('+') ? 'text-red-600' : 'text-green-600'}">${changeText}</td>
+                    <td class="px-4 py-3"><button onclick="deleteTx('${tx.id}')" class="text-red-500 hover:text-red-700 text-xs">刪除</button></td>
+                `;
+                t
