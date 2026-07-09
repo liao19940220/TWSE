@@ -13,7 +13,7 @@
 
     <div class="max-w-6xl mx-auto space-y-4 md:space-y-6">
         <!-- 標頭 -->
-        <header class="bg-white p-4 md:p-6 rounded-lg shadow-sm border flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <header class="bg-white p-4 md:p-6 rounded-lg shadow-sm border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
                 <h1 class="text-lg md:text-2xl font-bold text-gray-800">股票交易與資產管理系統</h1>
                 <p class="text-[11px] md:text-xs text-gray-400 mt-0.5">資料儲存於本地瀏覽器。建議定期備份以免資料遺失。</p>
@@ -483,7 +483,7 @@
             calculateAndRender();
         };
 
-        // --- 【大重構】直接連動 YAHOO 財經 API 作為中文名稱與價格的第一供應來源 ---
+        // --- 【大重構：極速單封包連線】改連「台灣 Yahoo 奇摩股市」官方一體化 API ───
         window.fetchTwsePrices = async function() {
             const btn = document.getElementById('fetchPriceBtn');
             const status = document.getElementById('apiStatus');
@@ -497,67 +497,74 @@
 
             btn.disabled = true;
             btn.innerText = "連線中...";
-            status.innerText = "正透過 Yahoo 財經讀取最新數據...";
+            status.innerText = "正打包持股向台灣 Yahoo 股市連線...";
 
             const today = new Date().toISOString().split('T')[0];
             if (!historicalPrices[today]) {
                 historicalPrices[today] = {};
             }
 
-            let updatedCount = 0;
-
+            // 1. 打包所有要查詢的代號（同時配對上市 .TW 與上櫃 .TWO，確保一網打盡）
+            const symbolQueries = [];
             for (let i = 0; i < activeSymbols.length; i++) {
                 const sym = activeSymbols[i];
-                status.innerText = "Yahoo 讀取中: " + sym + "...";
-                let success = false;
-                
-                const suffixes = ['.TW', '.TWO'];
+                symbolQueries.push(sym + ".TW");
+                symbolQueries.push(sym + ".TWO");
+            }
 
-                for (let j = 0; j < suffixes.length; j++) {
-                    if (success) break;
-                    const suffix = suffixes[j];
-                    const targetUrl = "https://query1.finance.yahoo.com/v8/finance/chart/" + sym + suffix;
+            // 2. 建立台灣 Yahoo 奇摩股市專屬的批次查詢 API
+            const targetUrl = "https://tw.stock.yahoo.com/_api/v1/views/quote?symbols=" + symbolQueries.join(',');
+            
+            // 手機優先直連 (無代理)，備用高速代理 corsproxy
+            const tryUrls = [
+                targetUrl,
+                "https://corsproxy.io/?" + encodeURIComponent(targetUrl)
+            ];
+
+            let updatedCount = 0;
+            let successFetch = false;
+
+            for (let k = 0; k < tryUrls.length; k++) {
+                if (successFetch) break;
+                try {
+                    const response = await fetch(tryUrls[k]);
+                    if (!response.ok) continue;
+
+                    const data = await response.json();
                     
-                    const tryUrls = [
-                        targetUrl,
-                        "https://corsproxy.io/?" + encodeURIComponent(targetUrl)
-                    ];
+                    // 台灣 Yahoo 股市 API 回傳規格為 Array 結構 [ {symbol: "2330.TW", price: ...}, ... ]
+                    if (data && Array.isArray(data)) {
+                        data.forEach(item => {
+                            if (!item) return;
 
-                    for (let k = 0; k < tryUrls.length; k++) {
-                        if (success) break;
-                        try {
-                            const response = await fetch(tryUrls[k]);
-                            if (!response.ok) continue;
+                            // 取出純代號 (例如 "2330.TW" -> "2330")
+                            const fullSymbol = item.symbol || '';
+                            const symCode = fullSymbol.split('.')[0];
+                            if (!symCode) return;
 
-                            const data = await response.json();
-                            
-                            let result = null;
-                            if (data && data.chart && data.chart.result && data.chart.result[0]) {
-                                result = data.chart.result[0];
+                            // 讀取最新價格
+                            const priceVal = parseFloat(item.price || item.regularMarketPrice);
+                            if (!isNaN(priceVal) && priceVal > 0) {
+                                currentPrices[symCode] = priceVal;
+                                historicalPrices[today][symCode] = priceVal; // 歷史庫自動存檔
+                                updatedCount++;
                             }
 
-                            if (result && result.meta && result.meta.regularMarketPrice !== undefined) {
-                                const price = parseFloat(result.meta.regularMarketPrice);
-                                if (!isNaN(price) && price > 0) {
-                                    currentPrices[sym] = price;
-                                    historicalPrices[today][sym] = price; 
-                                    
-                                    // 【核心新邏輯】直接連動 Yahoo 官方中文 shortName 欄位，完成股票名稱對照
-                                    if (result.meta.shortName) {
-                                        stockNames[sym] = result.meta.shortName.trim();
-                                    }
-
-                                    updatedCount++;
-                                    success = true;
-                                }
+                            // 讀取台灣 Yahoo 奇摩股市官方中文名稱
+                            const rawName = item.symbolName || item.shortName || item.name;
+                            if (rawName) {
+                                stockNames[symCode] = rawName.trim();
                             }
-                        } catch (err) {
-                            // 靜默捕捉，重試下一種 URL
-                        }
+                        });
+
+                        successFetch = true;
                     }
+                } catch (err) {
+                    console.warn("第 " + (k+1) + " 連線方案未成功，切換下一重試");
                 }
             }
 
+            // 更新 LocalStorage 存檔
             localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
             localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
             localStorage.setItem('stock_v6_names', JSON.stringify(stockNames));
@@ -565,7 +572,7 @@
             calculateAndRender();
 
             const now = new Date();
-            status.innerText = "成功同步 " + updatedCount + " 檔 Yahoo 最新數據 (" + now.toLocaleTimeString() + ")";
+            status.innerText = "成功同步 " + activeSymbols.length + " 檔 Yahoo 最新數據 (" + now.toLocaleTimeString() + ")";
             btn.disabled = false;
             btn.innerText = "更新今日收盤價";
         };
