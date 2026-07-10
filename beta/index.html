@@ -1361,6 +1361,25 @@
             return [...new Set(dates)].sort();
         }
 
+        // --- 4.1 新增：生成年區間時間軸 (修復 yearly 報錯問題) ---
+        function generateYearlyDates(startDate, endDate) {
+            const dates = [];
+            let curr = new Date(startDate.getFullYear(), 0, 1);
+            const end = new Date(endDate);
+            while (curr <= end) {
+                const lastDayOfYear = new Date(curr.getFullYear(), 11, 31);
+                if (lastDayOfYear >= startDate && lastDayOfYear <= end) {
+                    dates.push(lastDayOfYear.toISOString().split('T')[0]);
+                }
+                curr.setFullYear(curr.getFullYear() + 1);
+            }
+            const endStr = end.toISOString().split('T')[0];
+            if (dates.indexOf(endStr) === -1) {
+                dates.push(endStr);
+            }
+            return [...new Set(dates)].sort();
+        }
+
         // --- 5. 分頁切換與尺度控制系統 ---
 
         window.switchTab = function(tab) {
@@ -1399,7 +1418,11 @@
                 renderChart();
                 renderAllocationCharts(); 
             } else if (tab === 'history') {
-                initDefaultHistoryRange(currentHistoryScale);
+                // 僅在尚未有資料被設定時，才進行預設初始化
+                const histStartEl = document.getElementById('historyStartDate');
+                if (histStartEl && !histStartEl.value) {
+                    initDefaultHistoryRange(currentHistoryScale);
+                }
                 
                 const currentBtn = document.getElementById(`btn-hist-${currentHistoryScale}`);
                 if (currentBtn) {
@@ -1839,7 +1862,8 @@
                 reader.onload = function(e) {
                     try {
                         const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
+                        // 啟用 cellDates 確保 Excel 日期物件會被正確解析成 JS Date 類型
+                        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
 
                         const wsTx = workbook.Sheets["交易紀錄"];
                         if (!wsTx) {
@@ -1847,17 +1871,50 @@
                             return;
                         }
 
+                        // 安全格式化 Excel 日期欄位的輔助函式 (兼容序列號、Date、各種字串)
+                        function parseExcelDate(val) {
+                            if (val === undefined || val === null) return "";
+                            if (val instanceof Date) {
+                                if (isNaN(val.getTime())) return "";
+                                const offset = val.getTimezoneOffset();
+                                const corrected = new Date(val.getTime() - (offset * 60 * 1000));
+                                return corrected.toISOString().split('T')[0];
+                            }
+                            if (typeof val === 'number' || (!isNaN(Number(val)) && String(val).trim() !== '')) {
+                                const num = Number(val);
+                                if (num > 10000 && num < 60000) {
+                                    const date = new Date((num - 25569) * 86400 * 1000);
+                                    if (!isNaN(date.getTime())) {
+                                        return date.toISOString().split('T')[0];
+                                    }
+                                }
+                            }
+                            const str = String(val).trim();
+                            if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+                                return str.substring(0, 10);
+                            }
+                            const parsedDate = new Date(str);
+                            if (!isNaN(parsedDate.getTime())) {
+                                return parsedDate.toISOString().split('T')[0];
+                            }
+                            return str;
+                        }
+
                         const rawTx = XLSX.utils.sheet_to_json(wsTx);
-                        const importedTx = rawTx.map(row => ({
-                            id: String(row["ID"] || row["id"] || Date.now().toString() + Math.random()),
-                            date: String(row["日期"] || row["date"] || ""),
-                            type: String(row["類型"] || row["type"] || ""),
-                            symbol: String(row["股票代號"] || row["symbol"] || ""),
-                            price: parseFloat(row["單價_金額"] || row["price"]) || 0,
-                            quantity: parseInt(row["數量"] || row["quantity"]) || 0,
-                            fee: parseFloat(row["手續費"] || row["fee"]) || 0,
-                            tax: parseFloat(row["交易稅"] || row["tax"]) || 0
-                        }));
+                        const importedTx = rawTx.map(row => {
+                            const rawDate = row["日期"] || row["date"];
+                            const parsedDate = parseExcelDate(rawDate);
+                            return {
+                                id: String(row["ID"] || row["id"] || Date.now().toString() + Math.random()),
+                                date: parsedDate,
+                                type: String(row["類型"] || row["type"] || "").toUpperCase().trim(),
+                                symbol: String(row["股票代號"] || row["symbol"] || "").toUpperCase().trim(),
+                                price: parseFloat(row["單價_金額"] || row["price"]) || 0,
+                                quantity: parseInt(row["數量"] || row["quantity"]) || 0,
+                                fee: parseFloat(row["手續費"] || row["fee"]) || 0,
+                                tax: parseFloat(row["交易稅"] || row["tax"]) || 0
+                            };
+                        });
 
                         const wsPrice = workbook.Sheets["目前市價"];
                         const importedCurrentPrices = {};
@@ -1908,8 +1965,20 @@
                         localStorage.setItem('stock_v6_names', JSON.stringify(stockNames));
                         localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
 
+                        // 核心加強：匯入後自動調整「交易紀錄」時間篩選區間，使其完美涵蓋所有歷史資料
+                        if (transactions.length > 0) {
+                            const minDate = transactions[0].date;
+                            const maxDate = transactions[transactions.length - 1].date;
+                            const histStartEl = document.getElementById('historyStartDate');
+                            const histEndEl = document.getElementById('historyEndDate');
+                            if (histStartEl && histEndEl) {
+                                histStartEl.value = minDate;
+                                histEndEl.value = maxDate;
+                            }
+                        }
+
                         render();
-                        alert("Excel 備份資料匯入成功！");
+                        alert("Excel 備份資料匯入成功！已為您自動展開歷史交易檢視的時間區間。");
                         event.target.value = ""; 
 
                     } catch (err) {
