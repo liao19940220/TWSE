@@ -10,6 +10,16 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <!-- SheetJS (Excel 讀寫函式庫) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- 燈箱漸顯動畫額外樣式 -->
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.15s ease-out forwards;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 md:p-6 text-sm text-gray-800">
 
@@ -20,14 +30,26 @@
                 <h1 class="text-lg md:text-2xl font-bold text-gray-800">股票交易與資產管理系統</h1>
                 <p class="text-[11px] md:text-xs text-gray-400 mt-0.5">資料儲存於本地瀏覽器。建議定期備份以免資料遺失。</p>
             </div>
-            <!-- 備份功能 (已改為 Excel .xlsx 格式) -->
-            <div class="flex flex-wrap gap-1.5 w-full md:w-auto">
-                <button onclick="exportData()" class="flex-1 md:flex-initial bg-gray-500 hover:bg-gray-600 text-white text-[11px] md:text-xs px-2.5 py-1.5 rounded transition">匯出 EXCEL 備份</button>
-                <label class="flex-1 md:flex-initial text-center bg-gray-500 hover:bg-gray-600 text-white text-[11px] md:text-xs px-2.5 py-1.5 rounded cursor-pointer transition">
-                    匯入 EXCEL 備份
-                    <input type="file" id="importFile" onchange="importData(event)" accept=".xlsx, .xls" class="hidden">
-                </label>
-                <button onclick="clearAllData()" class="flex-1 md:flex-initial bg-red-500 hover:bg-red-600 text-white text-[11px] md:text-xs px-2.5 py-1.5 rounded transition">重設</button>
+            <!-- 備份功能 (手機自動切換雙欄，電腦版維持原配置) -->
+            <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full md:w-auto">
+                <button onclick="exportData()" class="text-center bg-gray-500 hover:bg-gray-600 text-white text-[11px] md:text-xs px-2.5 py-2 rounded transition whitespace-nowrap">
+                    匯出 EXCEL 備份
+                </button>
+                
+                <!-- 匯入與規則說明的複合按鈕組 (高度完全統一且不折行) -->
+                <div class="flex rounded overflow-hidden">
+                    <label class="flex-1 text-center bg-gray-500 hover:bg-gray-600 text-white text-[11px] md:text-xs px-2.5 py-2 cursor-pointer transition whitespace-nowrap flex items-center justify-center">
+                        匯入 EXCEL
+                        <input type="file" id="importFile" onchange="importData(event)" accept=".xlsx, .xls" class="hidden">
+                    </label>
+                    <button onclick="openExcelHelpModal()" title="查看 Excel 編輯與匯入規則" class="bg-gray-600 hover:bg-gray-700 text-white text-[10px] md:text-xs px-2.5 py-2 transition flex items-center justify-center font-bold whitespace-nowrap shrink-0 border-l border-gray-400">
+                        ℹ️ 規則
+                    </button>
+                </div>
+
+                <button onclick="clearAllData()" class="col-span-2 sm:col-span-1 text-center bg-red-500 hover:bg-red-600 text-white text-[11px] md:text-xs px-2.5 py-2 rounded transition whitespace-nowrap">
+                    重設
+                </button>
             </div>
         </header>
 
@@ -324,7 +346,7 @@
                         <tr>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">日期</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">類型</th>
-                            <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">標的 / 名稱</th>
+                            <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">標對 / 名稱</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">單價 / 金額</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">數量</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">收支變動</th>
@@ -335,6 +357,97 @@
                         <!-- 動態插入 -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel 匯入說明燈箱 (Modal) -->
+    <div id="excelHelpModal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl border max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+            <!-- 燈箱頭部 -->
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                <h3 class="text-xs md:text-sm font-bold text-gray-800 flex items-center gap-1.5">
+                    <span>📊 Excel 手動編輯與匯入規則說明</span>
+                </h3>
+                <button onclick="closeExcelHelpModal()" class="text-gray-400 hover:text-gray-600 text-lg font-bold focus:outline-none">&times;</button>
+            </div>
+            
+            <!-- 燈箱內容 (滾動區) -->
+            <div class="p-4 overflow-y-auto text-xs text-gray-600 space-y-3.5 leading-relaxed">
+                <p class="font-bold text-gray-700">💡 當您匯出 Excel 備份後，可以直接手動在 Excel 內修改內容或新增列，再匯入系統。請務必遵守以下「交易紀錄」工作表之欄位填寫規則：</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 bg-white border rounded">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">欄位名稱 (Excel)</th>
+                                <th class="px-3 py-2 text-left font-bold text-gray-700 whitespace-nowrap">填寫格式與範例</th>
+                                <th class="px-3 py-2 text-left font-bold text-gray-700">詳細說明</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 text-gray-600">
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-gray-800 whitespace-nowrap">ID</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-blue-600 font-semibold">留空（推薦）</td>
+                                <td class="px-3 py-2">手動新增交易時直接「留空」即可，系統匯入時會自動為其產生不重複 ID。</td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-gray-800 whitespace-nowrap">日期</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-800 font-medium">2026-07-10</td>
+                                <td class="px-3 py-2">格式必須為 <span class="font-bold">YYYY-MM-DD</span>（半形橫線連結，如：2026-07-10）。</td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-gray-800 whitespace-nowrap">類型</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-red-600 font-semibold">BUY / SELL / DEPOSIT / WITHDRAW</td>
+                                <td class="px-3 py-2 leading-relaxed">
+                                    必須填入對應的<span class="font-bold text-red-600">英文大寫</span>指令：<br>
+                                    • <span class="font-bold text-gray-800">BUY</span> (買入股票)<br>
+                                    • <span class="font-bold text-gray-800">SELL</span> (賣出股票)<br>
+                                    • <span class="font-bold text-gray-800">DEPOSIT</span> (帳戶入金)<br>
+                                    • <span class="font-bold text-gray-800">WITHDRAW</span> (帳戶出金)
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-gray-800 whitespace-nowrap">股票代號</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-800 font-semibold">2330 / CASH</td>
+                                <td class="px-3 py-2 leading-relaxed">
+                                    • 股票：填入股票代號（如：6488）<br>
+                                    • 入金/出金：固定填入大寫 <span class="font-bold text-gray-800">CASH</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-gray-800 whitespace-nowrap">單價_金額</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-800 font-semibold">32900 / 950</td>
+                                <td class="px-3 py-2 leading-relaxed">
+                                    • 股票：填入每股單價<br>
+                                    • 入金/出金：請填入 <span class="font-bold text-amber-600">"元"</span>（在網頁輸入時雖輸入 32.9 千元，但<span class="font-bold text-red-600">在 Excel 內儲存時必須還原成實際的 32900</span>）
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-gray-800 whitespace-nowrap">數量</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-800 font-semibold">1000 / 1</td>
+                                <td class="px-3 py-2 leading-relaxed">
+                                    • 股票：填入股數<br>
+                                    • 入金/出金：固定填 <span class="font-bold text-gray-800">1</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-gray-800 whitespace-nowrap">手續費</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-800">0 / 20</td>
+                                <td class="px-3 py-2">該筆交易的手續費，沒有請填 0。</td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-bold text-gray-800 whitespace-nowrap">交易稅</td>
+                                <td class="px-3 py-2 whitespace-nowrap text-gray-800">0 / 15</td>
+                                <td class="px-3 py-2">該筆交易的交易稅（僅在賣出時需要），沒有請填 0。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 燈箱尾部 -->
+            <div class="p-3 border-t flex justify-end bg-gray-50">
+                <button onclick="closeExcelHelpModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-1.5 rounded transition">我知道了</button>
             </div>
         </div>
     </div>
@@ -498,6 +611,23 @@
                     wrapper.style.display = 'block';
                     arrow.innerText = '▼ 點選收合';
                 }
+            }
+        };
+
+        // 規則說明燈箱（Modal）控制函式
+        window.openExcelHelpModal = function() {
+            const modal = document.getElementById('excelHelpModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden'; // 阻止背景頁面滾動
+            }
+        };
+
+        window.closeExcelHelpModal = function() {
+            const modal = document.getElementById('excelHelpModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = ''; // 恢復網頁滾動
             }
         };
 
@@ -752,3 +882,1065 @@
                             if (!item || !Array.isArray(item.d)) return;
 
                             const sParts = (item.s || '').split(':');
+                            const symCode = sParts[1];
+                            if (!symCode) return;
+
+                            const priceVal = parseFloat(item.d[2]);
+                            if (!isNaN(priceVal) && priceVal > 0) {
+                                currentPrices[symCode] = priceVal;
+                                historicalPrices[today][symCode] = priceVal; 
+                                tvUpdatedSymbols.add(symCode);
+                            }
+                        });
+
+                        successFetch = true;
+                    }
+                } catch (err) {
+                    console.warn("TradingView 連線方案未成功，切換下一重試");
+                }
+            }
+
+            const missingSymbols = activeSymbols.filter(sym => !tvUpdatedSymbols.has(sym));
+            let yahooUpdatedCount = 0;
+
+            if (missingSymbols.length > 0) {
+                status.innerText = `TradingView 已更新 ${tvUpdatedSymbols.size} 檔，正在連線 Yahoo 財經補齊其餘 ${missingSymbols.length} 檔...`;
+                
+                const yahooPromises = missingSymbols.map(async (sym) => {
+                    const price = await fetchSingleYahooPrice(sym);
+                    if (price !== null) {
+                        currentPrices[sym] = price;
+                        historicalPrices[today][sym] = price;
+                        yahooUpdatedCount++;
+                    }
+                });
+
+                await Promise.all(yahooPromises);
+            }
+
+            localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
+            localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
+
+            calculateAndRender();
+
+            const now = new Date();
+            const totalUpdated = tvUpdatedSymbols.size + yahooUpdatedCount;
+            status.innerText = `成功同步 ${totalUpdated} 檔收盤價 (${now.toLocaleTimeString()})`;
+            btn.disabled = false;
+            btn.innerText = "更新今日收盤價";
+        };
+
+        function getActiveSymbols() {
+            const holdings = {};
+            transactions.forEach(tx => {
+                if (tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW') return;
+                const sym = tx.symbol || 'UNKNOWN';
+                const qty = Number(tx.quantity) || 0;
+                if (!holdings[sym]) holdings[sym] = 0;
+                holdings[sym] += (tx.type === 'BUY' ? qty : -qty);
+            });
+            return Object.keys(holdings).filter(sym => holdings[sym] > 0);
+        }
+
+        // --- 3. 核心庫存與已實現/未實現計算 (整合手續費、稅金與資產警示邏輯) ---
+        function calculateAndRender() {
+            let cash = 0;
+            let stockMarketValue = 0;
+            let totalUnrealizedPnl = 0;
+            let totalRealizedPnl = 0;
+            const holdings = {};
+
+            transactions.forEach(tx => {
+                const price = Number(tx.price) || 0;
+                const quantity = Number(tx.quantity) || 0;
+                const fee = Number(tx.fee) || 0;
+                const tax = Number(tx.tax) || 0;
+
+                if (tx.type === 'DEPOSIT') {
+                    cash += price; 
+                } else if (tx.type === 'WITHDRAW') {
+                    cash -= price;
+                } else if (tx.type === 'BUY') {
+                    const totalCost = (price * quantity) + fee;
+                    cash -= totalCost; 
+                    
+                    if (!holdings[tx.symbol]) holdings[tx.symbol] = { qty: 0, totalCost: 0, avgCost: 0 };
+                    holdings[tx.symbol].qty += quantity;
+                    holdings[tx.symbol].totalCost += totalCost; 
+                    holdings[tx.symbol].avgCost = holdings[tx.symbol].qty > 0 ? (holdings[tx.symbol].totalCost / holdings[tx.symbol].qty) : 0;
+                } else if (tx.type === 'SELL') {
+                    const totalRevenue = (price * quantity) - fee - tax;
+                    cash += totalRevenue; 
+                    
+                    const hold = holdings[tx.symbol];
+                    if (hold && hold.qty > 0) {
+                        const realized = totalRevenue - (quantity * (hold.avgCost || 0));
+                        totalRealizedPnl += realized;
+
+                        hold.qty -= quantity;
+                        hold.totalCost = hold.qty * (hold.avgCost || 0);
+                    }
+                }
+            });
+
+            Object.keys(holdings).forEach(sym => {
+                const hold = holdings[sym];
+                if (hold.qty > 0) {
+                    const currentPrice = Number(currentPrices[sym]) || 0;
+                    if (currentPrice > 0) {
+                        stockMarketValue += hold.qty * currentPrice;
+                    }
+                }
+            });
+
+            const totalAsset = cash + stockMarketValue;
+
+            const elCashRatio = document.getElementById('currentCash').nextElementSibling;
+            const elStockRatio = document.getElementById('stockMarketValue').nextElementSibling;
+            if (totalAsset > 0) {
+                if (elCashRatio) elCashRatio.innerText = `佔比: ${((cash / totalAsset) * 100).toFixed(1)}%`;
+                if (elStockRatio) elStockRatio.innerText = `佔比: ${((stockMarketValue / totalAsset) * 100).toFixed(1)}%`;
+            } else {
+                if (elCashRatio) elCashRatio.innerText = `佔比: 0.0%`;
+                if (elStockRatio) elStockRatio.innerText = `佔比: 0.0%`;
+            }
+
+            const elCashAlert = document.getElementById('cashAlert');
+            if (elCashAlert) {
+                if (totalAsset > 0 && (cash / totalAsset) > 0.5) {
+                    elCashAlert.innerHTML = '<span class="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 font-semibold inline-block mt-1 animate-pulse">💡 資金運用建議</span>';
+                } else {
+                    elCashAlert.innerHTML = '';
+                }
+            }
+
+            if (holdingsTable) {
+                holdingsTable.innerHTML = '';
+                Object.keys(holdings).forEach(sym => {
+                    const hold = holdings[sym];
+                    if (hold.qty > 0) {
+                        const currentPrice = Number(currentPrices[sym]) || 0;
+                        const marketVal = hold.qty * currentPrice;
+                        const costVal = hold.qty * (hold.avgCost || 0);
+                        const unrealized = currentPrice > 0 ? (marketVal - costVal) : 0;
+                        const percent = costVal > 0 ? ((unrealized / costVal) * 100) : 0;
+
+                        const holdingPercentOfTotal = totalAsset > 0 ? ((marketVal / totalAsset) * 100) : 0;
+
+                        if (currentPrice > 0) {
+                            totalUnrealizedPnl += unrealized;
+                        }
+
+                        let pnlClass = "text-gray-600";
+                        let pnlSign = "";
+                        if (currentPrice > 0) {
+                            if (unrealized > 0) { 
+                                pnlClass = "text-red-600 font-semibold"; 
+                                pnlSign = "+"; 
+                            } else if (unrealized < 0) { 
+                                pnlClass = "text-green-600 font-semibold"; 
+                            }
+                        }
+
+                        let holdStyle = "text-blue-600 font-semibold";
+                        if (holdingPercentOfTotal > 30) {
+                            holdStyle = "text-amber-600 font-extrabold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded inline-block animate-pulse";
+                        }
+
+                        let pnlBadgeStyle = "";
+                        if (currentPrice > 0) {
+                            if (percent <= -15) {
+                                pnlBadgeStyle = "bg-emerald-50 text-emerald-800 border border-emerald-300 px-1.5 py-0.5 rounded font-extrabold block mt-1";
+                            } else if (percent >= 50) {
+                                pnlBadgeStyle = "bg-rose-50 text-rose-700 border border-rose-300 px-1.5 py-0.5 rounded font-extrabold block mt-1";
+                            }
+                        }
+
+                        const nameText = stockNames[sym] 
+                            ? `<span class="text-[10px] text-gray-400 block mt-0.5 font-normal whitespace-normal break-all leading-tight">${stockNames[sym]}</span>` 
+                            : '';
+
+                        const tr = document.createElement('tr');
+                        tr.className = "hover:bg-gray-50";
+                        tr.innerHTML = `
+                            <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm">
+                                <div class="font-bold text-gray-800">${sym}${nameText}</div>
+                            </td>
+                            <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm">
+                                <span class="${holdStyle}">
+                                    ${holdingPercentOfTotal > 30 ? '⚡ ' : ''}${holdingPercentOfTotal.toFixed(1)}%
+                                </span>
+                            </td>
+                            <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm">${hold.qty.toLocaleString()}</td>
+                            <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm ${pnlClass}">
+                                ${currentPrice > 0 ? `
+                                    <div class="flex flex-col items-start justify-center gap-0.5">
+                                        <span>${pnlSign}${unrealized.toLocaleString('zh-TW', {maximumFractionDigits: 0})}</span>
+                                        <span class="${pnlBadgeStyle || 'text-[10px] text-gray-400'}">${percent > 0 ? '+' : ''}${percent.toFixed(2)}%</span>
+                                    </div>
+                                ` : '--'}
+                            </td>
+                            <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm">NT$ ${(hold.avgCost || 0).toFixed(2)}</td>
+                            <td class="px-2.5 py-2 whitespace-nowrap">
+                                <input type="number" step="0.01" value="${currentPrice || ''}" placeholder="輸入市價" onchange="updateCurrentPrice('${sym}', this.value)" class="w-16 md:w-20 border rounded px-1.5 py-0.5 text-xs">
+                            </td>
+                        `;
+                        holdingsTable.appendChild(tr);
+                    }
+                });
+            }
+
+            const elCash = document.getElementById('currentCash');
+            const elMarket = document.getElementById('stockMarketValue');
+            const elUnrealized = document.getElementById('totalUnrealizedPnl');
+            const elRealized = document.getElementById('totalRealizedPnl');
+
+            if (elCash) elCash.innerText = `NT$ ${cash.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+            if (elMarket) elMarket.innerText = `NT$ ${stockMarketValue.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+            if (elUnrealized) formatColorText(elUnrealized, totalUnrealizedPnl);
+            if (elRealized) formatColorText(elRealized, totalRealizedPnl);
+
+            return { cash, stockMarketValue, totalUnrealizedPnl };
+        }
+
+        // 歷史交易表渲染
+        function renderHistory() {
+            if (!txHistoryTable) return;
+            txHistoryTable.innerHTML = '';
+
+            const startVal = document.getElementById('historyStartDate').value;
+            const endVal = document.getElementById('historyEndDate').value;
+            const searchKeyword = (document.getElementById('historySearch')?.value || '').trim().toLowerCase();
+
+            const filteredTxs = transactions.filter(tx => {
+                if (startVal && tx.date < startVal) return false;
+                if (endVal && tx.date > endVal) return false;
+                
+                if (searchKeyword) {
+                    const symbolMatch = (tx.symbol || '').toLowerCase().includes(searchKeyword);
+                    const nameMatch = (stockNames[tx.symbol] || '').toLowerCase().includes(searchKeyword);
+                    const isCashMatch = (tx.symbol === 'CASH' && "現金往來".includes(searchKeyword));
+                    if (!symbolMatch && !nameMatch && !isCashMatch) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            [...filteredTxs].reverse().forEach(tx => {
+                let typeText = "", typeClass = "", changeText = "";
+                const price = Number(tx.price) || 0;
+                const quantity = Number(tx.quantity) || 0;
+                const fee = Number(tx.fee) || 0;
+                const tax = Number(tx.tax) || 0;
+
+                if (tx.type === 'BUY') {
+                    typeText = "買入"; typeClass = "bg-red-50 text-red-700"; 
+                    changeText = "-NT$ " + ((price * quantity) + fee).toLocaleString();
+                } else if (tx.type === 'SELL') {
+                    typeText = "賣出"; typeClass = "bg-green-50 text-green-700"; 
+                    changeText = "+NT$ " + ((price * quantity) - fee - tax).toLocaleString();
+                } else if (tx.type === 'DEPOSIT') {
+                    typeText = "入金"; typeClass = "bg-blue-50 text-blue-700"; 
+                    changeText = "+NT$ " + price.toLocaleString();
+                } else if (tx.type === 'WITHDRAW') {
+                    typeText = "出金"; typeClass = "bg-yellow-50 text-yellow-700"; 
+                    changeText = "-NT$ " + price.toLocaleString();
+                }
+
+                let itemText = tx.symbol === 'CASH' ? '<div class="font-bold text-gray-800">現金往來</div>' : `<div class="font-bold text-gray-800">${tx.symbol}</div>`;
+                if (tx.symbol !== 'CASH' && stockNames[tx.symbol]) {
+                    itemText = `<div class="font-bold text-gray-800">${tx.symbol}<span class="text-[10px] text-gray-400 block mt-0.5 font-normal whitespace-normal break-all leading-tight">${stockNames[tx.symbol]}</span></div>`;
+                }
+
+                let detailTooltip = "";
+                if (fee > 0 || tax > 0) {
+                    detailTooltip = `<span class="text-[9px] text-gray-400 block font-normal">(含費:${fee}/稅:${tax})</span>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50";
+                tr.innerHTML = `
+                    <td class="px-2.5 py-2 text-gray-500 whitespace-nowrap text-xs">${tx.date}</td>
+                    <td class="px-2.5 py-2 whitespace-nowrap"><span class="px-1.5 py-0.5 rounded text-[10px] ${typeClass}">${typeText}</span></td>
+                    <td class="px-2.5 py-2 font-medium text-gray-700 whitespace-nowrap text-xs">${itemText}</td>
+                    <td class="px-2.5 py-2 whitespace-nowrap text-xs">NT$ ${price.toLocaleString()}</td>
+                    <td class="px-2.5 py-2 whitespace-nowrap text-xs">${tx.type==='DEPOSIT'||tx.type==='WITHDRAW' ? '--' : quantity.toLocaleString()}</td>
+                    <td class="px-2.5 py-2 whitespace-nowrap text-xs font-semibold ${changeText.startsWith('+') ? 'text-red-600' : 'text-green-600'}">
+                        <div>${changeText}${detailTooltip}</div>
+                    </td>
+                    <td class="px-2.5 py-2 whitespace-nowrap text-xs"><button onclick="deleteTx('${tx.id}')" class="text-red-500 hover:text-red-700">刪除</button></td>
+                `;
+                txHistoryTable.appendChild(tr);
+            });
+        }
+
+        function saveData() {
+            localStorage.setItem('stock_v6_tx', JSON.stringify(transactions));
+        }
+
+        function initDefaultHistoryRange(scale) {
+            const today = new Date();
+            let start = new Date();
+
+            if (scale === 'daily') {
+                start.setDate(today.getDate() - 5);  
+            } else if (scale === 'weekly') {
+                start.setDate(today.getDate() - 28); 
+            } else if (scale === 'monthly') {
+                start.setMonth(today.getMonth() - 6); 
+            } else if (scale === 'yearly') {
+                start.setFullYear(today.getFullYear() - 3); 
+            }
+
+            const startStr = start.toISOString().split('T')[0];
+            const todayStr = today.toISOString().split('T')[0];
+
+            const histStartEl = document.getElementById('historyStartDate');
+            const histEndEl = document.getElementById('historyEndDate');
+
+            if (histStartEl && histEndEl) {
+                histStartEl.value = startStr;
+                histEndEl.value = todayStr;
+                histStartEl.max = todayStr;
+                histEndEl.max = todayStr;
+            }
+        }
+
+        window.changeHistoryScale = function(scale, btnElement) {
+            currentHistoryScale = scale;
+            
+            document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
+                btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+            });
+            if (btnElement) {
+                btnElement.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+            }
+
+            initDefaultHistoryRange(scale);
+            renderHistory();
+        };
+
+        window.resetHistoryRange = function() {
+            currentHistoryScale = 'daily';
+            initDefaultHistoryRange('daily');
+            
+            if (document.getElementById('historySearch')) {
+                document.getElementById('historySearch').value = '';
+            }
+
+            const currentBtn = document.getElementById('btn-hist-daily');
+            if (currentBtn) {
+                document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
+                    btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+                });
+                currentBtn.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+            }
+
+            renderHistory();
+        };
+
+        // 重新補回漏掉的 render 核心主函數，解決 ReferenceError 衝突
+        function render() {
+            renderHistory();
+            calculateAndRender();
+        }
+
+        // --- 4. 歷史重播與連續時間軸處理邏輯 ---
+
+        function calculateAssetOnSpecificDate(targetDate) {
+            let cash = 0;
+            let stockMarketValue = 0;
+            let totalUnrealizedPnl = 0;
+            const holdings = {};
+
+            const historicalTxs = transactions.filter(tx => tx.date <= targetDate);
+
+            historicalTxs.forEach(tx => {
+                const price = Number(tx.price) || 0;
+                const quantity = Number(tx.quantity) || 0;
+                const fee = Number(tx.fee) || 0;
+                const tax = Number(tx.tax) || 0;
+
+                if (tx.type === 'DEPOSIT') {
+                    cash += price;
+                } else if (tx.type === 'WITHDRAW') {
+                    cash -= price;
+                } else if (tx.type === 'BUY') {
+                    const totalCost = (price * quantity) + fee;
+                    cash -= totalCost;
+                    if (!holdings[tx.symbol]) holdings[tx.symbol] = { qty: 0, totalCost: 0, avgCost: 0 };
+                    holdings[tx.symbol].qty += quantity;
+                    holdings[tx.symbol].totalCost += totalCost;
+                    holdings[tx.symbol].avgCost = holdings[tx.symbol].qty > 0 ? (holdings[tx.symbol].totalCost / holdings[tx.symbol].qty) : 0;
+                } else if (tx.type === 'SELL') {
+                    const totalRevenue = (price * quantity) - fee - tax;
+                    cash += totalRevenue;
+                    const hold = holdings[tx.symbol];
+                    if (hold && hold.qty > 0) {
+                        hold.qty -= quantity;
+                        hold.totalCost = hold.qty * (hold.avgCost || 0);
+                    }
+                }
+            });
+
+            Object.keys(holdings).forEach(sym => {
+                const hold = holdings[sym];
+                if (hold.qty > 0) {
+                    let priceOnDate = 0;
+
+                    if (historicalPrices[targetDate] && historicalPrices[targetDate][sym] !== undefined) {
+                        priceOnDate = historicalPrices[targetDate][sym];
+                    } else {
+                        const symHistory = historicalTxs.filter(t => t.symbol === sym);
+                        const lastTxPrice = symHistory.length > 0 ? symHistory[symHistory.length - 1].price : 0;
+                        priceOnDate = lastTxPrice || hold.avgCost || 0;
+                    }
+
+                    const marketVal = hold.qty * priceOnDate;
+                    const costVal = hold.qty * (hold.avgCost || 0);
+
+                    stockMarketValue += marketVal;
+                    totalUnrealizedPnl += (marketVal - costVal);
+                }
+            });
+
+            return {
+                date: targetDate,
+                cash: cash,
+                stockValue: stockMarketValue,
+                unrealizedPnl: totalUnrealizedPnl,
+                totalAsset: cash + stockMarketValue
+            };
+        }
+
+        function generateDailyDates(startDate, endDate) {
+            const dates = [];
+            let curr = new Date(startDate);
+            const end = new Date(endDate);
+            while (curr <= end) {
+                dates.push(curr.toISOString().split('T')[0]);
+                curr.setDate(curr.getDate() + 1);
+            }
+            return dates;
+        }
+
+        function generateWeeklyDates(startDate, endDate) {
+            const dates = [];
+            let curr = new Date(startDate);
+            const end = new Date(endDate);
+            while (curr <= end) {
+                const day = curr.getDay(); 
+                if (day === 5) { 
+                    dates.push(curr.toISOString().split('T')[0]);
+                }
+                curr.setDate(curr.getDate() + 1);
+            }
+            const endStr = end.toISOString().split('T')[0];
+            if (dates.indexOf(endStr) === -1) {
+                dates.push(endStr);
+            }
+            return [...new Set(dates)].sort();
+        }
+
+        function generateMonthlyDates(startDate, endDate) {
+            const dates = [];
+            let curr = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+            const end = new Date(endDate);
+            while (curr <= end) {
+                const lastDay = new Date(curr.getFullYear(), curr.getMonth() + 1, 0);
+                if (lastDay >= startDate && lastDay <= end) {
+                    dates.push(lastDay.toISOString().split('T')[0]);
+                }
+                curr.setMonth(curr.getMonth() + 1);
+            }
+            const endStr = end.toISOString().split('T')[0];
+            if (dates.indexOf(endStr) === -1) {
+                dates.push(endStr);
+            }
+            return [...new Set(dates)].sort();
+        }
+
+        // --- 5. 分頁切換與尺度控制系統 ---
+
+        window.switchTab = function(tab) {
+            activeTab = tab;
+            const tabMain = document.getElementById('tab-main');
+            const tabChart = document.getElementById('tab-chart');
+            const tabHistory = document.getElementById('tab-history');
+
+            const tabMainBtn = document.getElementById('tab-main-btn');
+            const tabChartBtn = document.getElementById('tab-chart-btn');
+            const tabHistoryBtn = document.getElementById('tab-history-btn');
+
+            if (tabMain) tabMain.style.display = tab === 'main' ? 'block' : 'none';
+            if (tabChart) tabChart.style.display = tab === 'chart' ? 'block' : 'none';
+            if (tabHistory) tabHistory.style.display = tab === 'history' ? 'block' : 'none';
+
+            if (tabMainBtn) {
+                tabMainBtn.className = tab === 'main' 
+                    ? "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-blue-500 text-blue-600 font-semibold text-xs md:text-sm transition"
+                    : "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-xs md:text-sm transition";
+            }
+            if (tabChartBtn) {
+                tabChartBtn.className = tab === 'chart' 
+                    ? "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-blue-500 text-blue-600 font-semibold text-xs md:text-sm transition"
+                    : "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-xs md:text-sm transition";
+            }
+            if (tabHistoryBtn) {
+                tabHistoryBtn.className = tab === 'history' 
+                    ? "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-blue-500 text-blue-600 font-semibold text-xs md:text-sm transition"
+                    : "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-xs md:text-sm transition";
+            }
+
+            if (tab === 'chart') {
+                initDefaultChartRange(currentChartScale);
+                initTargetLinePersistence();
+                renderChart();
+                renderAllocationCharts(); 
+            } else if (tab === 'history') {
+                initDefaultHistoryRange(currentHistoryScale);
+                
+                const currentBtn = document.getElementById(`btn-hist-${currentHistoryScale}`);
+                if (currentBtn) {
+                    document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
+                        btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+                    });
+                    currentBtn.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+                }
+                renderHistory();
+            }
+        };
+
+        function initDefaultChartRange(scale) {
+            const today = new Date();
+            let start = new Date();
+
+            if (scale === 'weekly') {
+                start.setDate(today.getDate() - 28); 
+            } else if (scale === 'daily') {
+                start.setDate(today.getDate() - 5);  
+            } else if (scale === 'monthly') {
+                start.setMonth(today.getMonth() - 6); 
+            } else if (scale === 'yearly') {
+                start.setFullYear(today.getFullYear() - 3); 
+            }
+
+            document.getElementById('chartStartDate').value = start.toISOString().split('T')[0];
+            document.getElementById('chartEndDate').value = today.toISOString().split('T')[0];
+
+            const todayStr = today.toISOString().split('T')[0];
+            document.getElementById('chartStartDate').max = todayStr;
+            document.getElementById('chartEndDate').max = todayStr;
+        }
+
+        window.changeChartScale = function(scale, btnElement) {
+            currentChartScale = scale;
+            
+            document.querySelectorAll('#btn-scale-weekly, #btn-scale-daily, #btn-scale-monthly, #btn-scale-yearly').forEach(btn => {
+                btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+            });
+            if (btnElement) {
+                btnElement.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+            }
+
+            initDefaultChartRange(scale);
+            renderChart();
+        };
+
+        window.onCustomRangeChange = function() {
+            renderChart();
+        };
+
+        // --- 5.1 對照基準線狀態讀取與記憶機制 ---
+        function initTargetLinePersistence() {
+            const showTargetEl = document.getElementById('showTargetLine');
+            const percentEl = document.getElementById('targetLinePercent');
+            if (showTargetEl && percentEl) {
+                const savedShow = localStorage.getItem('stock_v8_show_target');
+                const savedPercent = localStorage.getItem('stock_v8_target_percent');
+                
+                if (savedShow !== null) {
+                    showTargetEl.checked = savedShow === 'true';
+                } else {
+                    showTargetEl.checked = false; 
+                }
+                
+                if (savedPercent !== null) {
+                    percentEl.value = savedPercent;
+                } else {
+                    percentEl.value = "50"; 
+                }
+            }
+        }
+
+        window.onTargetPercentInput = function(el) {
+            let val = parseFloat(el.value);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > 100) val = 100;
+            el.value = val;
+            
+            localStorage.setItem('stock_v8_target_percent', val);
+            
+            if (document.getElementById('showTargetLine')?.checked) {
+                renderChart();
+            }
+        };
+
+        window.onTargetCheckboxChange = function(el) {
+            localStorage.setItem('stock_v8_show_target', el.checked);
+            renderChart();
+        };
+
+        // --- 6. 核心趨勢折線圖渲染 ---
+
+        function renderChart() {
+            if (typeof Chart === 'undefined') {
+                alert("未偵測到 Chart.js，請確認您的網路連線正常。");
+                return;
+            }
+
+            const canvas = document.getElementById('assetChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            if (assetChartInstance) {
+                assetChartInstance.destroy();
+            }
+
+            const startVal = document.getElementById('chartStartDate').value;
+            const endVal = document.getElementById('chartEndDate').value;
+
+            if (!startVal || !endVal) return;
+
+            const startDateObj = new Date(startVal);
+            const endDateObj = new Date(endVal);
+
+            if (startDateObj > endDateObj) {
+                alert("開始日期不能大於結束日期");
+                return;
+            }
+
+            let dateTimeline = [];
+            if (currentChartScale === 'weekly') {
+                dateTimeline = generateWeeklyDates(startDateObj, endDateObj);
+            } else if (currentChartScale === 'daily') {
+                dateTimeline = generateDailyDates(startDateObj, endDateObj);
+            } else if (currentChartScale === 'monthly') {
+                dateTimeline = generateMonthlyDates(startDateObj, endDateObj);
+            } else if (currentChartScale === 'yearly') {
+                dateTimeline = generateYearlyDates(startDateObj, endDateObj);
+            }
+
+            const plotData = dateTimeline.map(date => calculateAssetOnSpecificDate(date));
+
+            const labels = plotData.map(d => d.date);
+            const totalAssetData = plotData.map(d => d.totalAsset);
+
+            const showTarget = document.getElementById('showTargetLine')?.checked || false;
+            const targetPercent = parseFloat(document.getElementById('targetLinePercent')?.value) || 0;
+
+            const datasets = [
+                {
+                    label: '總資產 (現金+持股市值)',
+                    data: totalAssetData,
+                    borderColor: '#3B82F6',
+                    fill: false, 
+                    tension: 0.03,
+                    pointRadius: dateTimeline.length > 80 ? 0 : 2
+                }
+            ];
+
+            if (showTarget) {
+                const maxAsset = totalAssetData.length > 0 ? Math.max(...totalAssetData) : 0;
+                const targetVal = maxAsset * (targetPercent / 100);
+                
+                const targetData = totalAssetData.map(() => targetVal);
+                
+                datasets.push({
+                    label: `對照基準線 (${targetPercent}% of 區間最大值: NT$ ${Math.round(targetVal).toLocaleString()})`,
+                    data: targetData,
+                    borderColor: '#EF4444', 
+                    borderDash: [5, 5],     
+                    fill: false,
+                    tension: 0,            
+                    pointRadius: 0,        
+                    borderWidth: 2
+                });
+            }
+
+            const currentBtn = document.getElementById(`btn-scale-${currentChartScale}`);
+            if (currentBtn) {
+                document.querySelectorAll('#btn-scale-weekly, #btn-scale-daily, #btn-scale-monthly, #btn-scale-yearly').forEach(btn => {
+                    btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+                });
+                currentBtn.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+            }
+
+            assetChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function(value) { return 'NT$ ' + value.toLocaleString(); }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 6.1 實時資產分配圖表連動 (圓餅圖 + 橫向長條圖) ---
+        function renderAllocationCharts() {
+            let cash = 0;
+            const holdings = {};
+            
+            transactions.forEach(tx => {
+                const price = Number(tx.price) || 0;
+                const quantity = Number(tx.quantity) || 0;
+                const fee = Number(tx.fee) || 0;
+                const tax = Number(tx.tax) || 0;
+
+                if (tx.type === 'DEPOSIT') {
+                    cash += price;
+                } else if (tx.type === 'WITHDRAW') {
+                    cash -= price;
+                } else if (tx.type === 'BUY') {
+                    const totalCost = (price * quantity) + fee;
+                    cash -= totalCost;
+                    if (!holdings[tx.symbol]) holdings[tx.symbol] = { qty: 0, totalCost: 0, avgCost: 0 };
+                    holdings[tx.symbol].qty += quantity;
+                    holdings[tx.symbol].totalCost += totalCost;
+                    holdings[tx.symbol].avgCost = holdings[tx.symbol].qty > 0 ? (holdings[tx.symbol].totalCost / holdings[tx.symbol].qty) : 0;
+                } else if (tx.type === 'SELL') {
+                    const totalRevenue = (price * quantity) - fee - tax;
+                    cash += totalRevenue;
+                    const hold = holdings[tx.symbol];
+                    if (hold && hold.qty > 0) {
+                        hold.qty -= quantity;
+                        hold.totalCost = hold.qty * (hold.avgCost || 0);
+                    }
+                }
+            });
+
+            const labels = [];
+            const dataVals = [];
+            const backgroundColors = [
+                '#3B82F6', 
+                '#F59E0B', 
+                '#EC4899', 
+                '#8B5CF6', 
+                '#06B6D4', 
+                '#10B981', 
+                '#EF4444', 
+                '#14B8A6', 
+                '#6366F1', 
+                '#9CA3AF'  
+            ];
+
+            if (cash > 0) {
+                labels.push('現金');
+                dataVals.push(cash);
+            } else if (cash < 0) {
+                labels.push('現金');
+                dataVals.push(0);
+            }
+
+            Object.keys(holdings).forEach(sym => {
+                const hold = holdings[sym];
+                if (hold.qty > 0) {
+                    const currentPrice = Number(currentPrices[sym]) || 0;
+                    const marketVal = hold.qty * currentPrice;
+                    if (marketVal > 0) {
+                        labels.push(sym); 
+                        dataVals.push(marketVal);
+                    }
+                }
+            });
+
+            const total = dataVals.reduce((a, b) => a + b, 0);
+            if (total === 0) {
+                labels.push('EMPTY');
+                dataVals.push(1);
+            }
+
+            const activeColors = backgroundColors.slice(0, labels.length);
+
+            const legendContainer = document.getElementById('unifiedLegend');
+            if (legendContainer) {
+                legendContainer.innerHTML = '';
+                labels.forEach((label, idx) => {
+                    const color = activeColors[idx];
+                    const item = document.createElement('div');
+                    item.className = "flex items-center gap-1 w-full text-left";
+                    item.innerHTML = `
+                        <span class="w-2 h-2 rounded-full inline-block shrink-0" style="background-color: ${color}"></span>
+                        <span class="text-[9px] md:text-[11px] font-bold text-gray-700 truncate leading-none">${label}</span>
+                    `;
+                    legendContainer.appendChild(item);
+                });
+            }
+
+            renderDoughnutChart(labels, dataVals, activeColors, total);
+
+            const listContainer = document.getElementById('allocationListContainer');
+            if (listContainer) {
+                listContainer.innerHTML = '';
+                labels.forEach((label, idx) => {
+                    const val = dataVals[idx];
+                    const pct = total > 0 ? ((val / total) * 100) : 0;
+                    const color = activeColors[idx];
+
+                    const item = document.createElement('div');
+                    item.className = "flex items-center gap-2.5";
+
+                    item.innerHTML = `
+                        <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: ${color}"></span>
+                        
+                        <div class="w-full bg-gray-200 rounded h-6 relative overflow-hidden border border-gray-300 shadow-sm">
+                            <div class="h-full rounded transition-all duration-500" style="width: ${pct.toFixed(1)}%; background-color: ${color}"></div>
+                            
+                            <div class="absolute inset-0 flex justify-between items-center px-3 pointer-events-none text-white text-xs font-extrabold" style="text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);">
+                                <span>${label}</span>
+                                <span>${pct.toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
+        }
+
+        function renderDoughnutChart(labels, dataVals, activeColors, total) {
+            const canvas = document.getElementById('allocationChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (allocationChartInstance) {
+                allocationChartInstance.destroy();
+            }
+
+            allocationChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataVals,
+                        backgroundColor: activeColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }, 
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw || 0;
+                                    const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    const code = context.label;
+                                    const nameText = stockNames[code] ? ` (${stockNames[code]})` : '';
+                                    return ` ${code}${nameText}: NT$ ${value.toLocaleString()} (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 7. EXCEL 匯出備份 (使用 SheetJS 活頁簿格式) ---
+        window.exportData = function() {
+            try {
+                if (typeof XLSX === 'undefined') {
+                    alert("Excel 處理函式庫載入失敗，請確認您的網路連線。");
+                    return;
+                }
+
+                const wb = XLSX.utils.book_new();
+
+                // Sheet 1: 交易紀錄
+                const txData = transactions.map(tx => ({
+                    "ID": tx.id || "",
+                    "日期": tx.date || "",
+                    "類型": tx.type || "",
+                    "股票代號": tx.symbol || "",
+                    "單價_金額": Number(tx.price) || 0,
+                    "數量": Number(tx.quantity) || 0,
+                    "手續費": Number(tx.fee) || 0,
+                    "交易稅": Number(tx.tax) || 0
+                }));
+                const wsTx = XLSX.utils.json_to_sheet(txData);
+                XLSX.utils.book_append_sheet(wb, wsTx, "交易紀錄");
+
+                // Sheet 2: 目前市價
+                const priceData = Object.keys(currentPrices).map(sym => ({
+                    "股票代號": sym,
+                    "目前市價": Number(currentPrices[sym]) || 0
+                }));
+                const wsPrice = XLSX.utils.json_to_sheet(priceData);
+                XLSX.utils.book_append_sheet(wb, wsPrice, "目前市價");
+
+                // Sheet 3: 自訂中文名稱
+                const nameData = Object.keys(stockNames).map(sym => ({
+                    "股票代號": sym,
+                    "中文名稱": stockNames[sym] || ""
+                }));
+                const wsName = XLSX.utils.json_to_sheet(nameData);
+                XLSX.utils.book_append_sheet(wb, wsName, "自訂中文名稱");
+
+                // Sheet 4: 歷史收盤價庫
+                const histData = [];
+                Object.keys(historicalPrices).forEach(date => {
+                    Object.keys(historicalPrices[date]).forEach(sym => {
+                        histData.push({
+                            "日期": date,
+                            "股票代號": sym,
+                            "收盤價": Number(historicalPrices[date][sym]) || 0
+                        });
+                    });
+                });
+                const wsHist = XLSX.utils.json_to_sheet(histData);
+                XLSX.utils.book_append_sheet(wb, wsHist, "歷史收盤價庫");
+
+                const filename = "stock_backup_" + new Date().toISOString().split('T')[0] + ".xlsx";
+                XLSX.writeFile(wb, filename);
+
+            } catch (err) {
+                alert("匯出 Excel 備份失敗：" + err.message);
+            }
+        };
+
+        // --- 7.1 EXCEL 匯入備份 ---
+        window.importData = function(event) {
+            try {
+                if (typeof XLSX === 'undefined') {
+                    alert("Excel 處理函式庫載入失敗，請確認您的網路連線。");
+                    return;
+                }
+
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+
+                        const wsTx = workbook.Sheets["交易紀錄"];
+                        if (!wsTx) {
+                            alert("匯入失敗：Excel 檔案結構不符，找不到「交易紀錄」工作表。");
+                            return;
+                        }
+
+                        const rawTx = XLSX.utils.sheet_to_json(wsTx);
+                        const importedTx = rawTx.map(row => ({
+                            id: String(row["ID"] || row["id"] || Date.now().toString() + Math.random()),
+                            date: String(row["日期"] || row["date"] || ""),
+                            type: String(row["類型"] || row["type"] || ""),
+                            symbol: String(row["股票代號"] || row["symbol"] || ""),
+                            price: parseFloat(row["單價_金額"] || row["price"]) || 0,
+                            quantity: parseInt(row["數量"] || row["quantity"]) || 0,
+                            fee: parseFloat(row["手續費"] || row["fee"]) || 0,
+                            tax: parseFloat(row["交易稅"] || row["tax"]) || 0
+                        }));
+
+                        const wsPrice = workbook.Sheets["目前市價"];
+                        const importedCurrentPrices = {};
+                        if (wsPrice) {
+                            const rawPrice = XLSX.utils.sheet_to_json(wsPrice);
+                            rawPrice.forEach(row => {
+                                const sym = String(row["股票代號"] || row["symbol"] || "").trim();
+                                const price = parseFloat(row["目前市價"] || row["price"]) || 0;
+                                if (sym) importedCurrentPrices[sym] = price;
+                            });
+                        }
+
+                        const wsName = workbook.Sheets["自訂中文名稱"];
+                        const importedStockNames = {};
+                        if (wsName) {
+                            const rawName = XLSX.utils.sheet_to_json(wsName);
+                            rawName.forEach(row => {
+                                const sym = String(row["股票代號"] || row["symbol"] || "").trim();
+                                const name = String(row["中文名稱"] || row["name"] || "").trim();
+                                if (sym) importedStockNames[sym] = name;
+                            });
+                        }
+
+                        const wsHist = workbook.Sheets["歷史收盤價庫"];
+                        const importedHistoricalPrices = {};
+                        if (wsHist) {
+                            const rawHist = XLSX.utils.sheet_to_json(wsHist);
+                            rawHist.forEach(row => {
+                                const date = String(row["日期"] || row["date"] || "").trim();
+                                const sym = String(row["股票代號"] || row["symbol"] || "").trim();
+                                const price = parseFloat(row["收盤價"] || row["price"]) || 0;
+                                if (date && sym) {
+                                    if (!importedHistoricalPrices[date]) {
+                                        importedHistoricalPrices[date] = {};
+                                    }
+                                    importedHistoricalPrices[date][sym] = price;
+                                }
+                            });
+                        }
+
+                        transactions = importedTx.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+                        currentPrices = importedCurrentPrices;
+                        stockNames = { ...defaultNames, ...importedStockNames };
+                        historicalPrices = importedHistoricalPrices;
+
+                        localStorage.setItem('stock_v6_tx', JSON.stringify(transactions));
+                        localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
+                        localStorage.setItem('stock_v6_names', JSON.stringify(stockNames));
+                        localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
+
+                        render();
+                        alert("Excel 備份資料匯入成功！");
+                        event.target.value = ""; 
+
+                    } catch (err) {
+                        alert("讀取 Excel 內容時發生錯誤：" + err.message);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+
+            } catch (err) {
+                alert("匯入 Excel 失敗：" + err.message);
+            }
+        };
+
+        // 重設
+        window.clearAllData = function() {
+            if (confirm("確定要重設所有資料嗎？這將刪除所有交易紀錄且無法復原！")) {
+                localStorage.clear();
+                transactions = [];
+                currentPrices = {};
+                stockNames = { ...defaultNames };
+                historicalPrices = {};
+                render();
+                alert("資料已全部重設。");
+            }
+        };
+
+        // --- 首次啟動與背景執行配置 ---
+        toggleFormFields();
+        initDefaultHistoryRange(currentHistoryScale); 
+        initTargetLinePersistence(); // 在最開始載入本地記憶快取
+        render();
+    </script>
+</body>
+</html>
