@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>股票交易與資產管理系統</title>
     <!-- Tailwind CSS (排版) -->
-    <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js (圖表) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 md:p-6 text-sm text-gray-800">
 
@@ -623,7 +623,6 @@
         async function fetchSingleYahooPrice(symbol) {
             const suffixes = ['.TW', '.TWO'];
             
-            // 多重公用 Proxy 列表，當第一個 Proxy 被封鎖或失效時，會自動切換至第二個
             const proxies = [
                 (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
                 (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
@@ -672,7 +671,6 @@
                 historicalPrices[today] = {};
             }
 
-            // 同時產生多組可能的前綴，100% 覆蓋 TradingView 內部不同資料庫的分類定義
             const symbolQueries = [];
             for (let i = 0; i < activeSymbols.length; i++) {
                 const sym = activeSymbols[i];
@@ -700,7 +698,6 @@
             const tvUpdatedSymbols = new Set();
             let successFetch = false;
 
-            // 1. 第一階段：嘗試 TradingView 多重格式查詢
             for (let k = 0; k < tryUrls.length; k++) {
                 if (successFetch) break;
                 try {
@@ -739,7 +736,6 @@
                 }
             }
 
-            // 2. 第二階段：若有未取回價格之個股，自動使用多重代理連線至 Yahoo 財經補足
             const missingSymbols = activeSymbols.filter(sym => !tvUpdatedSymbols.has(sym));
             let yahooUpdatedCount = 0;
 
