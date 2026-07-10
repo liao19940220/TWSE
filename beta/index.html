@@ -244,33 +244,33 @@
                 </div>
             </div>
 
-            <!-- 配置比重對照看板 (5:2:5 黃金比例，中央放置統一色標代號說明) -->
-            <div class="bg-gray-50 p-2 md:p-4 rounded-lg border border-gray-200 space-y-4">
+            <!-- 配置比重對照看板 -->
+            <div class="bg-gray-50 p-4 md:p-6 rounded-lg border border-gray-200 space-y-4">
                 <div>
-                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">實時資產配置比重 (含現金)</h3>
-                    <p class="text-[10px] md:text-[11px] text-gray-400">雙圖表連動：左側圓餅結構，右欄為佔比(%)長條圖，中間為兩圖共用的資產代號顏色對照欄。</p>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">實時資產配置比重 (含現金)</h3>
+                    <p class="text-[10px] md:text-[11px] text-gray-400">圓餅圖與右側進度條完美連動，中置文字呈現看盤規格質感。</p>
                 </div>
-                <!-- 5:2:5 格線劃分 -->
-                <div class="grid grid-cols-12 gap-2 md:gap-4 items-center">
+                
+                <div class="grid grid-cols-12 gap-3 md:gap-6 items-center">
                     <!-- 左欄：比例圓餅圖 (佔 5/12 寬) -->
-                    <div class="col-span-5 text-center">
-                        <span class="text-[9px] md:text-xs font-semibold text-gray-600 block mb-1">比例結構圓餅圖</span>
-                        <div class="relative w-full h-[190px] sm:h-[240px] md:h-[300px]">
+                    <div class="col-span-12 md:col-span-5 flex flex-col items-center justify-center relative">
+                        <div class="relative w-[170px] h-[170px] sm:w-[190px] sm:h-[190px] flex items-center justify-center">
                             <canvas id="allocationChart"></canvas>
+                            <!-- 圓餅圖正中央 "資產配置" 置中文字 -->
+                            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span class="text-[11px] md:text-xs font-bold text-gray-400 tracking-wider">資產</span>
+                                <span class="text-[11px] md:text-xs font-bold text-gray-400 tracking-wider">配置</span>
+                            </div>
                         </div>
                     </div>
-                    <!-- 中欄：統一顏色代號說明欄 (佔 2/12 寬) -->
-                    <div class="col-span-2 flex flex-col justify-center items-center py-2 self-center border-l border-r border-gray-200 h-full">
-                        <span class="text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 whitespace-nowrap">資產代號</span>
-                        <div id="unifiedLegend" class="flex flex-col gap-1.5 overflow-y-auto max-h-[170px] sm:max-h-[220px] md:max-h-[280px] w-full items-start px-1.5">
-                            <!-- 由 JS 動態生成色塊與股票代碼 -->
-                        </div>
-                    </div>
-                    <!-- 右欄：橫向長條圖 (佔 5/12 寬) -->
-                    <div class="col-span-5 text-center">
-                        <span class="text-[9px] md:text-xs font-semibold text-gray-600 block mb-1">佔比(%)長條圖</span>
-                        <div class="relative w-full h-[190px] sm:h-[240px] md:h-[300px]">
-                            <canvas id="barChart"></canvas>
+                    
+                    <!-- 右欄：市值與代碼配置清單進度條 (佔 7/12 寬) -->
+                    <div class="col-span-12 md:col-span-7 space-y-2">
+                        <!-- 對比標頭 -->
+                        <div class="text-[10px] md:text-xs font-bold text-gray-400 border-b pb-1.5">實時配置佔比</div>
+                        <!-- 進度條列表容器 (JS 將動態注入進度條) -->
+                        <div id="allocationListContainer" class="space-y-3 pt-2">
+                            <!-- JS 動態生成 -->
                         </div>
                     </div>
                 </div>
@@ -381,7 +381,6 @@
         let activeTab = 'main';
         let assetChartInstance = null;
         let allocationChartInstance = null; // 圓餅圖實體
-        let barChartInstance = null;        // 長條圖實體
         let currentChartScale = 'daily'; // 將「日」設為預設尺度
 
         // 預設日期安全設定與【限制不能大於當天】
@@ -1334,7 +1333,7 @@
             });
         }
 
-        // --- 6.1 實時資產分配圖表連動 (圓餅圖 + 橫向長條圖，顏色與字型大小優化) ---
+        // --- 6.1 實時資產分配圖表連動 (圓餅圖 + 橫向長條圖) ---
         function renderAllocationCharts() {
             // 本地重現與計算最新的資產配置狀態
             let cash = 0;
@@ -1372,7 +1371,7 @@
             const labels = [];
             const dataVals = [];
             const backgroundColors = [
-                '#3B82F6', // CASH (藍色)
+                '#3B82F6', // 現金 (藍色)
                 '#F59E0B', // 第一檔
                 '#EC4899', // 第二檔
                 '#8B5CF6', // 第三檔
@@ -1384,12 +1383,12 @@
                 '#9CA3AF'  // 其他
             ];
 
-            // 1. 現金代號
+            // 1. 現金代號 (已依要求從 CASH 改成 現金)
             if (cash > 0) {
-                labels.push('CASH');
+                labels.push('現金');
                 dataVals.push(cash);
             } else if (cash < 0) {
-                labels.push('CASH');
+                labels.push('現金');
                 dataVals.push(0);
             }
 
@@ -1432,8 +1431,39 @@
 
             // 渲染圓餅圖
             renderDoughnutChart(labels, dataVals, activeColors, total);
-            // 渲染橫向長條圖 (X 軸轉換為百分比數據)
-            renderHorizontalBarChart(labels, dataVals, activeColors, total);
+
+            // 修正：動態產生右側比例進度條 (代碼與%皆融入長條圖上)
+            const listContainer = document.getElementById('allocationListContainer');
+            if (listContainer) {
+                listContainer.innerHTML = '';
+                labels.forEach((label, idx) => {
+                    const val = dataVals[idx];
+                    const pct = total > 0 ? ((val / total) * 100) : 0;
+                    const color = activeColors[idx];
+
+                    // 建立一行，左側為色點，右側為內嵌「代號(左) 與 比例(右)」的質感進度條
+                    const item = document.createElement('div');
+                    item.className = "flex items-center gap-2.5";
+
+                    item.innerHTML = `
+                        <!-- 左側：同步色點指示器 -->
+                        <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: ${color}"></span>
+                        
+                        <!-- 右側：內嵌文字雙向定位進度條 -->
+                        <div class="w-full bg-gray-200 rounded h-6 relative overflow-hidden border border-gray-300 shadow-sm">
+                            <!-- 彩色進度條主體 -->
+                            <div class="h-full rounded transition-all duration-500" style="width: ${pct.toFixed(1)}%; background-color: ${color}"></div>
+                            
+                            <!-- 雙向疊加文字：代碼(左) / 比例(右) 搭配高對比實心邊框與陰影 (提昇文字清晰度) -->
+                            <div class="absolute inset-0 flex justify-between items-center px-3 pointer-events-none text-white text-xs font-extrabold" style="text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);">
+                                <span>${label}</span>
+                                <span>${pct.toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
         }
 
         // 繪製圓餅圖 (已將內建 legend 隱藏)
@@ -1460,7 +1490,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }, // 隱藏內建圖例，使用中央 HTML 色標欄
+                        legend: { display: false }, // 隱藏內建圖例
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -1470,67 +1500,6 @@
                                     const nameText = stockNames[code] ? ` (${stockNames[code]})` : '';
                                     return ` ${code}${nameText}: NT$ ${value.toLocaleString()} (${pct}%)`;
                                 }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // 繪製橫向長條圖 (將數值自動轉換成 "%" 呈現)
-        function renderHorizontalBarChart(labels, dataVals, activeColors, total) {
-            const canvas = document.getElementById('barChart');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-
-            if (barChartInstance) {
-                barChartInstance.destroy();
-            }
-
-            // 將原本的絕對市值轉換成百分比陣列
-            const pctDataVals = dataVals.map(val => total > 0 ? ((val / total) * 100) : 0);
-
-            barChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: pctDataVals, // 傳入佔比數據
-                        backgroundColor: activeColors, 
-                        borderWidth: 1,
-                        barThickness: 12               
-                    }]
-                },
-                options: {
-                    indexAxis: 'y', // 設定為橫向
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }, // 隱藏內建圖例
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const pctVal = context.raw || 0;
-                                    const code = context.label;
-                                    const nameText = stockNames[code] ? ` (${stockNames[code]})` : '';
-                                    return ` ${code}${nameText}: 佔比 ${pctVal.toFixed(1)}%`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: {
-                                font: { size: 8 }, 
-                                callback: function(value) {
-                                    return value + '%'; // 刻度一律顯示為百分比
-                                }
-                            },
-                            max: 100 // 最大鎖定 100%
-                        },
-                        y: {
-                            ticks: {
-                                font: { size: 8 } 
                             }
                         }
                     }
