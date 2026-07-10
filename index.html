@@ -244,7 +244,7 @@
                 </div>
             </div>
 
-            <!-- 配置比重對照看板 (淺色主題，精簡文字與移除多餘欄位) -->
+            <!-- 配置比重對照看板 -->
             <div class="bg-gray-50 p-4 md:p-6 rounded-lg border border-gray-200 space-y-4">
                 <div>
                     <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">資產配置比 (含現金)</h3>
@@ -279,16 +279,28 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3">
                 <div>
                     <h2 class="text-base md:text-lg font-semibold text-gray-700">歷史交易紀錄</h2>
-                    <p class="text-[10px] md:text-xs text-gray-400 mt-0.5">預設顯示本週（週一至週五）明細，可使用右側欄位進行篩選或直接搜尋代號、中文簡稱。</p>
+                    <p class="text-[10px] md:text-xs text-gray-400 mt-0.5">預設顯示日區間（最近5天），可使用尺度切換或自訂日期篩選。</p>
                 </div>
                 
-                <!-- 交易歷史時間篩選與關鍵字搜尋 -->
-                <div class="flex flex-wrap items-center gap-1.5 text-[11px] md:text-xs text-gray-600">
-                    <input type="text" id="historySearch" oninput="renderHistory()" placeholder="搜尋股票代號 / 中文名稱..." class="border rounded p-1 w-32 md:w-44 text-xs">
-                    <input type="date" id="historyStartDate" onchange="renderHistory()" class="border rounded p-1">
-                    <span>至</span>
-                    <input type="date" id="historyEndDate" onchange="renderHistory()" class="border rounded p-1">
-                    <button onclick="resetHistoryRange()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded border transition text-[10px]">本週 (週一至五)</button>
+                <!-- 交易歷史時間篩選與關鍵字搜尋 (比照資產統計結構優化) -->
+                <div class="flex flex-wrap items-center gap-2.5 text-[11px] md:text-xs text-gray-600">
+                    <!-- 統計尺度篩選面板 (日、周、月、年) -->
+                    <div class="flex bg-gray-100 rounded p-0.5 gap-0.5 text-[11px] md:text-xs">
+                        <button id="btn-hist-daily" onclick="changeHistoryScale('daily', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">日</button>
+                        <button id="btn-hist-weekly" onclick="changeHistoryScale('weekly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">周</button>
+                        <button id="btn-hist-monthly" onclick="changeHistoryScale('monthly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">月</button>
+                        <button id="btn-hist-yearly" onclick="changeHistoryScale('yearly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">年</button>
+                    </div>
+
+                    <!-- 即時文字搜尋框 -->
+                    <input type="text" id="historySearch" oninput="renderHistory()" placeholder="搜尋股票代號 / 中文名稱..." class="border rounded p-1 w-28 md:w-36 text-xs">
+                    
+                    <!-- 日期區間顯示 -->
+                    <div class="flex items-center gap-1.5 text-[11px] md:text-xs text-gray-600">
+                        <input type="date" id="historyStartDate" onchange="renderHistory()" class="border rounded p-1">
+                        <span>至</span>
+                        <input type="date" id="historyEndDate" onchange="renderHistory()" class="border rounded p-1">
+                    </div>
                 </div>
             </div>
 
@@ -379,6 +391,7 @@
         let assetChartInstance = null;
         let allocationChartInstance = null; // 圓餅圖實體
         let currentChartScale = 'daily'; // 將「日」設為預設尺度
+        let currentHistoryScale = 'daily'; // 交易明細預設也設為「日」
 
         // 預設日期安全設定與【限制不能大於當天】
         const todayStr = new Date().toISOString().split('T')[0];
@@ -962,38 +975,67 @@
             localStorage.setItem('stock_v6_tx', JSON.stringify(transactions));
         }
 
-        // 本週週一至週五智慧計算
-        function initDefaultHistoryRange() {
+        // 歷史明細時間軸區間核心計算 (日->5天, 周->28天, 月->180天, 年->3年)
+        function initDefaultHistoryRange(scale) {
             const today = new Date();
-            const dayOfWeek = today.getDay(); // 0: 日, 1: 一, ..., 6: 六
-            const offsetToMonday = (dayOfWeek === 0) ? -6 : 1 - dayOfWeek;
-            
-            const monday = new Date(today);
-            monday.setDate(today.getDate() + offsetToMonday);
-            
-            const friday = new Date(monday);
-            friday.setDate(monday.getDate() + 4);
+            let start = new Date();
 
-            const mondayStr = monday.toISOString().split('T')[0];
-            const fridayStr = friday.toISOString().split('T')[0];
+            if (scale === 'daily') {
+                start.setDate(today.getDate() - 5);  // 5天
+            } else if (scale === 'weekly') {
+                start.setDate(today.getDate() - 28); // 4周 (28天)
+            } else if (scale === 'monthly') {
+                start.setMonth(today.getMonth() - 6); // 6個月
+            } else if (scale === 'yearly') {
+                start.setFullYear(today.getFullYear() - 3); // 3年
+            }
+
+            const startStr = start.toISOString().split('T')[0];
+            const todayStr = today.toISOString().split('T')[0];
 
             const histStartEl = document.getElementById('historyStartDate');
             const histEndEl = document.getElementById('historyEndDate');
 
             if (histStartEl && histEndEl) {
-                histStartEl.value = mondayStr;
-                histEndEl.value = fridayStr;
-                
-                histStartEl.removeAttribute('max');
-                histEndEl.removeAttribute('max');
+                histStartEl.value = startStr;
+                histEndEl.value = todayStr;
+                histStartEl.max = todayStr;
+                histEndEl.max = todayStr;
             }
         }
 
+        // 修改交易歷史統計尺度 (日/周/月/年)
+        window.changeHistoryScale = function(scale, btnElement) {
+            currentHistoryScale = scale;
+            
+            document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
+                btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+            });
+            if (btnElement) {
+                btnElement.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+            }
+
+            initDefaultHistoryRange(scale);
+            renderHistory();
+        };
+
         window.resetHistoryRange = function() {
-            initDefaultHistoryRange();
+            currentHistoryScale = 'daily';
+            initDefaultHistoryRange('daily');
+            
             if (document.getElementById('historySearch')) {
                 document.getElementById('historySearch').value = '';
             }
+
+            // 更新預設按鈕色彩狀態
+            const currentBtn = document.getElementById('btn-hist-daily');
+            if (currentBtn) {
+                document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
+                    btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+                });
+                currentBtn.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+            }
+
             renderHistory();
         };
 
@@ -1177,7 +1219,17 @@
                 renderChart();
                 renderAllocationCharts(); // 連動渲染圓餅圖與長條圖
             } else if (tab === 'history') {
-                initDefaultHistoryRange();
+                // 套用明細目前的尺度範圍
+                initDefaultHistoryRange(currentHistoryScale);
+                
+                // 同步歷史明細尺度按鈕的亮起顏色
+                const currentBtn = document.getElementById(`btn-hist-${currentHistoryScale}`);
+                if (currentBtn) {
+                    document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
+                        btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+                    });
+                    currentBtn.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+                }
                 renderHistory();
             }
         };
@@ -1410,6 +1462,22 @@
 
             const activeColors = backgroundColors.slice(0, labels.length);
 
+            // 渲染中央 HTML 統一顏色對照標籤
+            const legendContainer = document.getElementById('unifiedLegend');
+            if (legendContainer) {
+                legendContainer.innerHTML = '';
+                labels.forEach((label, idx) => {
+                    const color = activeColors[idx];
+                    const item = document.createElement('div');
+                    item.className = "flex items-center gap-1 w-full text-left";
+                    item.innerHTML = `
+                        <span class="w-2 h-2 rounded-full inline-block shrink-0" style="background-color: ${color}"></span>
+                        <span class="text-[9px] md:text-[11px] font-bold text-gray-700 truncate leading-none">${label}</span>
+                    `;
+                    legendContainer.appendChild(item);
+                });
+            }
+
             // 渲染圓餅圖
             renderDoughnutChart(labels, dataVals, activeColors, total);
 
@@ -1422,7 +1490,7 @@
                     const pct = total > 0 ? ((val / total) * 100) : 0;
                     const color = activeColors[idx];
 
-                    // 建立一行，左側為色點，右側為內嵌「代號(左) 與 比例(右)」的質感進度條
+                    // 建立一行，左側為色點，右側為內嵌「代號(左) 與 比例(right)」的質感進度條
                     const item = document.createElement('div');
                     item.className = "flex items-center gap-2.5";
 
@@ -1538,7 +1606,7 @@
 
         // --- 首次啟動與背景執行配置 ---
         toggleFormFields();
-        initDefaultHistoryRange();
+        initDefaultHistoryRange(currentHistoryScale); // 交易明細初始採用預設的「日」尺度 (最近5天)
         render();
     </script>
 </body>
