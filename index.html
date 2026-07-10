@@ -30,22 +30,26 @@
                 <h1 class="text-lg md:text-2xl font-bold text-gray-800">股票交易與資產管理系統</h1>
                 <p class="text-[11px] md:text-xs text-gray-400 mt-0.5">資料儲存於本地瀏覽器。建議定期備份以免資料遺失。</p>
             </div>
-            <!-- 備份功能 (已整合 ℹ️ 規則 複合按鈕) -->
-            <div class="flex flex-wrap gap-1.5 w-full md:w-auto items-center">
-                <button onclick="exportData()" class="flex-1 md:flex-initial bg-gray-500 hover:bg-gray-600 text-white text-[11px] md:text-xs px-2.5 py-1.5 rounded transition whitespace-nowrap">匯出 EXCEL 備份</button>
+            <!-- 備份功能 (手機自動切換雙欄，電腦版維持原配置) -->
+            <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full md:w-auto">
+                <button onclick="exportData()" class="text-center bg-gray-500 hover:bg-gray-600 text-white text-[11px] md:text-xs px-2.5 py-2 rounded transition whitespace-nowrap">
+                    匯出 EXCEL 備份
+                </button>
                 
-                <!-- 匯入與規則說明的複合按鈕組 -->
-                <div class="flex-1 md:flex-initial flex gap-px">
-                    <label class="flex-1 text-center bg-gray-500 hover:bg-gray-600 text-white text-[11px] md:text-xs px-2.5 py-1.5 rounded-l cursor-pointer transition whitespace-nowrap">
-                        匯入 EXCEL 備份
+                <!-- 匯入與規則說明的複合按鈕組 (高度完全統一且不折行) -->
+                <div class="flex rounded overflow-hidden">
+                    <label class="flex-1 text-center bg-gray-500 hover:bg-gray-600 text-white text-[11px] md:text-xs px-2.5 py-2 cursor-pointer transition whitespace-nowrap flex items-center justify-center">
+                        匯入 EXCEL
                         <input type="file" id="importFile" onchange="importData(event)" accept=".xlsx, .xls" class="hidden">
                     </label>
-                    <button onclick="openExcelHelpModal()" title="查看 Excel 編輯與匯入規則" class="bg-gray-600 hover:bg-gray-700 text-white text-[11px] md:text-xs px-2 py-1.5 rounded-r transition flex items-center justify-center font-bold">
+                    <button onclick="openExcelHelpModal()" title="查看 Excel 編輯與匯入規則" class="bg-gray-600 hover:bg-gray-700 text-white text-[10px] md:text-xs px-2.5 py-2 transition flex items-center justify-center font-bold whitespace-nowrap shrink-0 border-l border-gray-400">
                         ℹ️ 規則
                     </button>
                 </div>
 
-                <button onclick="clearAllData()" class="flex-1 md:flex-initial bg-red-500 hover:bg-red-600 text-white text-[11px] md:text-xs px-2.5 py-1.5 rounded transition whitespace-nowrap">重設</button>
+                <button onclick="clearAllData()" class="col-span-2 sm:col-span-1 text-center bg-red-500 hover:bg-red-600 text-white text-[11px] md:text-xs px-2.5 py-2 rounded transition whitespace-nowrap">
+                    重設
+                </button>
             </div>
         </header>
 
@@ -357,7 +361,7 @@
         </div>
     </div>
 
-    <!-- Excel 匯入說明燈箱 (Modal) (位置已優化並整合) -->
+    <!-- Excel 匯入說明燈箱 (Modal) -->
     <div id="excelHelpModal" style="display: none;" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg shadow-xl border max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
             <!-- 燈箱頭部 -->
@@ -648,8 +652,8 @@
                         return;
                     }
 
-                    const today = new Date().toISOString().split('T')[0];
-                    if (dateInput > today) {
+                    const Math_today = new Date().toISOString().split('T')[0];
+                    if (dateInput > Math_today) {
                         alert("交易日期不能大於今天！");
                         return;
                     }
@@ -721,8 +725,8 @@
                         return;
                     }
 
-                    const today = new Date().toISOString().split('T')[0];
-                    if (date > today) {
+                    const Math_today = new Date().toISOString().split('T')[0];
+                    if (date > Math_today) {
                         alert("補登日期不能大於今天！");
                         return;
                     }
@@ -739,7 +743,7 @@
                     historicalPrices[date][symbol] = priceVal;
                     localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
 
-                    if (date === today) {
+                    if (date === Math_today) {
                         currentPrices[symbol] = priceVal;
                         localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
                     }
@@ -770,11 +774,11 @@
             currentPrices[symbol] = price;
             localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
 
-            const today = new Date().toISOString().split('T')[0];
-            if (!historicalPrices[today]) {
-                historicalPrices[today] = {};
+            const Math_today = new Date().toISOString().split('T')[0];
+            if (!historicalPrices[Math_today]) {
+                historicalPrices[Math_today] = {};
             }
-            historicalPrices[today][symbol] = price;
+            historicalPrices[Math_today][symbol] = price;
             localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
 
             calculateAndRender();
@@ -827,9 +831,9 @@
             btn.innerText = "連線中...";
             status.innerText = "連線 TradingView 下載最新數據...";
 
-            const today = new Date().toISOString().split('T')[0];
-            if (!historicalPrices[today]) {
-                historicalPrices[today] = {};
+            const Math_today = new Date().toISOString().split('T')[0];
+            if (!historicalPrices[Math_today]) {
+                historicalPrices[Math_today] = {};
             }
 
             const symbolQueries = [];
@@ -884,7 +888,7 @@
                             const priceVal = parseFloat(item.d[2]);
                             if (!isNaN(priceVal) && priceVal > 0) {
                                 currentPrices[symCode] = priceVal;
-                                historicalPrices[today][symCode] = priceVal; 
+                                historicalPrices[Math_today][symCode] = priceVal; 
                                 tvUpdatedSymbols.add(symCode);
                             }
                         });
@@ -906,7 +910,7 @@
                     const price = await fetchSingleYahooPrice(sym);
                     if (price !== null) {
                         currentPrices[sym] = price;
-                        historicalPrices[today][sym] = price;
+                        historicalPrices[Math_today][sym] = price;
                         yahooUpdatedCount++;
                     }
                 });
@@ -1234,236 +1238,6 @@
             }
 
             renderHistory();
-        };
-
-        function render() {
-            renderHistory();
-            calculateAndRender();
-        }
-
-        // --- 4. 歷史重播與連續時間軸處理邏輯 ---
-
-        function calculateAssetOnSpecificDate(targetDate) {
-            let cash = 0;
-            let stockMarketValue = 0;
-            let totalUnrealizedPnl = 0;
-            const holdings = {};
-
-            const historicalTxs = transactions.filter(tx => tx.date <= targetDate);
-
-            historicalTxs.forEach(tx => {
-                const price = Number(tx.price) || 0;
-                const quantity = Number(tx.quantity) || 0;
-                const fee = Number(tx.fee) || 0;
-                const tax = Number(tx.tax) || 0;
-
-                if (tx.type === 'DEPOSIT') {
-                    cash += price;
-                } else if (tx.type === 'WITHDRAW') {
-                    cash -= price;
-                } else if (tx.type === 'BUY') {
-                    const totalCost = (price * quantity) + fee;
-                    cash -= totalCost;
-                    if (!holdings[tx.symbol]) holdings[tx.symbol] = { qty: 0, totalCost: 0, avgCost: 0 };
-                    holdings[tx.symbol].qty += quantity;
-                    holdings[tx.symbol].totalCost += totalCost;
-                    holdings[tx.symbol].avgCost = holdings[tx.symbol].qty > 0 ? (holdings[tx.symbol].totalCost / holdings[tx.symbol].qty) : 0;
-                } else if (tx.type === 'SELL') {
-                    const totalRevenue = (price * quantity) - fee - tax;
-                    cash += totalRevenue;
-                    const hold = holdings[tx.symbol];
-                    if (hold && hold.qty > 0) {
-                        hold.qty -= quantity;
-                        hold.totalCost = hold.qty * (hold.avgCost || 0);
-                    }
-                }
-            });
-
-            Object.keys(holdings).forEach(sym => {
-                const hold = holdings[sym];
-                if (hold.qty > 0) {
-                    let priceOnDate = 0;
-
-                    if (historicalPrices[targetDate] && historicalPrices[targetDate][sym] !== undefined) {
-                        priceOnDate = historicalPrices[targetDate][sym];
-                    } else {
-                        const symHistory = historicalTxs.filter(t => t.symbol === sym);
-                        const lastTxPrice = symHistory.length > 0 ? symHistory[symHistory.length - 1].price : 0;
-                        priceOnDate = lastTxPrice || hold.avgCost || 0;
-                    }
-
-                    const marketVal = hold.qty * priceOnDate;
-                    const costVal = hold.qty * (hold.avgCost || 0);
-
-                    stockMarketValue += marketVal;
-                    totalUnrealizedPnl += (marketVal - costVal);
-                }
-            });
-
-            return {
-                date: targetDate,
-                cash: cash,
-                stockValue: stockMarketValue,
-                unrealizedPnl: totalUnrealizedPnl,
-                totalAsset: cash + stockMarketValue
-            };
-        }
-
-        function generateDailyDates(startDate, endDate) {
-            const dates = [];
-            let curr = new Date(startDate);
-            const end = new Date(endDate);
-            while (curr <= end) {
-                dates.push(curr.toISOString().split('T')[0]);
-                curr.setDate(curr.getDate() + 1);
-            }
-            return dates;
-        }
-
-        function generateWeeklyDates(startDate, endDate) {
-            const dates = [];
-            let curr = new Date(startDate);
-            const end = new Date(endDate);
-            while (curr <= end) {
-                const day = curr.getDay(); 
-                if (day === 5) { 
-                    dates.push(curr.toISOString().split('T')[0]);
-                }
-                curr.setDate(curr.getDate() + 1);
-            }
-            const endStr = end.toISOString().split('T')[0];
-            if (dates.indexOf(endStr) === -1) {
-                dates.push(endStr);
-            }
-            return [...new Set(dates)].sort();
-        }
-
-        function generateMonthlyDates(startDate, endDate) {
-            const dates = [];
-            let curr = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-            const end = new Date(endDate);
-            while (curr <= end) {
-                const lastDay = new Date(curr.getFullYear(), curr.getMonth() + 1, 0);
-                if (lastDay >= startDate && lastDay <= end) {
-                    dates.push(lastDay.toISOString().split('T')[0]);
-                }
-                curr.setMonth(curr.getMonth() + 1);
-            }
-            const endStr = end.toISOString().split('T')[0];
-            if (dates.indexOf(endStr) === -1) {
-                dates.push(endStr);
-            }
-            return [...new Set(dates)].sort();
-        }
-
-        function generateYearlyDates(startDate, endDate) {
-            const dates = [];
-            let curr = new Date(startDate.getFullYear(), 0, 1);
-            const end = new Date(endDate);
-            while (curr <= end) {
-                const yearKey = curr.getFullYear();
-                const lastDayOfYear = yearKey + "-12-31";
-                if (new Date(lastDayOfYear) <= end) {
-                    dates.push(lastDayOfYear);
-                }
-                curr.setFullYear(curr.getFullYear() + 1);
-            }
-            const endStr = end.toISOString().split('T')[0];
-            if (dates.indexOf(endStr) === -1) {
-                dates.push(endStr);
-            }
-            return [...new Set(dates)].sort();
-        }
-
-        // --- 5. 分頁切換與尺度控制系統 ---
-
-        window.switchTab = function(tab) {
-            activeTab = tab;
-            const tabMain = document.getElementById('tab-main');
-            const tabChart = document.getElementById('tab-chart');
-            const tabHistory = document.getElementById('tab-history');
-
-            const tabMainBtn = document.getElementById('tab-main-btn');
-            const tabChartBtn = document.getElementById('tab-chart-btn');
-            const tabHistoryBtn = document.getElementById('tab-history-btn');
-
-            if (tabMain) tabMain.style.display = tab === 'main' ? 'block' : 'none';
-            if (tabChart) tabChart.style.display = tab === 'chart' ? 'block' : 'none';
-            if (tabHistory) tabHistory.style.display = tab === 'history' ? 'block' : 'none';
-
-            if (tabMainBtn) {
-                tabMainBtn.className = tab === 'main' 
-                    ? "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-blue-500 text-blue-600 font-semibold text-xs md:text-sm transition"
-                    : "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-xs md:text-sm transition";
-            }
-            if (tabChartBtn) {
-                tabChartBtn.className = tab === 'chart' 
-                    ? "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-blue-500 text-blue-600 font-semibold text-xs md:text-sm transition"
-                    : "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-xs md:text-sm transition";
-            }
-            if (tabHistoryBtn) {
-                tabHistoryBtn.className = tab === 'history' 
-                    ? "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-blue-500 text-blue-600 font-semibold text-xs md:text-sm transition"
-                    : "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-xs md:text-sm transition";
-            }
-
-            if (tab === 'chart') {
-                initDefaultChartRange(currentChartScale);
-                initTargetLinePersistence();
-                renderChart();
-                renderAllocationCharts(); 
-            } else if (tab === 'history') {
-                initDefaultHistoryRange(currentHistoryScale);
-                
-                const currentBtn = document.getElementById(`btn-hist-${currentHistoryScale}`);
-                if (currentBtn) {
-                    document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
-                        btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
-                    });
-                    currentBtn.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
-                }
-                renderHistory();
-            }
-        };
-
-        function initDefaultChartRange(scale) {
-            const Math_today = new Date();
-            let start = new Date();
-
-            if (scale === 'weekly') {
-                start.setDate(Math_today.getDate() - 28); 
-            } else if (scale === 'daily') {
-                start.setDate(Math_today.getDate() - 5);  
-            } else if (scale === 'monthly') {
-                start.setMonth(Math_today.getMonth() - 6); 
-            } else if (scale === 'yearly') {
-                start.setFullYear(Math_today.getFullYear() - 3); 
-            }
-
-            document.getElementById('chartStartDate').value = start.toISOString().split('T')[0];
-            document.getElementById('chartEndDate').value = Math_today.toISOString().split('T')[0];
-
-            const todayStr = Math_today.toISOString().split('T')[0];
-            document.getElementById('chartStartDate').max = todayStr;
-            document.getElementById('chartEndDate').max = todayStr;
-        }
-
-        window.changeChartScale = function(scale, btnElement) {
-            currentChartScale = scale;
-            
-            document.querySelectorAll('#btn-scale-weekly, #btn-scale-daily, #btn-scale-monthly, #btn-scale-yearly').forEach(btn => {
-                btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
-            });
-            if (btnElement) {
-                btnElement.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
-            }
-
-            initDefaultChartRange(scale);
-            renderChart();
-        };
-
-        window.onCustomRangeChange = function() {
-            renderChart();
         };
 
         // --- 5.1 對照基準線狀態讀取與記憶機制 ---
