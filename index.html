@@ -134,6 +134,7 @@
                         <div>
                             <div class="text-xs text-gray-400">目前帳戶現金</div>
                             <div class="text-xl font-bold text-gray-800" id="currentCash">NT$ 0</div>
+                            <div id="cashAlert"></div>
                         </div>
                         <div>
                             <div class="text-xs text-gray-400">持股市值</div>
@@ -157,7 +158,7 @@
                                 <button id="fetchPriceBtn" onclick="fetchTwsePrices()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] py-1 px-2.5 rounded transition">
                                     更新今日收盤價
                                 </button>
-                                <span id="apiStatus" class="text-[10px] text-gray-400">尚未更新</span>
+                                <span id="apiStatus" class="text-[10px] text-gray-400">名稱自動更新中...</span>
                             </div>
                         </div>
                         <!-- RWD 手機滑動包裹器 -->
@@ -166,11 +167,11 @@
                                 <thead class="bg-gray-50">
                                     <tr>
                                         <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">代號 / 名稱</th>
-                                        <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">持股 %</th>
+                                        <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">總資產佔比 %</th>
                                         <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">持股數</th>
                                         <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">平均成本</th>
                                         <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap w-24">目前市價</th>
-                                        <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">未實現損益</th>
+                                        <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">未實現損益 (報酬率)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="holdingsTable" class="divide-y divide-gray-200">
@@ -178,6 +179,32 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- 常駐資產警示色彩說明看板 -->
+                        <div class="mt-4 p-3 bg-gray-50 rounded border border-gray-200 text-xs space-y-1.5">
+                            <div class="font-semibold text-gray-700 flex items-center gap-1">
+                                <span>⚠️ 庫存與資產配置警示說明：</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-gray-600">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-3 h-3 bg-amber-500 rounded-full inline-block"></span>
+                                    <span>單一持股 > 30%：<strong class="text-amber-600 font-semibold">集中度警告</strong></span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-3 h-3 bg-emerald-100 border border-emerald-300 rounded inline-block"></span>
+                                    <span>個股虧損 > 15%：<strong class="text-emerald-800 font-semibold">停損提醒</strong></span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-3 h-3 bg-rose-100 border border-rose-300 rounded inline-block"></span>
+                                    <span>個股獲利 > 50%：<strong class="text-rose-700 font-semibold">檢視是否停利</strong></span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-3 h-3 bg-blue-50 border border-blue-200 rounded inline-block"></span>
+                                    <span>現金比例 > 50%：<strong class="text-blue-600 font-semibold">資金運用建議</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -191,7 +218,8 @@
                 <!-- 控制面板 -->
                 <div class="flex flex-wrap items-center gap-2.5">
                     <div class="flex bg-gray-100 rounded p-0.5 gap-0.5 text-[11px] md:text-xs">
-                        <button id="btn-scale-daily" onclick="changeChartScale('daily', this)" class="px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm">每日</button>
+                        <button id="btn-scale-weekly" onclick="changeChartScale('weekly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">每週</button>
+                        <button id="btn-scale-daily" onclick="changeChartScale('daily', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">每日</button>
                         <button id="btn-scale-monthly" onclick="changeChartScale('monthly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">每月</button>
                         <button id="btn-scale-yearly" onclick="changeChartScale('yearly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">每年</button>
                     </div>
@@ -216,11 +244,12 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3">
                 <div>
                     <h2 class="text-base md:text-lg font-semibold text-gray-700">歷史交易紀錄</h2>
-                    <p class="text-[10px] md:text-xs text-gray-400 mt-0.5">預設顯示本週（週一至週五）明細，可使用右側自訂挑選時間區間。</p>
+                    <p class="text-[10px] md:text-xs text-gray-400 mt-0.5">預設顯示本週（週一至週五）明細，可使用右側欄位進行篩選或直接搜尋代號、中文簡稱。</p>
                 </div>
                 
-                <!-- 交易歷史時間篩選 -->
-                <div class="flex items-center gap-1.5 text-[11px] md:text-xs text-gray-600">
+                <!-- 交易歷史時間篩選與關鍵字搜尋 -->
+                <div class="flex flex-wrap items-center gap-1.5 text-[11px] md:text-xs text-gray-600">
+                    <input type="text" id="historySearch" oninput="renderHistory()" placeholder="搜尋股票代號 / 中文名稱..." class="border rounded p-1 w-32 md:w-44 text-xs">
                     <input type="date" id="historyStartDate" onchange="renderHistory()" class="border rounded p-1">
                     <span>至</span>
                     <input type="date" id="historyEndDate" onchange="renderHistory()" class="border rounded p-1">
@@ -313,7 +342,7 @@
         
         let activeTab = 'main';
         let assetChartInstance = null;
-        let currentChartScale = 'daily'; 
+        let currentChartScale = 'weekly'; // 將每週設為預設尺度
 
         // 預設日期安全設定與【限制不能大於當天】
         const todayStr = new Date().toISOString().split('T')[0];
@@ -542,6 +571,67 @@
             calculateAndRender();
         };
 
+        // --- 【上市與上櫃股票名稱 API 串接實作 (背景自動執行)】 ---
+        window.fetchStockNamesFromTwse = async function() {
+            const status = document.getElementById('apiStatus');
+            if (status) status.innerText = "基本資料自動更新中...";
+
+            const urls = [
+                "https://openapi.twse.com.tw/v1/opendata/t187ap02_L",
+                "https://openapi.twse.com.tw/v1/opendata/t187ap02_OTC"
+            ];
+
+            let updatedCount = 0;
+
+            for (const url of urls) {
+                let success = false;
+                const tryUrls = [
+                    url,
+                    "https://corsproxy.io/?" + encodeURIComponent(url)
+                ];
+
+                for (const fetchUrl of tryUrls) {
+                    if (success) break;
+                    try {
+                        const response = await fetch(fetchUrl);
+                        if (!response.ok) continue;
+
+                        const data = await response.json();
+                        if (Array.isArray(data)) {
+                            data.forEach(item => {
+                                const code = item["公司代號"] || item["SecuritiesCode"];
+                                const name = item["公司簡稱"] || item["SecuritiesName"];
+
+                                if (code && name) {
+                                    const trimmedCode = code.trim();
+                                    const trimmedName = name.trim();
+                                    if (trimmedCode && trimmedName) {
+                                        stockNames[trimmedCode] = trimmedName;
+                                        updatedCount++;
+                                    }
+                                }
+                            });
+                            success = true;
+                        }
+                    } catch (err) {
+                        console.warn(`無法自 ${fetchUrl} 下載名稱，準備嘗試備用方案...`);
+                    }
+                }
+            }
+
+            if (updatedCount > 0) {
+                localStorage.setItem('stock_v6_names', JSON.stringify(stockNames));
+                calculateAndRender();
+                if (status) {
+                    status.innerText = `已自動更新 ${updatedCount} 檔股票名稱`;
+                }
+            } else {
+                if (status) {
+                    status.innerText = "已載入本地快取資料";
+                }
+            }
+        };
+
         // --- 【TradingView 批次掃描 API 直連】 ---
         window.fetchTwsePrices = async function() {
             const btn = document.getElementById('fetchPriceBtn');
@@ -618,9 +708,9 @@
                                 updatedCount++;
                             }
 
-                            // 【大優化】同步存檔 TradingView 標準中文簡稱 (item.d[1])
+                            // 若本機尚未有該股中文簡稱，才以 TradingView 名稱作低優先級填補
                             const rawName = item.d[1];
-                            if (rawName) {
+                            if (rawName && !stockNames[symCode]) {
                                 stockNames[symCode] = rawName.trim();
                             }
                         });
@@ -656,7 +746,7 @@
             return Object.keys(holdings).filter(sym => holdings[sym] > 0);
         }
 
-        // --- 3. 核心庫存與已實現/未實現計算 (整合手續費及稅金邏輯) ---
+        // --- 3. 核心庫存與已實現/未實現計算 (整合手續費、稅金與資產警示邏輯) ---
         function calculateAndRender() {
             let cash = 0;
             let stockMarketValue = 0;
@@ -698,20 +788,30 @@
                 }
             });
 
-            // 2. 第二階段：雙循環設計以精確計算「持股 %」
-            let activeHoldingsMarketSum = 0; 
-
+            // 1.5 預先計算持股市值，以便取得正確的總資產配置數據
             Object.keys(holdings).forEach(sym => {
                 const hold = holdings[sym];
                 if (hold.qty > 0) {
                     const currentPrice = Number(currentPrices[sym]) || 0;
                     if (currentPrice > 0) {
-                        activeHoldingsMarketSum += hold.qty * currentPrice;
+                        stockMarketValue += hold.qty * currentPrice;
                     }
                 }
             });
 
-            // 3. 第三階段：渲染庫存表格
+            const totalAsset = cash + stockMarketValue;
+
+            // 現金佔比 > 50% 警示燈號
+            const elCashAlert = document.getElementById('cashAlert');
+            if (elCashAlert) {
+                if (totalAsset > 0 && (cash / totalAsset) > 0.5) {
+                    elCashAlert.innerHTML = '<span class="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 font-semibold inline-block mt-1 animate-pulse">💡 資金運用建議</span>';
+                } else {
+                    elCashAlert.innerHTML = '';
+                }
+            }
+
+            // 2. 第二階段：渲染庫存表格
             if (holdingsTable) {
                 holdingsTable.innerHTML = '';
                 Object.keys(holdings).forEach(sym => {
@@ -723,12 +823,10 @@
                         const unrealized = currentPrice > 0 ? (marketVal - costVal) : 0;
                         const percent = costVal > 0 ? ((unrealized / costVal) * 100) : 0;
 
-                        const holdingPercent = (currentPrice > 0 && activeHoldingsMarketSum > 0) 
-                            ? ((marketVal / activeHoldingsMarketSum) * 100) 
-                            : 0;
+                        // 計算該檔個股佔【總資產 (現金 + 持股市值)】的比例
+                        const holdingPercentOfTotal = totalAsset > 0 ? ((marketVal / totalAsset) * 100) : 0;
 
                         if (currentPrice > 0) {
-                            stockMarketValue += marketVal;
                             totalUnrealizedPnl += unrealized;
                         }
 
@@ -743,7 +841,23 @@
                             }
                         }
 
-                        // 【RWD 極致升級】 股票代號置上且粗體，中文名稱置下且縮小淡灰色顯示
+                        // --- 顏色說明與警示邏輯區 ---
+                        // 1. 單一持股佔比 > 30%
+                        let holdStyle = "text-blue-600 font-semibold";
+                        if (holdingPercentOfTotal > 30) {
+                            holdStyle = "text-amber-600 font-extrabold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded inline-block animate-pulse";
+                        }
+
+                        // 2. 個股虧損 > 15% 與個股獲利 > 50%
+                        let pnlBadgeStyle = "";
+                        if (currentPrice > 0) {
+                            if (percent <= -15) {
+                                pnlBadgeStyle = "bg-emerald-50 text-emerald-800 border border-emerald-300 px-1.5 py-0.5 rounded font-extrabold block mt-1";
+                            } else if (percent >= 50) {
+                                pnlBadgeStyle = "bg-rose-50 text-rose-700 border border-rose-300 px-1.5 py-0.5 rounded font-extrabold block mt-1";
+                            }
+                        }
+
                         const nameText = stockNames[sym] 
                             ? `<span class="text-[10px] text-gray-400 block mt-0.5 font-normal whitespace-normal break-all leading-tight">${stockNames[sym]}</span>` 
                             : '';
@@ -754,8 +868,10 @@
                             <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm">
                                 <div class="font-bold text-gray-800">${sym}${nameText}</div>
                             </td>
-                            <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm font-semibold text-blue-600">
-                                ${currentPrice > 0 ? `${holdingPercent.toFixed(1)}%` : '0.0%'}
+                            <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm">
+                                <span class="${holdStyle}">
+                                    ${holdingPercentOfTotal > 30 ? '⚡ ' : ''}${holdingPercentOfTotal.toFixed(1)}%
+                                </span>
                             </td>
                             <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm">${hold.qty.toLocaleString()}</td>
                             <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm">NT$ ${(hold.avgCost || 0).toFixed(2)}</td>
@@ -763,7 +879,12 @@
                                 <input type="number" step="0.01" value="${currentPrice || ''}" placeholder="輸入市價" onchange="updateCurrentPrice('${sym}', this.value)" class="w-16 md:w-20 border rounded px-1.5 py-0.5 text-xs">
                             </td>
                             <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm ${pnlClass}">
-                                ${currentPrice > 0 ? `${pnlSign}${unrealized.toLocaleString('zh-TW', {maximumFractionDigits: 0})} (${pnlSign}${percent.toFixed(2)}%)` : '--'}
+                                ${currentPrice > 0 ? `
+                                    <div class="flex flex-col items-start justify-center gap-0.5">
+                                        <span>${pnlSign}${unrealized.toLocaleString('zh-TW', {maximumFractionDigits: 0})}</span>
+                                        <span class="${pnlBadgeStyle || 'text-[10px] text-gray-400'}">${percent > 0 ? '+' : ''}${percent.toFixed(2)}%</span>
+                                    </div>
+                                ` : '--'}
                             </td>
                         `;
                         holdingsTable.appendChild(tr);
@@ -784,17 +905,28 @@
             return { cash, stockMarketValue, totalUnrealizedPnl };
         }
 
-        // 歷史交易表渲染 (顯示手續費與稅金明細)
+        // 歷史交易表渲染 (支援按鍵搜尋與自訂區間篩選)
         function renderHistory() {
             if (!txHistoryTable) return;
             txHistoryTable.innerHTML = '';
 
             const startVal = document.getElementById('historyStartDate').value;
             const endVal = document.getElementById('historyEndDate').value;
+            const searchKeyword = (document.getElementById('historySearch')?.value || '').trim().toLowerCase();
 
             const filteredTxs = transactions.filter(tx => {
                 if (startVal && tx.date < startVal) return false;
                 if (endVal && tx.date > endVal) return false;
+                
+                // 個股與交易類型關鍵字搜尋
+                if (searchKeyword) {
+                    const symbolMatch = (tx.symbol || '').toLowerCase().includes(searchKeyword);
+                    const nameMatch = (stockNames[tx.symbol] || '').toLowerCase().includes(searchKeyword);
+                    const isCashMatch = (tx.symbol === 'CASH' && "現金往來".includes(searchKeyword));
+                    if (!symbolMatch && !nameMatch && !isCashMatch) {
+                        return false;
+                    }
+                }
                 return true;
             });
 
@@ -819,7 +951,6 @@
                     changeText = "-NT$ " + price.toLocaleString();
                 }
 
-                // 【RWD 極致升級】歷史交易紀錄同步採用 代號粗體置上 / 名稱小字淡灰置下
                 let itemText = tx.symbol === 'CASH' ? '<div class="font-bold text-gray-800">現金往來</div>' : `<div class="font-bold text-gray-800">${tx.symbol}</div>`;
                 if (tx.symbol !== 'CASH' && stockNames[tx.symbol]) {
                     itemText = `<div class="font-bold text-gray-800">${tx.symbol}<span class="text-[10px] text-gray-400 block mt-0.5 font-normal whitespace-normal break-all leading-tight">${stockNames[tx.symbol]}</span></div>`;
@@ -895,6 +1026,9 @@
 
         window.resetHistoryRange = function() {
             initDefaultHistoryRange();
+            if (document.getElementById('historySearch')) {
+                document.getElementById('historySearch').value = '';
+            }
             renderHistory();
         };
 
@@ -985,6 +1119,25 @@
             return dates;
         }
 
+        // 產生週趨勢時間軸 (固定取每週的週五，並補齊最後一天收盤，以完整呈現週一～週五變動)
+        function generateWeeklyDates(startDate, endDate) {
+            const dates = [];
+            let curr = new Date(startDate);
+            const end = new Date(endDate);
+            while (curr <= end) {
+                const day = curr.getDay(); // 0:日, 1:一, ..., 5:五, 6:六
+                if (day === 5) { // 固定以週五當作每週資產指標日
+                    dates.push(curr.toISOString().split('T')[0]);
+                }
+                curr.setDate(curr.getDate() + 1);
+            }
+            const endStr = end.toISOString().split('T')[0];
+            if (dates.indexOf(endStr) === -1) {
+                dates.push(endStr);
+            }
+            return [...new Set(dates)].sort();
+        }
+
         function generateMonthlyDates(startDate, endDate) {
             const dates = [];
             let curr = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
@@ -1055,7 +1208,7 @@
             }
 
             if (tab === 'chart') {
-                initDefaultChartRange('daily');
+                initDefaultChartRange(currentChartScale);
                 renderChart();
             } else if (tab === 'history') {
                 initDefaultHistoryRange();
@@ -1067,7 +1220,9 @@
             const today = new Date();
             let start = new Date();
 
-            if (scale === 'daily') {
+            if (scale === 'weekly') {
+                start.setDate(today.getDate() - 90); // 預設顯示 90 天內週線趨勢
+            } else if (scale === 'daily') {
                 start.setDate(today.getDate() - 30);
             } else if (scale === 'monthly') {
                 start.setMonth(today.getMonth() - 12);
@@ -1086,7 +1241,7 @@
         window.changeChartScale = function(scale, btnElement) {
             currentChartScale = scale;
             
-            document.querySelectorAll('#btn-scale-daily, #btn-scale-monthly, #btn-scale-yearly').forEach(btn => {
+            document.querySelectorAll('#btn-scale-weekly, #btn-scale-daily, #btn-scale-monthly, #btn-scale-yearly').forEach(btn => {
                 btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
             });
             if (btnElement) {
@@ -1131,7 +1286,9 @@
             }
 
             let dateTimeline = [];
-            if (currentChartScale === 'daily') {
+            if (currentChartScale === 'weekly') {
+                dateTimeline = generateWeeklyDates(startDateObj, endDateObj);
+            } else if (currentChartScale === 'daily') {
                 dateTimeline = generateDailyDates(startDateObj, endDateObj);
             } else if (currentChartScale === 'monthly') {
                 dateTimeline = generateMonthlyDates(startDateObj, endDateObj);
@@ -1145,6 +1302,15 @@
             const cashData = plotData.map(d => d.cash);
             const pnlData = plotData.map(d => d.unrealizedPnl);
             const totalAssetData = plotData.map(d => d.totalAsset);
+
+            // 當切換回圖表時，同步將目前按鈕更新為正確色彩樣式
+            const currentBtn = document.getElementById(`btn-scale-${currentChartScale}`);
+            if (currentBtn) {
+                document.querySelectorAll('#btn-scale-weekly, #btn-scale-daily, #btn-scale-monthly, #btn-scale-yearly').forEach(btn => {
+                    btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+                });
+                currentBtn.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+            }
 
             assetChartInstance = new Chart(ctx, {
                 type: 'line',
@@ -1245,10 +1411,13 @@
             fileReader.readAsText(event.target.files[0]);
         };
 
-        // 首次啟動
+        // --- 首次啟動與背景執行配置 ---
         toggleFormFields();
         initDefaultHistoryRange();
         render();
+        
+        // 頁面開啟後，自動在背景無感更新股票名稱，確保代碼資料庫永遠與證交所同步
+        fetchStockNamesFromTwse();
     </script>
 </body>
 </html>
