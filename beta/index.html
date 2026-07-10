@@ -72,19 +72,19 @@
                                 </div>
                                 <div>
                                     <label id="amountLabel" class="block text-xs font-medium text-gray-600">單價 (元)</label>
-                                    <input type="number" step="0.01" id="price" class="mt-1 block w-full rounded border-gray-300 border p-1.5 text-xs">
+                                    <input type="number" step="any" inputmode="decimal" id="price" class="mt-1 block w-full rounded border-gray-300 border p-1.5 text-xs">
                                 </div>
                                 <div id="qtyField">
                                     <label class="block text-xs font-medium text-gray-600">股數</label>
-                                    <input type="number" id="quantity" class="mt-1 block w-full rounded border-gray-300 border p-1.5 text-xs">
+                                    <input type="number" inputmode="numeric" pattern="[0-9]*" id="quantity" class="mt-1 block w-full rounded border-gray-300 border p-1.5 text-xs">
                                 </div>
                                 <div id="feeField">
                                     <label class="block text-xs font-medium text-gray-600">手續費 (元)</label>
-                                    <input type="number" step="1" id="fee" value="0" class="mt-1 block w-full rounded border-gray-300 border p-1.5 text-xs">
+                                    <input type="number" step="1" inputmode="numeric" pattern="[0-9]*" id="fee" value="0" class="mt-1 block w-full rounded border-gray-300 border p-1.5 text-xs">
                                 </div>
                                 <div id="taxField" class="hidden">
                                     <label class="block text-xs font-medium text-gray-600">交易稅 (元)</label>
-                                    <input type="number" step="1" id="tax" value="0" class="mt-1 block w-full rounded border-gray-300 border p-1.5 text-xs">
+                                    <input type="number" step="1" inputmode="numeric" pattern="[0-9]*" id="tax" value="0" class="mt-1 block w-full rounded border-gray-300 border p-1.5 text-xs">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-600">日期</label>
@@ -117,7 +117,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-[11px] font-medium text-gray-600">當天真實收盤價 (元)</label>
-                                    <input type="number" step="0.01" id="histPrice" placeholder="輸入收盤價" class="mt-1 block w-full rounded-md border-gray-300 border p-1.5 text-xs">
+                                    <input type="number" step="0.01" inputmode="decimal" id="histPrice" placeholder="輸入收盤價" class="mt-1 block w-full rounded-md border-gray-300 border p-1.5 text-xs">
                                 </div>
                                 <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded transition text-xs">
                                     確認補登收盤價
@@ -236,7 +236,19 @@
             
             <p class="text-[11px] text-gray-400 mb-2">提示：圖表會根據您輸入的交易日期自動重播歷史資產。若某一天曾手動補登收盤價，將會套用補登價格計算。</p>
 
-            <!-- 歷史趨勢折線圖 -->
+            <!-- 對照比例控制面板 -->
+            <div class="flex flex-wrap items-center gap-3 bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs text-gray-700">
+                <label class="flex items-center gap-2 font-semibold cursor-pointer">
+                    <input type="checkbox" id="showTargetLine" onchange="renderChart()" class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span>顯示對照比例曲線 (總資產 × </span>
+                </label>
+                <div class="flex items-center gap-1">
+                    <input type="number" id="targetLinePercent" value="50" min="0" max="100" step="1" inputmode="numeric" oninput="onTargetPercentInput(this)" class="w-12 border rounded px-1.5 py-0.5 text-center text-xs font-bold focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <span class="font-semibold">% )</span>
+                </div>
+            </div>
+
+            <!-- 歷史資產趨勢折線圖 -->
             <div class="space-y-2">
                 <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">歷史資產趨勢折線圖</h3>
                 <div class="relative w-full h-[280px] md:h-[340px]">
@@ -263,9 +275,8 @@
                         </div>
                     </div>
                     
-                    <!-- 右欄：市值與代碼配置清單進度條 (佔 7/12 寬，無額外表頭) -->
+                    <!-- 右欄：市值與代碼配置清單進度條 -->
                     <div class="col-span-12 md:col-span-7 space-y-2">
-                        <!-- 進度條列表容器 (JS 將動態注入進度條) -->
                         <div id="allocationListContainer" class="space-y-3 pt-2">
                             <!-- JS 動態生成 -->
                         </div>
@@ -284,7 +295,7 @@
                 
                 <!-- 交易歷史時間篩選與關鍵字搜尋 -->
                 <div class="flex flex-wrap items-center gap-2.5 text-[11px] md:text-xs text-gray-600">
-                    <!-- 統計尺度篩選面板 (日、周、月、年) -->
+                    <!-- 統計尺度篩選面板 -->
                     <div class="flex bg-gray-100 rounded p-0.5 gap-0.5 text-[11px] md:text-xs">
                         <button id="btn-hist-daily" onclick="changeHistoryScale('daily', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">日</button>
                         <button id="btn-hist-weekly" onclick="changeHistoryScale('weekly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">周</button>
@@ -335,6 +346,24 @@
             alert("系統偵測到錯誤，請將此訊息截圖提供給開發者：\n錯誤訊息: " + message + "\n行號: " + lineno + "\n檔案: " + source);
             return false;
         };
+
+        // --- 0.05 網路請求安全逾時控制幫手 ---
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 3000 } = options; 
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(resource, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                return response;
+            } catch (e) {
+                clearTimeout(id);
+                throw e;
+            }
+        }
 
         // --- 0.1 關鍵著色與排版工具 ---
         function formatColorText(el, val) {
@@ -426,13 +455,13 @@
                 qtyField.style.display = 'none';
                 feeField.style.display = 'none';
                 taxField.style.display = 'none';
-                amountLabel.innerText = "金額 (元)";
+                amountLabel.innerText = "金額 (千元)"; 
             } else if (typeEl.value === 'BUY') {
                 stockFields.style.display = 'block';
                 qtyField.style.display = 'block';
                 feeField.style.display = 'block';
                 taxField.style.display = 'none'; 
-                amountLabel.innerText = "單價 (元)";
+                amountLabel.innerText = "單價 (元)"; 
             } else if (typeEl.value === 'SELL') {
                 stockFields.style.display = 'block';
                 qtyField.style.display = 'block';
@@ -497,10 +526,14 @@
                         return;
                     }
 
-                    const priceVal = parseFloat(priceInput);
+                    let priceVal = parseFloat(priceInput);
                     if (isNaN(priceVal) || priceVal <= 0) {
                         alert("請輸入大於 0 的金額/單價");
                         return;
+                    }
+
+                    if (type === 'DEPOSIT' || type === 'WITHDRAW') {
+                        priceVal = priceVal * 1000;
                     }
 
                     let qtyVal = 1;
@@ -619,7 +652,7 @@
             calculateAndRender();
         };
 
-        // --- 1.2 Yahoo Finance 多重代理伺服器備援查詢機制 ---
+        // --- 1.2 Yahoo Finance 多重代理伺服器備援查詢機制 (含 2.5 秒安全逾時控制) ---
         async function fetchSingleYahooPrice(symbol) {
             const suffixes = ['.TW', '.TWO'];
             
@@ -634,7 +667,7 @@
                 for (const getProxyUrl of proxies) {
                     const proxyUrl = getProxyUrl(target);
                     try {
-                        const res = await fetch(proxyUrl);
+                        const res = await fetchWithTimeout(proxyUrl, { timeout: 2500 });
                         if (!res.ok) continue;
                         const json = await res.json();
                         const meta = json?.chart?.result?.[0]?.meta;
@@ -675,9 +708,7 @@
             for (let i = 0; i < activeSymbols.length; i++) {
                 const sym = activeSymbols[i];
                 symbolQueries.push("TWSE:" + sym);
-                symbolQueries.push("TPEX:" + sym);
-                symbolQueries.push("TWO:" + sym);
-                symbolQueries.push("OTC:" + sym);
+                symbolQueries.push("TPEX:" + sym); 
             }
 
             const targetUrl = "https://scanner.tradingview.com/taiwan/scan";
@@ -701,12 +732,13 @@
             for (let k = 0; k < tryUrls.length; k++) {
                 if (successFetch) break;
                 try {
-                    const response = await fetch(tryUrls[k], {
+                    const response = await fetchWithTimeout(tryUrls[k], {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify(payload),
+                        timeout: 3500
                     });
                     
                     if (!response.ok) continue;
@@ -761,7 +793,7 @@
 
             const now = new Date();
             const totalUpdated = tvUpdatedSymbols.size + yahooUpdatedCount;
-            status.innerText = `成功同步 ${totalUpdated} 檔收盤價 (TradingView: ${tvUpdatedSymbols.size}, Yahoo: ${yahooUpdatedCount}) (${now.toLocaleTimeString()})`;
+            status.innerText = `成功同步 ${totalUpdated} 檔收盤價 (${now.toLocaleTimeString()})`;
             btn.disabled = false;
             btn.innerText = "更新今日收盤價";
         };
@@ -1305,6 +1337,18 @@
             renderChart();
         };
 
+        // --- 對照比例輸入值過濾與即時更新 ---
+        window.onTargetPercentInput = function(el) {
+            let val = parseFloat(el.value);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > 100) val = 100;
+            el.value = val;
+            
+            if (document.getElementById('showTargetLine')?.checked) {
+                renderChart();
+            }
+        };
+
         // --- 6. 核心趨勢折線圖渲染 ---
 
         function renderChart() {
@@ -1348,9 +1392,38 @@
             const plotData = dateTimeline.map(date => calculateAssetOnSpecificDate(date));
 
             const labels = plotData.map(d => d.date);
-            const cashData = plotData.map(d => d.cash);
-            const pnlData = plotData.map(d => d.unrealizedPnl);
             const totalAssetData = plotData.map(d => d.totalAsset);
+
+            const showTarget = document.getElementById('showTargetLine')?.checked || false;
+            const targetPercent = parseFloat(document.getElementById('targetLinePercent')?.value) || 0;
+
+            // 僅保留藍色總資產主線
+            const datasets = [
+                {
+                    label: '總資產 (現金+持股市值)',
+                    data: totalAssetData,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.03)',
+                    fill: true,
+                    tension: 0.03,
+                    pointRadius: dateTimeline.length > 80 ? 0 : 2
+                }
+            ];
+
+            // 若使用者勾選對照比例，則新增一條綠色虛線作為比較
+            if (showTarget) {
+                const factor = targetPercent / 100;
+                const targetData = totalAssetData.map(val => val * factor);
+                datasets.push({
+                    label: `對照曲線 (${targetPercent}%)`,
+                    data: targetData,
+                    borderColor: '#10B981', // 綠色
+                    borderDash: [5, 5],     // 虛線
+                    fill: false,
+                    tension: 0.03,
+                    pointRadius: dateTimeline.length > 80 ? 0 : 2
+                });
+            }
 
             const currentBtn = document.getElementById(`btn-scale-${currentChartScale}`);
             if (currentBtn) {
@@ -1364,34 +1437,7 @@
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [
-                        {
-                            label: '總資產 (現金+持股市值)',
-                            data: totalAssetData,
-                            borderColor: '#3B82F6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.03)',
-                            fill: true,
-                            tension: 0.03,
-                            pointRadius: dateTimeline.length > 80 ? 0 : 2
-                        },
-                        {
-                            label: '帳戶現金',
-                            data: cashData,
-                            borderColor: '#9CA3AF',
-                            borderDash: [4, 4],
-                            fill: false,
-                            tension: 0.03,
-                            pointRadius: dateTimeline.length > 80 ? 0 : 2
-                        },
-                        {
-                            label: '未實現損益',
-                            data: pnlData,
-                            borderColor: '#EF4444',
-                            fill: false,
-                            tension: 0.03,
-                            pointRadius: dateTimeline.length > 80 ? 0 : 2
-                        }
-                    ]
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
