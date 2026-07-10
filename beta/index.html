@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>股票交易與資產管理系統</title>
     <!-- Tailwind CSS (排版) -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com" crossorigin="anonymous"></script>
     <!-- Chart.js (圖表) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer crossorigin="anonymous"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 md:p-6 text-sm text-gray-800">
 
@@ -247,8 +247,7 @@
             <!-- 配置比重對照看板 -->
             <div class="bg-gray-50 p-4 md:p-6 rounded-lg border border-gray-200 space-y-4">
                 <div>
-                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">實時資產配置比重 (含現金)</h3>
-                    <p class="text-[10px] md:text-[11px] text-gray-400">圓餅圖與右側進度條完美連動，中置文字呈現看盤規格質感。</p>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">資產配置比 (含現金)</h3>
                 </div>
                 
                 <div class="grid grid-cols-12 gap-3 md:gap-6 items-center">
@@ -264,10 +263,8 @@
                         </div>
                     </div>
                     
-                    <!-- 右欄：市值與代碼配置清單進度條 (佔 7/12 寬) -->
+                    <!-- 右欄：市值與代碼配置清單進度條 (佔 7/12 寬，無額外表頭) -->
                     <div class="col-span-12 md:col-span-7 space-y-2">
-                        <!-- 對比標頭 -->
-                        <div class="text-[10px] md:text-xs font-bold text-gray-400 border-b pb-1.5">實時配置佔比</div>
                         <!-- 進度條列表容器 (JS 將動態注入進度條) -->
                         <div id="allocationListContainer" class="space-y-3 pt-2">
                             <!-- JS 動態生成 -->
@@ -282,16 +279,28 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3">
                 <div>
                     <h2 class="text-base md:text-lg font-semibold text-gray-700">歷史交易紀錄</h2>
-                    <p class="text-[10px] md:text-xs text-gray-400 mt-0.5">預設顯示本週（週一至週五）明細，可使用右側欄位進行篩選或直接搜尋代號、中文簡稱。</p>
+                    <p class="text-[10px] md:text-xs text-gray-400 mt-0.5">預設顯示日區間（最近5天），可使用尺度切換或自訂日期篩選。</p>
                 </div>
                 
-                <!-- 交易歷史時間篩選與關鍵字搜尋 -->
-                <div class="flex flex-wrap items-center gap-1.5 text-[11px] md:text-xs text-gray-600">
-                    <input type="text" id="historySearch" oninput="renderHistory()" placeholder="搜尋股票代號 / 中文名稱..." class="border rounded p-1 w-32 md:w-44 text-xs">
-                    <input type="date" id="historyStartDate" onchange="renderHistory()" class="border rounded p-1">
-                    <span>至</span>
-                    <input type="date" id="historyEndDate" onchange="renderHistory()" class="border rounded p-1">
-                    <button onclick="resetHistoryRange()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded border transition text-[10px]">本週 (週一至五)</button>
+                <!-- 交易歷史時間篩選與關鍵字搜尋 (比照資產統計結構優化) -->
+                <div class="flex flex-wrap items-center gap-2.5 text-[11px] md:text-xs text-gray-600">
+                    <!-- 統計尺度篩選面板 (日、周、月、年) -->
+                    <div class="flex bg-gray-100 rounded p-0.5 gap-0.5 text-[11px] md:text-xs">
+                        <button id="btn-hist-daily" onclick="changeHistoryScale('daily', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">日</button>
+                        <button id="btn-hist-weekly" onclick="changeHistoryScale('weekly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">周</button>
+                        <button id="btn-hist-monthly" onclick="changeHistoryScale('monthly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">月</button>
+                        <button id="btn-hist-yearly" onclick="changeHistoryScale('yearly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">年</button>
+                    </div>
+
+                    <!-- 即時文字搜尋框 -->
+                    <input type="text" id="historySearch" oninput="renderHistory()" placeholder="搜尋股票代號 / 中文名稱..." class="border rounded p-1 w-28 md:w-36 text-xs">
+                    
+                    <!-- 日期區間顯示 -->
+                    <div class="flex items-center gap-1.5 text-[11px] md:text-xs text-gray-600">
+                        <input type="date" id="historyStartDate" onchange="renderHistory()" class="border rounded p-1">
+                        <span>至</span>
+                        <input type="date" id="historyEndDate" onchange="renderHistory()" class="border rounded p-1">
+                    </div>
                 </div>
             </div>
 
@@ -320,6 +329,10 @@
     <script>
         // --- 0. 全域除錯小幫手 ---
         window.onerror = function(message, source, lineno, colno, error) {
+            // 忽略外部注入、翻譯、分享套件或跨網域產生的無害資訊 (通常呈現為 "Script error." 且行號為 0)
+            if (message === "Script error." || !source || lineno === 0) {
+                return true; 
+            }
             alert("系統偵測到錯誤，請將此訊息截圖提供給開發者：\n錯誤訊息: " + message + "\n行號: " + lineno + "\n檔案: " + source);
             return false;
         };
@@ -382,6 +395,7 @@
         let assetChartInstance = null;
         let allocationChartInstance = null; // 圓餅圖實體
         let currentChartScale = 'daily'; // 將「日」設為預設尺度
+        let currentHistoryScale = 'daily'; // 交易明細預設也設為「日」
 
         // 預設日期安全設定與【限制不能大於當天】
         const todayStr = new Date().toISOString().split('T')[0];
@@ -610,7 +624,30 @@
             calculateAndRender();
         };
 
-        // --- 【TradingView 批次掃描 API 直連 (僅更新收盤價，完全不連動/不更新股票中文名稱)】 ---
+        // --- 1.2 Yahoo Finance 單檔連線備援查詢輔助函式 ---
+        async function fetchSingleYahooPrice(symbol) {
+            // 自動嘗試上市 (.TW) 與上櫃/興櫃 (.TWO) 後綴
+            const suffixes = ['.TW', '.TWO'];
+            for (const suffix of suffixes) {
+                const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}${suffix}`;
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(target)}`;
+                try {
+                    const res = await fetch(proxyUrl);
+                    if (!res.ok) continue;
+                    const json = await res.json();
+                    const meta = json?.chart?.result?.[0]?.meta;
+                    const price = meta?.regularMarketPrice;
+                    if (price && typeof price === 'number' && price > 0) {
+                        return price; 
+                    }
+                } catch (e) {
+                    console.warn(`Yahoo fallback failed for ${symbol}${suffix}:`, e);
+                }
+            }
+            return null;
+        }
+
+        // --- 2. 【連動 TradingView 更新 + Yahoo 財經 API 備援連線機制】 ---
         window.fetchTwsePrices = async function() {
             const btn = document.getElementById('fetchPriceBtn');
             const status = document.getElementById('apiStatus');
@@ -645,7 +682,7 @@
                 symbols: {
                     tickers: symbolQueries
                 },
-                columns: ["name", "description", "close"] // 僅需要 close 數據
+                columns: ["name", "description", "close"] 
             };
 
             const tryUrls = [
@@ -653,9 +690,10 @@
                 proxyUrl   
             ];
 
-            let updatedCount = 0;
+            const tvUpdatedSymbols = new Set();
             let successFetch = false;
 
+            // 1. 第一階段：嘗試 TradingView
             for (let k = 0; k < tryUrls.length; k++) {
                 if (successFetch) break;
                 try {
@@ -683,15 +721,35 @@
                             if (!isNaN(priceVal) && priceVal > 0) {
                                 currentPrices[symCode] = priceVal;
                                 historicalPrices[today][symCode] = priceVal; 
-                                updatedCount++;
+                                tvUpdatedSymbols.add(symCode);
                             }
                         });
 
                         successFetch = true;
                     }
                 } catch (err) {
-                    console.warn("連線方案未成功，切換下一重試");
+                    console.warn("TradingView 連線方案未成功，切換下一重試");
                 }
+            }
+
+            // 2. 第二階段：過濾出 TradingView 無法取得的個股，並發起 Yahoo 財經備援查詢
+            const missingSymbols = activeSymbols.filter(sym => !tvUpdatedSymbols.has(sym));
+            let yahooUpdatedCount = 0;
+
+            if (missingSymbols.length > 0) {
+                status.innerText = `TradingView 已更新 ${tvUpdatedSymbols.size} 檔，正在連線 Yahoo 財經補齊其餘 ${missingSymbols.length} 檔...`;
+                
+                // 併行（Parallel）向 Yahoo 財經查詢遺漏的股價
+                const yahooPromises = missingSymbols.map(async (sym) => {
+                    const price = await fetchSingleYahooPrice(sym);
+                    if (price !== null) {
+                        currentPrices[sym] = price;
+                        historicalPrices[today][sym] = price;
+                        yahooUpdatedCount++;
+                    }
+                });
+
+                await Promise.all(yahooPromises);
             }
 
             localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
@@ -700,7 +758,8 @@
             calculateAndRender();
 
             const now = new Date();
-            status.innerText = "成功同步 " + activeSymbols.length + " 檔最新收盤價 (" + now.toLocaleTimeString() + ")";
+            const totalUpdated = tvUpdatedSymbols.size + yahooUpdatedCount;
+            status.innerText = `成功同步 ${totalUpdated} 檔收盤價 (TradingView: ${tvUpdatedSymbols.size}, Yahoo: ${yahooUpdatedCount}) (${now.toLocaleTimeString()})`;
             btn.disabled = false;
             btn.innerText = "更新今日收盤價";
         };
@@ -846,7 +905,6 @@
 
                         const tr = document.createElement('tr');
                         tr.className = "hover:bg-gray-50";
-                        // 欄位順序修改：[代號] -> [佔比] -> [持股數] -> [未實現損益] -> [平均成本] -> [目前市價]
                         tr.innerHTML = `
                             <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm">
                                 <div class="font-bold text-gray-800">${sym}${nameText}</div>
@@ -965,38 +1023,67 @@
             localStorage.setItem('stock_v6_tx', JSON.stringify(transactions));
         }
 
-        // 本週週一至週五智慧計算
-        function initDefaultHistoryRange() {
+        // 歷史明細時間軸區間核心計算 (日->5天, 周->28天, 月->180天, 年->3年)
+        function initDefaultHistoryRange(scale) {
             const today = new Date();
-            const dayOfWeek = today.getDay(); // 0: 日, 1: 一, ..., 6: 六
-            const offsetToMonday = (dayOfWeek === 0) ? -6 : 1 - dayOfWeek;
-            
-            const monday = new Date(today);
-            monday.setDate(today.getDate() + offsetToMonday);
-            
-            const friday = new Date(monday);
-            friday.setDate(monday.getDate() + 4);
+            let start = new Date();
 
-            const mondayStr = monday.toISOString().split('T')[0];
-            const fridayStr = friday.toISOString().split('T')[0];
+            if (scale === 'daily') {
+                start.setDate(today.getDate() - 5);  // 5天
+            } else if (scale === 'weekly') {
+                start.setDate(today.getDate() - 28); // 4周 (28天)
+            } else if (scale === 'monthly') {
+                start.setMonth(today.getMonth() - 6); // 6個月
+            } else if (scale === 'yearly') {
+                start.setFullYear(today.getFullYear() - 3); // 3年
+            }
+
+            const startStr = start.toISOString().split('T')[0];
+            const todayStr = today.toISOString().split('T')[0];
 
             const histStartEl = document.getElementById('historyStartDate');
             const histEndEl = document.getElementById('historyEndDate');
 
             if (histStartEl && histEndEl) {
-                histStartEl.value = mondayStr;
-                histEndEl.value = fridayStr;
-                
-                histStartEl.removeAttribute('max');
-                histEndEl.removeAttribute('max');
+                histStartEl.value = startStr;
+                histEndEl.value = todayStr;
+                histStartEl.max = todayStr;
+                histEndEl.max = todayStr;
             }
         }
 
+        // 修改交易歷史統計尺度 (日/周/月/年)
+        window.changeHistoryScale = function(scale, btnElement) {
+            currentHistoryScale = scale;
+            
+            document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
+                btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+            });
+            if (btnElement) {
+                btnElement.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+            }
+
+            initDefaultHistoryRange(scale);
+            renderHistory();
+        };
+
         window.resetHistoryRange = function() {
-            initDefaultHistoryRange();
+            currentHistoryScale = 'daily';
+            initDefaultHistoryRange('daily');
+            
             if (document.getElementById('historySearch')) {
                 document.getElementById('historySearch').value = '';
             }
+
+            // 更新預設按鈕色彩狀態
+            const currentBtn = document.getElementById('btn-hist-daily');
+            if (currentBtn) {
+                document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
+                    btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+                });
+                currentBtn.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+            }
+
             renderHistory();
         };
 
@@ -1180,7 +1267,17 @@
                 renderChart();
                 renderAllocationCharts(); // 連動渲染圓餅圖與長條圖
             } else if (tab === 'history') {
-                initDefaultHistoryRange();
+                // 套用明細目前的尺度範圍
+                initDefaultHistoryRange(currentHistoryScale);
+                
+                // 同步歷史明細尺度按鈕的亮起顏色
+                const currentBtn = document.getElementById(`btn-hist-${currentHistoryScale}`);
+                if (currentBtn) {
+                    document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
+                        btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+                    });
+                    currentBtn.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+                }
                 renderHistory();
             }
         };
@@ -1441,7 +1538,7 @@
                     const pct = total > 0 ? ((val / total) * 100) : 0;
                     const color = activeColors[idx];
 
-                    // 建立一行，左側為色點，右側為內嵌「代號(左) 與 比例(右)」的質感進度條
+                    // 建立一行，左側為色點，右側為內嵌「代號(左) 與 比例(right)」的質感進度條
                     const item = document.createElement('div');
                     item.className = "flex items-center gap-2.5";
 
@@ -1507,21 +1604,32 @@
             });
         }
 
-        // 備份匯出
+        // 備份匯出 (相容 iOS Blob 下載)
         window.exportData = function() {
-            const dataStr = JSON.stringify({
-                transactions,
-                currentPrices,
-                stockNames,
-                historicalPrices
-            });
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            const exportFileDefaultName = "stock_backup_" + new Date().toISOString().split('T')[0] + ".json";
+            try {
+                const dataStr = JSON.stringify({
+                    transactions,
+                    currentPrices,
+                    stockNames,
+                    historicalPrices
+                });
+                
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const exportFileDefaultName = "stock_backup_" + new Date().toISOString().split('T')[0] + ".json";
 
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportFileDefaultName);
-            linkElement.click();
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', url);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                
+                document.body.appendChild(linkElement);
+                linkElement.click();
+                document.body.removeChild(linkElement);
+                
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+            } catch (err) {
+                alert("匯出失敗：" + err.message);
+            }
         };
 
         // 備份匯入
@@ -1555,9 +1663,22 @@
             fileReader.readAsText(event.target.files[0]);
         };
 
+        // 重設
+        window.clearAllData = function() {
+            if (confirm("確定要重設所有資料嗎？這將刪除所有交易紀錄且無法復原！")) {
+                localStorage.clear();
+                transactions = [];
+                currentPrices = {};
+                stockNames = { ...defaultNames };
+                historicalPrices = {};
+                render();
+                alert("資料已全部重設。");
+            }
+        };
+
         // --- 首次啟動與背景執行配置 ---
         toggleFormFields();
-        initDefaultHistoryRange();
+        initDefaultHistoryRange(currentHistoryScale); // 交易明細初始採用預設的「日」尺度 (最近5天)
         render();
     </script>
 </body>
