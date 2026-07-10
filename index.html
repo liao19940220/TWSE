@@ -282,7 +282,7 @@
                     <p class="text-[10px] md:text-xs text-gray-400 mt-0.5">預設顯示日區間（最近5天），可使用尺度切換或自訂日期篩選。</p>
                 </div>
                 
-                <!-- 交易歷史時間篩選與關鍵字搜尋 (比照資產統計結構優化) -->
+                <!-- 交易歷史時間篩選與關鍵字搜尋 -->
                 <div class="flex flex-wrap items-center gap-2.5 text-[11px] md:text-xs text-gray-600">
                     <!-- 統計尺度篩選面板 (日、周、月、年) -->
                     <div class="flex bg-gray-100 rounded p-0.5 gap-0.5 text-[11px] md:text-xs">
@@ -329,11 +329,14 @@
     <script>
         // --- 0. 全域除錯小幫手 ---
         window.onerror = function(message, source, lineno, colno, error) {
+            if (message === "Script error." || !source || lineno === 0) {
+                return true; 
+            }
             alert("系統偵測到錯誤，請將此訊息截圖提供給開發者：\n錯誤訊息: " + message + "\n行號: " + lineno + "\n檔案: " + source);
             return false;
         };
 
-        // --- 0.1 關鍵著色與排版工具（最優先編譯） ---
+        // --- 0.1 關鍵著色與排版工具 ---
         function formatColorText(el, val) {
             if (!el) return;
             el.innerText = "NT$ " + val.toLocaleString('zh-TW', {maximumFractionDigits: 0});
@@ -361,7 +364,8 @@
             "2882": "國泰金",
             "0050": "元大台灣50",
             "0056": "元大高股息",
-            "00878": "國泰永續高股息"
+            "00878": "國泰永續高股息",
+            "6488": "環球晶"
         };
 
         function initLocalStorage() {
@@ -389,22 +393,21 @@
         
         let activeTab = 'main';
         let assetChartInstance = null;
-        let allocationChartInstance = null; // 圓餅圖實體
-        let currentChartScale = 'daily'; // 將「日」設為預設尺度
-        let currentHistoryScale = 'daily'; // 交易明細預設也設為「日」
+        let allocationChartInstance = null; 
+        let currentChartScale = 'daily'; 
+        let currentHistoryScale = 'daily'; 
 
-        // 預設日期安全設定與【限制不能大於當天】
         const todayStr = new Date().toISOString().split('T')[0];
 
         const dateInputEl = document.getElementById('date');
         if (dateInputEl) {
             dateInputEl.value = todayStr;
-            dateInputEl.max = todayStr; // 鎖定未來交易日期
+            dateInputEl.max = todayStr; 
         }
         const histDateInputEl = document.getElementById('histDate');
         if (histDateInputEl) {
             histDateInputEl.value = todayStr;
-            histDateInputEl.max = todayStr; // 鎖定未來補登日期
+            histDateInputEl.max = todayStr; 
         }
 
         // 介面欄位安全切換
@@ -439,7 +442,6 @@
             }
         }
 
-        // 切換新增交易表單展開與收合
         window.toggleTxForm = function() {
             const wrapper = document.getElementById('txFormWrapper');
             const arrow = document.getElementById('txToggleArrow');
@@ -454,7 +456,6 @@
             }
         };
 
-        // 切換補登歷史價格表單展開與收合
         window.toggleHistForm = function() {
             const wrapper = document.getElementById('histFormWrapper');
             const arrow = document.getElementById('histToggleArrow');
@@ -490,7 +491,6 @@
                         return;
                     }
 
-                    // 再次阻止寫入未來日期
                     const today = new Date().toISOString().split('T')[0];
                     if (dateInput > today) {
                         alert("交易日期不能大於今天！");
@@ -560,7 +560,6 @@
                         return;
                     }
 
-                    // 阻止寫入未來日期
                     const today = new Date().toISOString().split('T')[0];
                     if (date > today) {
                         alert("補登日期不能大於今天！");
@@ -620,7 +619,38 @@
             calculateAndRender();
         };
 
-        // --- 【TradingView 批次掃描 API 直連 (僅更新收盤價，完全不連動/不更新股票中文名稱)】 ---
+        // --- 1.2 Yahoo Finance 多重代理伺服器備援查詢機制 ---
+        async function fetchSingleYahooPrice(symbol) {
+            const suffixes = ['.TW', '.TWO'];
+            
+            const proxies = [
+                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+            ];
+
+            for (const suffix of suffixes) {
+                const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}${suffix}`;
+                
+                for (const getProxyUrl of proxies) {
+                    const proxyUrl = getProxyUrl(target);
+                    try {
+                        const res = await fetch(proxyUrl);
+                        if (!res.ok) continue;
+                        const json = await res.json();
+                        const meta = json?.chart?.result?.[0]?.meta;
+                        const price = meta?.regularMarketPrice;
+                        if (price && typeof price === 'number' && price > 0) {
+                            return price; 
+                        }
+                    } catch (e) {
+                        console.warn(`Proxy failed for ${symbol}${suffix} via Yahoo:`, e);
+                    }
+                }
+            }
+            return null;
+        }
+
+        // --- 2. 【連動 TradingView 更新 + Yahoo 財經 API 雙備援連線機制】 ---
         window.fetchTwsePrices = async function() {
             const btn = document.getElementById('fetchPriceBtn');
             const status = document.getElementById('apiStatus');
@@ -645,7 +675,9 @@
             for (let i = 0; i < activeSymbols.length; i++) {
                 const sym = activeSymbols[i];
                 symbolQueries.push("TWSE:" + sym);
+                symbolQueries.push("TPEX:" + sym);
                 symbolQueries.push("TWO:" + sym);
+                symbolQueries.push("OTC:" + sym);
             }
 
             const targetUrl = "https://scanner.tradingview.com/taiwan/scan";
@@ -655,7 +687,7 @@
                 symbols: {
                     tickers: symbolQueries
                 },
-                columns: ["name", "description", "close"] // 僅需要 close 數據
+                columns: ["name", "description", "close"] 
             };
 
             const tryUrls = [
@@ -663,7 +695,7 @@
                 proxyUrl   
             ];
 
-            let updatedCount = 0;
+            const tvUpdatedSymbols = new Set();
             let successFetch = false;
 
             for (let k = 0; k < tryUrls.length; k++) {
@@ -693,15 +725,33 @@
                             if (!isNaN(priceVal) && priceVal > 0) {
                                 currentPrices[symCode] = priceVal;
                                 historicalPrices[today][symCode] = priceVal; 
-                                updatedCount++;
+                                tvUpdatedSymbols.add(symCode);
                             }
                         });
 
                         successFetch = true;
                     }
                 } catch (err) {
-                    console.warn("連線方案未成功，切換下一重試");
+                    console.warn("TradingView 連線方案未成功，切換下一重試");
                 }
+            }
+
+            const missingSymbols = activeSymbols.filter(sym => !tvUpdatedSymbols.has(sym));
+            let yahooUpdatedCount = 0;
+
+            if (missingSymbols.length > 0) {
+                status.innerText = `TradingView 已更新 ${tvUpdatedSymbols.size} 檔，正在連線 Yahoo 財經補齊其餘 ${missingSymbols.length} 檔...`;
+                
+                const yahooPromises = missingSymbols.map(async (sym) => {
+                    const price = await fetchSingleYahooPrice(sym);
+                    if (price !== null) {
+                        currentPrices[sym] = price;
+                        historicalPrices[today][sym] = price;
+                        yahooUpdatedCount++;
+                    }
+                });
+
+                await Promise.all(yahooPromises);
             }
 
             localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
@@ -710,7 +760,9 @@
             calculateAndRender();
 
             const now = new Date();
-            status.innerText = "成功同步 " + activeSymbols.length + " 檔最新收盤價 (" + now.toLocaleTimeString() + ")";
+            const totalUpdated = tvUpdatedSymbols.size + yahooUpdatedCount;
+            // 已簡化狀態描述：僅顯示成功同步 X 檔收盤價及更新時間
+            status.innerText = `成功同步 ${totalUpdated} 檔收盤價 (${now.toLocaleTimeString()})`;
             btn.disabled = false;
             btn.innerText = "更新今日收盤價";
         };
@@ -735,7 +787,6 @@
             let totalRealizedPnl = 0;
             const holdings = {};
 
-            // 1. 第一階段：回推所有交易並計算平均成本
             transactions.forEach(tx => {
                 const price = Number(tx.price) || 0;
                 const quantity = Number(tx.quantity) || 0;
@@ -769,7 +820,6 @@
                 }
             });
 
-            // 1.5 預先計算持股市值，以便取得正確的總資產配置數據
             Object.keys(holdings).forEach(sym => {
                 const hold = holdings[sym];
                 if (hold.qty > 0) {
@@ -782,7 +832,6 @@
 
             const totalAsset = cash + stockMarketValue;
 
-            // 渲染最上方看板的現金佔比與持股佔比文字
             const elCashRatio = document.getElementById('currentCash').nextElementSibling;
             const elStockRatio = document.getElementById('stockMarketValue').nextElementSibling;
             if (totalAsset > 0) {
@@ -793,7 +842,6 @@
                 if (elStockRatio) elStockRatio.innerText = `佔比: 0.0%`;
             }
 
-            // 現金佔比 > 50% 警示燈號
             const elCashAlert = document.getElementById('cashAlert');
             if (elCashAlert) {
                 if (totalAsset > 0 && (cash / totalAsset) > 0.5) {
@@ -803,7 +851,6 @@
                 }
             }
 
-            // 2. 第二階段：渲染庫存表格
             if (holdingsTable) {
                 holdingsTable.innerHTML = '';
                 Object.keys(holdings).forEach(sym => {
@@ -815,7 +862,6 @@
                         const unrealized = currentPrice > 0 ? (marketVal - costVal) : 0;
                         const percent = costVal > 0 ? ((unrealized / costVal) * 100) : 0;
 
-                        // 計算該檔個股佔【總資產 (現金 + 持股市值)】的比例
                         const holdingPercentOfTotal = totalAsset > 0 ? ((marketVal / totalAsset) * 100) : 0;
 
                         if (currentPrice > 0) {
@@ -833,14 +879,11 @@
                             }
                         }
 
-                        // --- 顏色說明與警示邏輯區 ---
-                        // 1. 單一持股佔比 > 30%
                         let holdStyle = "text-blue-600 font-semibold";
                         if (holdingPercentOfTotal > 30) {
                             holdStyle = "text-amber-600 font-extrabold bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded inline-block animate-pulse";
                         }
 
-                        // 2. 個股虧損 > 15% 與個股獲利 > 50%
                         let pnlBadgeStyle = "";
                         if (currentPrice > 0) {
                             if (percent <= -15) {
@@ -856,7 +899,6 @@
 
                         const tr = document.createElement('tr');
                         tr.className = "hover:bg-gray-50";
-                        // 欄位順序修改：[代號] -> [佔比] -> [持股數] -> [未實現損益] -> [平均成本] -> [目前市價]
                         tr.innerHTML = `
                             <td class="px-2.5 py-2 whitespace-nowrap text-xs md:text-sm">
                                 <div class="font-bold text-gray-800">${sym}${nameText}</div>
@@ -898,7 +940,7 @@
             return { cash, stockMarketValue, totalUnrealizedPnl };
         }
 
-        // 歷史交易表渲染 (支援按鍵搜尋與自訂區間篩選)
+        // 歷史交易表渲染
         function renderHistory() {
             if (!txHistoryTable) return;
             txHistoryTable.innerHTML = '';
@@ -911,7 +953,6 @@
                 if (startVal && tx.date < startVal) return false;
                 if (endVal && tx.date > endVal) return false;
                 
-                // 個股與交易類型關鍵字搜尋
                 if (searchKeyword) {
                     const symbolMatch = (tx.symbol || '').toLowerCase().includes(searchKeyword);
                     const nameMatch = (stockNames[tx.symbol] || '').toLowerCase().includes(searchKeyword);
@@ -975,19 +1016,18 @@
             localStorage.setItem('stock_v6_tx', JSON.stringify(transactions));
         }
 
-        // 歷史明細時間軸區間核心計算 (日->5天, 周->28天, 月->180天, 年->3年)
         function initDefaultHistoryRange(scale) {
             const today = new Date();
             let start = new Date();
 
             if (scale === 'daily') {
-                start.setDate(today.getDate() - 5);  // 5天
+                start.setDate(today.getDate() - 5);  
             } else if (scale === 'weekly') {
-                start.setDate(today.getDate() - 28); // 4周 (28天)
+                start.setDate(today.getDate() - 28); 
             } else if (scale === 'monthly') {
-                start.setMonth(today.getMonth() - 6); // 6個月
+                start.setMonth(today.getMonth() - 6); 
             } else if (scale === 'yearly') {
-                start.setFullYear(today.getFullYear() - 3); // 3年
+                start.setFullYear(today.getFullYear() - 3); 
             }
 
             const startStr = start.toISOString().split('T')[0];
@@ -1004,7 +1044,6 @@
             }
         }
 
-        // 修改交易歷史統計尺度 (日/周/月/年)
         window.changeHistoryScale = function(scale, btnElement) {
             currentHistoryScale = scale;
             
@@ -1027,7 +1066,6 @@
                 document.getElementById('historySearch').value = '';
             }
 
-            // 更新預設按鈕色彩狀態
             const currentBtn = document.getElementById('btn-hist-daily');
             if (currentBtn) {
                 document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
@@ -1039,7 +1077,6 @@
             renderHistory();
         };
 
-        // 全域核心 Render 宣告
         function render() {
             renderHistory();
             calculateAndRender();
@@ -1113,8 +1150,6 @@
             };
         }
 
-        // --- 時間軸產生輔助函式 ---
-
         function generateDailyDates(startDate, endDate) {
             const dates = [];
             let curr = new Date(startDate);
@@ -1126,14 +1161,13 @@
             return dates;
         }
 
-        // 產生週趨勢時間軸 (固定取每週的週五，並補齊最後一天收盤，以完整呈現週一～週五變動)
         function generateWeeklyDates(startDate, endDate) {
             const dates = [];
             let curr = new Date(startDate);
             const end = new Date(endDate);
             while (curr <= end) {
-                const day = curr.getDay(); // 0:日, 1:一, ..., 5:五, 6:六
-                if (day === 5) { // 固定以週五當作每週資產指標日
+                const day = curr.getDay(); 
+                if (day === 5) { 
                     dates.push(curr.toISOString().split('T')[0]);
                 }
                 curr.setDate(curr.getDate() + 1);
@@ -1217,12 +1251,10 @@
             if (tab === 'chart') {
                 initDefaultChartRange(currentChartScale);
                 renderChart();
-                renderAllocationCharts(); // 連動渲染圓餅圖與長條圖
+                renderAllocationCharts(); 
             } else if (tab === 'history') {
-                // 套用明細目前的尺度範圍
                 initDefaultHistoryRange(currentHistoryScale);
                 
-                // 同步歷史明細尺度按鈕的亮起顏色
                 const currentBtn = document.getElementById(`btn-hist-${currentHistoryScale}`);
                 if (currentBtn) {
                     document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
@@ -1234,19 +1266,18 @@
             }
         };
 
-        // 預設回測歷史天數 (日->5天, 周->28天, 月->6個月, 年->3年)
         function initDefaultChartRange(scale) {
             const today = new Date();
             let start = new Date();
 
             if (scale === 'weekly') {
-                start.setDate(today.getDate() - 28); // 預設顯示 28 天 (4 週)
+                start.setDate(today.getDate() - 28); 
             } else if (scale === 'daily') {
-                start.setDate(today.getDate() - 5);  // 預設顯示最近 5 天 (5 筆日資料)
+                start.setDate(today.getDate() - 5);  
             } else if (scale === 'monthly') {
-                start.setMonth(today.getMonth() - 6); // 預設顯示最近 6 個月
+                start.setMonth(today.getMonth() - 6); 
             } else if (scale === 'yearly') {
-                start.setFullYear(today.getFullYear() - 3); // 預設顯示最近 3 年
+                start.setFullYear(today.getFullYear() - 3); 
             }
 
             document.getElementById('chartStartDate').value = start.toISOString().split('T')[0];
@@ -1322,7 +1353,6 @@
             const pnlData = plotData.map(d => d.unrealizedPnl);
             const totalAssetData = plotData.map(d => d.totalAsset);
 
-            // 當切換回圖表時，同步將目前按鈕更新為正確色彩樣式
             const currentBtn = document.getElementById(`btn-scale-${currentChartScale}`);
             if (currentBtn) {
                 document.querySelectorAll('#btn-scale-weekly, #btn-scale-daily, #btn-scale-monthly, #btn-scale-yearly').forEach(btn => {
@@ -1384,7 +1414,6 @@
 
         // --- 6.1 實時資產分配圖表連動 (圓餅圖 + 橫向長條圖) ---
         function renderAllocationCharts() {
-            // 本地重現與計算最新的資產配置狀態
             let cash = 0;
             const holdings = {};
             
@@ -1416,23 +1445,21 @@
                 }
             });
 
-            // 圖表專用的純代碼標籤 (簡化名稱，不加中文說明)
             const labels = [];
             const dataVals = [];
             const backgroundColors = [
-                '#3B82F6', // 現金 (藍色)
-                '#F59E0B', // 第一檔
-                '#EC4899', // 第二檔
-                '#8B5CF6', // 第三檔
-                '#06B6D4', // 第四檔
-                '#10B981', // 第五檔
-                '#EF4444', // 第六檔
-                '#14B8A6', // 第七檔
-                '#6366F1', // 第八檔
-                '#9CA3AF'  // 其他
+                '#3B82F6', 
+                '#F59E0B', 
+                '#EC4899', 
+                '#8B5CF6', 
+                '#06B6D4', 
+                '#10B981', 
+                '#EF4444', 
+                '#14B8A6', 
+                '#6366F1', 
+                '#9CA3AF'  
             ];
 
-            // 1. 現金代號 (已依要求從 CASH 改成 現金)
             if (cash > 0) {
                 labels.push('現金');
                 dataVals.push(cash);
@@ -1441,14 +1468,13 @@
                 dataVals.push(0);
             }
 
-            // 2. 股票純代碼標籤
             Object.keys(holdings).forEach(sym => {
                 const hold = holdings[sym];
                 if (hold.qty > 0) {
                     const currentPrice = Number(currentPrices[sym]) || 0;
                     const marketVal = hold.qty * currentPrice;
                     if (marketVal > 0) {
-                        labels.push(sym); // 僅顯示代碼 (例如: 2330)
+                        labels.push(sym); 
                         dataVals.push(marketVal);
                     }
                 }
@@ -1462,7 +1488,6 @@
 
             const activeColors = backgroundColors.slice(0, labels.length);
 
-            // 渲染中央 HTML 統一顏色對照標籤
             const legendContainer = document.getElementById('unifiedLegend');
             if (legendContainer) {
                 legendContainer.innerHTML = '';
@@ -1478,10 +1503,8 @@
                 });
             }
 
-            // 渲染圓餅圖
             renderDoughnutChart(labels, dataVals, activeColors, total);
 
-            // 修正：動態產生右側比例進度條 (代碼與%皆融入長條圖上)
             const listContainer = document.getElementById('allocationListContainer');
             if (listContainer) {
                 listContainer.innerHTML = '';
@@ -1490,20 +1513,15 @@
                     const pct = total > 0 ? ((val / total) * 100) : 0;
                     const color = activeColors[idx];
 
-                    // 建立一行，左側為色點，右側為內嵌「代號(左) 與 比例(right)」的質感進度條
                     const item = document.createElement('div');
                     item.className = "flex items-center gap-2.5";
 
                     item.innerHTML = `
-                        <!-- 左側：同步色點指示器 -->
                         <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: ${color}"></span>
                         
-                        <!-- 右側：內嵌文字雙向定位進度條 -->
                         <div class="w-full bg-gray-200 rounded h-6 relative overflow-hidden border border-gray-300 shadow-sm">
-                            <!-- 彩色進度條主體 -->
                             <div class="h-full rounded transition-all duration-500" style="width: ${pct.toFixed(1)}%; background-color: ${color}"></div>
                             
-                            <!-- 雙向疊加文字：代碼(左) / 比例(右) 搭配高對比實心邊框與陰影 (提昇文字清晰度) -->
                             <div class="absolute inset-0 flex justify-between items-center px-3 pointer-events-none text-white text-xs font-extrabold" style="text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);">
                                 <span>${label}</span>
                                 <span>${pct.toFixed(1)}%</span>
@@ -1515,7 +1533,6 @@
             }
         }
 
-        // 繪製圓餅圖 (已將內建 legend 隱藏)
         function renderDoughnutChart(labels, dataVals, activeColors, total) {
             const canvas = document.getElementById('allocationChart');
             if (!canvas) return;
@@ -1539,7 +1556,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }, // 隱藏內建圖例
+                        legend: { display: false }, 
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -1558,19 +1575,30 @@
 
         // 備份匯出
         window.exportData = function() {
-            const dataStr = JSON.stringify({
-                transactions,
-                currentPrices,
-                stockNames,
-                historicalPrices
-            });
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            const exportFileDefaultName = "stock_backup_" + new Date().toISOString().split('T')[0] + ".json";
+            try {
+                const dataStr = JSON.stringify({
+                    transactions,
+                    currentPrices,
+                    stockNames,
+                    historicalPrices
+                });
+                
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const exportFileDefaultName = "stock_backup_" + new Date().toISOString().split('T')[0] + ".json";
 
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportFileDefaultName);
-            linkElement.click();
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', url);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                
+                document.body.appendChild(linkElement);
+                linkElement.click();
+                document.body.removeChild(linkElement);
+                
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+            } catch (err) {
+                alert("匯出失敗：" + err.message);
+            }
         };
 
         // 備份匯入
@@ -1604,9 +1632,22 @@
             fileReader.readAsText(event.target.files[0]);
         };
 
+        // 重設
+        window.clearAllData = function() {
+            if (confirm("確定要重設所有資料嗎？這將刪除所有交易紀錄且無法復原！")) {
+                localStorage.clear();
+                transactions = [];
+                currentPrices = {};
+                stockNames = { ...defaultNames };
+                historicalPrices = {};
+                render();
+                alert("資料已全部重設。");
+            }
+        };
+
         // --- 首次啟動與背景執行配置 ---
         toggleFormFields();
-        initDefaultHistoryRange(currentHistoryScale); // 交易明細初始採用預設的「日」尺度 (最近5天)
+        initDefaultHistoryRange(currentHistoryScale); 
         render();
     </script>
 </body>
