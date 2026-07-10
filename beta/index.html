@@ -346,7 +346,7 @@
                         <tr>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">日期</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">類型</th>
-                            <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">標對 / 名稱</th>
+                            <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">標的 / 名稱</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">單價 / 金額</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">數量</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">收支變動</th>
@@ -1240,12 +1240,6 @@
             renderHistory();
         };
 
-        // 重新補回漏掉的 render 核心主函數，解決 ReferenceError 衝突
-        function render() {
-            renderHistory();
-            calculateAndRender();
-        }
-
         // --- 4. 歷史重播與連續時間軸處理邏輯 ---
 
         function calculateAssetOnSpecificDate(targetDate) {
@@ -1359,6 +1353,32 @@
                 dates.push(endStr);
             }
             return [...new Set(dates)].sort();
+        }
+
+        // 重新補齊年時間軸產生函數，解決與 Chart.js 尺度切換衝突
+        function generateYearlyDates(startDate, endDate) {
+            const dates = [];
+            let curr = new Date(startDate.getFullYear(), 0, 1);
+            const end = new Date(endDate);
+            while (curr <= end) {
+                const yearKey = curr.getFullYear();
+                const lastDayOfYear = yearKey + "-12-31";
+                if (new Date(lastDayOfYear) <= end) {
+                    dates.push(lastDayOfYear);
+                }
+                curr.setFullYear(curr.getFullYear() + 1);
+            }
+            const endStr = end.toISOString().split('T')[0];
+            if (dates.indexOf(endStr) === -1) {
+                dates.push(endStr);
+            }
+            return [...new Set(dates)].sort();
+        }
+
+        // 全域核心 Render 宣告 (解決未定義 ReferenceError 錯誤)
+        function render() {
+            renderHistory();
+            calculateAndRender();
         }
 
         // --- 5. 分頁切換與尺度控制系統 ---
