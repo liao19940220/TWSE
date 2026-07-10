@@ -236,7 +236,7 @@
             
             <p class="text-[11px] text-gray-400 mb-2">提示：圖表會根據您輸入的交易日期自動重播歷史資產。若某一天曾手動補登收盤價，將會套用補登價格計算。</p>
 
-            <!-- 歷史趨勢折線圖 (寬版呈現) -->
+            <!-- 歷史趨勢折線圖 -->
             <div class="space-y-2">
                 <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">歷史資產趨勢折線圖</h3>
                 <div class="relative w-full h-[280px] md:h-[340px]">
@@ -244,25 +244,25 @@
                 </div>
             </div>
 
-            <!-- 配置比重對照看板 (強制維持雙欄並排，手機板自動縮小比例) -->
+            <!-- 配置比重對照看板 (強制雙欄並排，優化 Container 絕對高度避免手機塌陷) -->
             <div class="bg-gray-50 p-2 md:p-4 rounded-lg border border-gray-200 space-y-4">
                 <div>
                     <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">實時資產配置比重 (含現金)</h3>
                     <p class="text-[10px] md:text-[11px] text-gray-400">雙圖表連動：圓餅圖呈獻結構分配，橫向長條圖呈現絕對市值對比，對應顏色完全相同。</p>
                 </div>
-                <!-- 移除了 md: 限制，強制維持 grid-cols-2 -->
+                <!-- 雙欄排版 -->
                 <div class="grid grid-cols-2 gap-2 md:gap-6">
-                    <!-- 左欄：比例圓餅圖 -->
-                    <div class="flex flex-col justify-between h-[160px] sm:h-[240px] md:h-[320px]">
-                        <span class="text-[9px] md:text-xs font-semibold text-gray-600 self-center">比例結構圓餅圖</span>
-                        <div class="relative w-full flex-1">
+                    <!-- 左欄：比例圓餅圖 (使用絕對高度 class 避免 Flex 空間擠壓為0) -->
+                    <div class="text-center">
+                        <span class="text-[9px] md:text-xs font-semibold text-gray-600 block mb-1">比例結構圓餅圖</span>
+                        <div class="relative w-full h-[190px] sm:h-[240px] md:h-[300px]">
                             <canvas id="allocationChart"></canvas>
                         </div>
                     </div>
-                    <!-- 右欄：橫向長條圖 (顏色與圓餅圖完全一致) -->
-                    <div class="flex flex-col justify-between h-[160px] sm:h-[240px] md:h-[320px]">
-                        <span class="text-[9px] md:text-xs font-semibold text-gray-600 self-center">市值對比長條圖</span>
-                        <div class="relative w-full flex-1">
+                    <!-- 右欄：橫向長條圖 (與圓餅圖顏色完全一致) -->
+                    <div class="text-center">
+                        <span class="text-[9px] md:text-xs font-semibold text-gray-600 block mb-1">市值對比長條圖</span>
+                        <div class="relative w-full h-[190px] sm:h-[240px] md:h-[300px]">
                             <canvas id="barChart"></canvas>
                         </div>
                     </div>
@@ -295,7 +295,7 @@
                         <tr>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">日期</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">類型</th>
-                            <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">標的 / 名稱</th>
+                            <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">標的 / 名難</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">單價 / 金額</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">數量</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">收支變動</th>
@@ -1027,6 +1027,21 @@
             localStorage.setItem('stock_v6_tx', JSON.stringify(transactions));
         }
 
+        function clearAllData() {
+            if (confirm("這會清除網頁中所有的股票交易與資產資料。確定要重設嗎？")) {
+                localStorage.removeItem('stock_v6_tx');
+                localStorage.removeItem('stock_v6_prices');
+                localStorage.removeItem('stock_v6_names');
+                localStorage.removeItem('stock_v7_historical_prices');
+                transactions = [];
+                currentPrices = {};
+                stockNames = { ...defaultNames };
+                historicalPrices = {};
+                render();
+                alert("資料已完全清空");
+            }
+        }
+
         // 本週週一至週五智慧計算
         function initDefaultHistoryRange() {
             const today = new Date();
@@ -1509,7 +1524,7 @@
                             labels: {
                                 boxWidth: 8,       // 縮小色塊寬度以防重疊
                                 font: { size: 9 }, // 縮小手機版圖例字體
-                                padding: 6         // 減小內距
+                                padding: 4         // 減小內距確保足夠寬度
                             }
                         },
                         tooltip: {
