@@ -1,0 +1,10 @@
+專案根目錄
+│
+├── index.html            # 主網頁 (只保留排版，長度可縮減至 200 行以內)
+│
+└── js                   # 存放 JavaScript 邏輯的資料夾
+    ├── config.js         # 全域設定、預設股票名稱與 LocalStorage 初始化
+    ├── api.js            # TradingView 與 Yahoo 財經的股價更新邏輯
+    ├── excel.js          # Excel 匯入與匯出的 SheetJS 處理邏輯
+    ├── charts.js         # 歷史資產折線圖、對照基準線與圓餅圖渲染
+    └── main.js           # 頁面主控（表單送出、刪除、分頁切換與啟動配置）
