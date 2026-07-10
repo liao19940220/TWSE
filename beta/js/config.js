@@ -1,10 +1,13 @@
-// 全域偵錯與安全逾時定義
+// --- 0.05 網路請求安全逾時控制幫手 ---
 async function fetchWithTimeout(resource, options = {}) {
     const { timeout = 3000 } = options; 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     try {
-        const response = await fetch(resource, { ...options, signal: controller.signal });
+        const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal
+        });
         clearTimeout(id);
         return response;
     } catch (e) {
@@ -13,7 +16,7 @@ async function fetchWithTimeout(resource, options = {}) {
     }
 }
 
-// 資料載入與防衝突初始化
+// --- 1. 資料載入與防衝突初始化 ---
 let transactions = [];
 let currentPrices = {};
 let stockNames = {}; 
@@ -32,13 +35,14 @@ const defaultNames = {
     "6488": "環球晶"
 };
 
-// 初始化 LocalStorage 讀取
 function initLocalStorage() {
     try {
         transactions = JSON.parse(localStorage.getItem('stock_v6_tx')) || [];
         currentPrices = JSON.parse(localStorage.getItem('stock_v6_prices')) || {};
+        
         const savedNames = JSON.parse(localStorage.getItem('stock_v6_names')) || {};
         stockNames = { ...defaultNames, ...savedNames };
+
         historicalPrices = JSON.parse(localStorage.getItem('stock_v7_historical_prices')) || {};
     } catch (e) {
         console.error("讀取本地儲存失敗，已重新初始化", e);
@@ -46,4 +50,5 @@ function initLocalStorage() {
         historicalPrices = {};
     }
 }
+
 initLocalStorage();
