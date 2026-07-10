@@ -336,6 +336,24 @@
             return false;
         };
 
+        // --- 0.05 網路請求安全逾時控制幫手 ---
+        async function fetchWithTimeout(resource, options = {}) {
+            const { timeout = 3000 } = options; // 預設 3 秒強制逾時，防止死鎖
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(resource, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(id);
+                return response;
+            } catch (e) {
+                clearTimeout(id);
+                throw e;
+            }
+        }
+
         // --- 0.1 關鍵著色與排版工具 ---
         function formatColorText(el, val) {
             if (!el) return;
@@ -619,7 +637,7 @@
             calculateAndRender();
         };
 
-        // --- 1.2 Yahoo Finance 多重代理伺服器備援查詢機制 ---
+        // --- 1.2 Yahoo Finance 多重代理伺服器備援查詢機制 (含 2.5 秒嚴格逾時防呆) ---
         async function fetchSingleYahooPrice(symbol) {
             const suffixes = ['.TW', '.TWO'];
             
@@ -634,7 +652,8 @@
                 for (const getProxyUrl of proxies) {
                     const proxyUrl = getProxyUrl(target);
                     try {
-                        const res = await fetch(proxyUrl);
+                        // 使用安全 fetchWithTimeout，2.5 秒無回應則立刻切換代理
+                        const res = await fetchWithTimeout(proxyUrl, { timeout: 2500 });
                         if (!res.ok) continue;
                         const json = await res.json();
                         const meta = json?.chart?.result?.[0]?.meta;
@@ -671,13 +690,12 @@
                 historicalPrices[today] = {};
             }
 
+            // 精準鎖定 TWSE (上市) 與 TPEX (上櫃)
             const symbolQueries = [];
             for (let i = 0; i < activeSymbols.length; i++) {
                 const sym = activeSymbols[i];
                 symbolQueries.push("TWSE:" + sym);
                 symbolQueries.push("TPEX:" + sym);
-                symbolQueries.push("TWO:" + sym);
-                symbolQueries.push("OTC:" + sym);
             }
 
             const targetUrl = "https://scanner.tradingview.com/taiwan/scan";
@@ -698,15 +716,18 @@
             const tvUpdatedSymbols = new Set();
             let successFetch = false;
 
+            // 1. 第一階段：嘗試 TradingView
             for (let k = 0; k < tryUrls.length; k++) {
                 if (successFetch) break;
                 try {
-                    const response = await fetch(tryUrls[k], {
+                    // 使用安全 fetchWithTimeout，3.5 秒無回應則立刻放棄，防止網頁死結
+                    const response = await fetchWithTimeout(tryUrls[k], {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify(payload),
+                        timeout: 3500
                     });
                     
                     if (!response.ok) continue;
@@ -736,6 +757,7 @@
                 }
             }
 
+            // 2. 第二階段：若有未取回價格之個股，自動使用多重代理連線至 Yahoo 財經補足
             const missingSymbols = activeSymbols.filter(sym => !tvUpdatedSymbols.has(sym));
             let yahooUpdatedCount = 0;
 
@@ -761,7 +783,7 @@
 
             const now = new Date();
             const totalUpdated = tvUpdatedSymbols.size + yahooUpdatedCount;
-            // 已簡化狀態描述：僅顯示成功同步 X 檔收盤價及更新時間
+            // 成功同步狀態文字，僅保留同步總檔數與更新時間
             status.innerText = `成功同步 ${totalUpdated} 檔收盤價 (${now.toLocaleTimeString()})`;
             btn.disabled = false;
             btn.innerText = "更新今日收盤價";
