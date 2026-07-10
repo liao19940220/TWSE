@@ -160,7 +160,7 @@
                                 <button id="fetchPriceBtn" onclick="fetchTwsePrices()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] py-1 px-2.5 rounded transition">
                                     更新今日收盤價
                                 </button>
-                                <span id="apiStatus" class="text-[10px] text-gray-400">名稱自動更新中...</span>
+                                <span id="apiStatus" class="text-[10px] text-gray-400">尚未更新價格</span>
                             </div>
                         </div>
                         <!-- RWD 手機滑動包裹器 -->
@@ -171,7 +171,6 @@
                                         <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">代號 / 名稱</th>
                                         <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">總資產佔比 %</th>
                                         <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">持股數</th>
-                                        <!-- 損益提早到平均成本與市價之前 -->
                                         <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">未實現損益 (報酬率)</th>
                                         <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">平均成本</th>
                                         <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap w-24">目前市價</th>
@@ -218,13 +217,13 @@
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b pb-4">
                 <h2 class="text-base md:text-lg font-semibold text-gray-700">資產統計分析</h2>
                 
-                <!-- 控制面板 -->
+                <!-- 控制面板 (排序：日、周、月、年) -->
                 <div class="flex flex-wrap items-center gap-2.5">
                     <div class="flex bg-gray-100 rounded p-0.5 gap-0.5 text-[11px] md:text-xs">
-                        <button id="btn-scale-weekly" onclick="changeChartScale('weekly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">每週</button>
-                        <button id="btn-scale-daily" onclick="changeChartScale('daily', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">每日</button>
-                        <button id="btn-scale-monthly" onclick="changeChartScale('monthly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">每月</button>
-                        <button id="btn-scale-yearly" onclick="changeChartScale('yearly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">每年</button>
+                        <button id="btn-scale-daily" onclick="changeChartScale('daily', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">日</button>
+                        <button id="btn-scale-weekly" onclick="changeChartScale('weekly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">周</button>
+                        <button id="btn-scale-monthly" onclick="changeChartScale('monthly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">月</button>
+                        <button id="btn-scale-yearly" onclick="changeChartScale('yearly', this)" class="px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded">年</button>
                     </div>
                     
                     <div class="flex items-center gap-1.5 text-[11px] md:text-xs text-gray-600">
@@ -237,7 +236,7 @@
             
             <p class="text-[11px] text-gray-400 mb-2">提示：圖表會根據您輸入的交易日期自動重播歷史資產。若某一天曾手動補登收盤價，將會套用補登價格計算。</p>
 
-            <!-- 歷史趨勢折線圖 (寬版呈現) -->
+            <!-- 歷史趨勢折線圖 -->
             <div class="space-y-2">
                 <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">歷史資產趨勢折線圖</h3>
                 <div class="relative w-full h-[280px] md:h-[340px]">
@@ -245,25 +244,30 @@
                 </div>
             </div>
 
-            <!-- 配置比重對照看板 (圓餅圖 + 橫向長條圖並列) -->
-            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 space-y-4">
+            <!-- 配置比重對照看板 (淺色主題，精簡文字與移除多餘欄位) -->
+            <div class="bg-gray-50 p-4 md:p-6 rounded-lg border border-gray-200 space-y-4">
                 <div>
-                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">實時資產配置比重 (含現金)</h3>
-                    <p class="text-[11px] text-gray-400">雙圖表連動：圓餅圖呈獻結構分配，橫向長條圖呈現絕對市值對比，對應顏色完全相同。</p>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wider">資產配置比 (含現金)</h3>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- 左欄：比例圓餅圖 -->
-                    <div class="flex flex-col justify-between h-[280px] md:h-[320px]">
-                        <span class="text-xs font-semibold text-gray-600 self-center">比例結構圓餅圖</span>
-                        <div class="relative w-full flex-1">
+                
+                <div class="grid grid-cols-12 gap-3 md:gap-6 items-center">
+                    <!-- 左欄：比例圓餅圖 (佔 5/12 寬) -->
+                    <div class="col-span-12 md:col-span-5 flex flex-col items-center justify-center relative">
+                        <div class="relative w-[170px] h-[170px] sm:w-[190px] sm:h-[190px] flex items-center justify-center">
                             <canvas id="allocationChart"></canvas>
+                            <!-- 圓餅圖正中央 "資產配置" 置中文字 -->
+                            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                <span class="text-[11px] md:text-xs font-bold text-gray-400 tracking-wider">資產</span>
+                                <span class="text-[11px] md:text-xs font-bold text-gray-400 tracking-wider">配置</span>
+                            </div>
                         </div>
                     </div>
-                    <!-- 右欄：橫向長條圖 (顏色與圓餅圖完全一致) -->
-                    <div class="flex flex-col justify-between h-[280px] md:h-[320px]">
-                        <span class="text-xs font-semibold text-gray-600 self-center">市值對比長條圖</span>
-                        <div class="relative w-full flex-1">
-                            <canvas id="barChart"></canvas>
+                    
+                    <!-- 右欄：市值與代碼配置清單進度條 (佔 7/12 寬，無額外表頭) -->
+                    <div class="col-span-12 md:col-span-7 space-y-2">
+                        <!-- 進度條列表容器 (JS 將動態注入進度條) -->
+                        <div id="allocationListContainer" class="space-y-3 pt-2">
+                            <!-- JS 動態生成 -->
                         </div>
                     </div>
                 </div>
@@ -374,8 +378,7 @@
         let activeTab = 'main';
         let assetChartInstance = null;
         let allocationChartInstance = null; // 圓餅圖實體
-        let barChartInstance = null;        // 長條圖實體
-        let currentChartScale = 'weekly'; // 將每週設為預設尺度
+        let currentChartScale = 'daily'; // 將「日」設為預設尺度
 
         // 預設日期安全設定與【限制不能大於當天】
         const todayStr = new Date().toISOString().split('T')[0];
@@ -604,68 +607,7 @@
             calculateAndRender();
         };
 
-        // --- 【上市與上櫃股票名稱 API 串接實作 (背景自動執行)】 ---
-        window.fetchStockNamesFromTwse = async function() {
-            const status = document.getElementById('apiStatus');
-            if (status) status.innerText = "基本資料自動更新中...";
-
-            const urls = [
-                "https://openapi.twse.com.tw/v1/opendata/t187ap02_L",
-                "https://openapi.twse.com.tw/v1/opendata/t187ap02_OTC"
-            ];
-
-            let updatedCount = 0;
-
-            for (const url of urls) {
-                let success = false;
-                const tryUrls = [
-                    url,
-                    "https://corsproxy.io/?" + encodeURIComponent(url)
-                ];
-
-                for (const fetchUrl of tryUrls) {
-                    if (success) break;
-                    try {
-                        const response = await fetch(fetchUrl);
-                        if (!response.ok) continue;
-
-                        const data = await response.json();
-                        if (Array.isArray(data)) {
-                            data.forEach(item => {
-                                const code = item["公司代號"] || item["SecuritiesCode"];
-                                const name = item["公司簡稱"] || item["SecuritiesName"];
-
-                                if (code && name) {
-                                    const trimmedCode = code.trim();
-                                    const trimmedName = name.trim();
-                                    if (trimmedCode && trimmedName) {
-                                        stockNames[trimmedCode] = trimmedName;
-                                        updatedCount++;
-                                    }
-                                }
-                            });
-                            success = true;
-                        }
-                    } catch (err) {
-                        console.warn(`無法自 ${fetchUrl} 下載名稱，準備嘗試備用方案...`);
-                    }
-                }
-            }
-
-            if (updatedCount > 0) {
-                localStorage.setItem('stock_v6_names', JSON.stringify(stockNames));
-                calculateAndRender();
-                if (status) {
-                    status.innerText = `已自動更新 ${updatedCount} 檔股票名稱`;
-                }
-            } else {
-                if (status) {
-                    status.innerText = "已載入本地快取資料";
-                }
-            }
-        };
-
-        // --- 【TradingView 批次掃描 API 直連】 ---
+        // --- 【TradingView 批次掃描 API 直連 (僅更新收盤價，完全不連動/不更新股票中文名稱)】 ---
         window.fetchTwsePrices = async function() {
             const btn = document.getElementById('fetchPriceBtn');
             const status = document.getElementById('apiStatus');
@@ -700,7 +642,7 @@
                 symbols: {
                     tickers: symbolQueries
                 },
-                columns: ["name", "description", "close"]
+                columns: ["name", "description", "close"] // 僅需要 close 數據
             };
 
             const tryUrls = [
@@ -740,12 +682,6 @@
                                 historicalPrices[today][symCode] = priceVal; 
                                 updatedCount++;
                             }
-
-                            // 若本機尚未有該股中文簡稱，才以 TradingView 名稱作低優先級填補
-                            const rawName = item.d[1];
-                            if (rawName && !stockNames[symCode]) {
-                                stockNames[symCode] = rawName.trim();
-                            }
                         });
 
                         successFetch = true;
@@ -757,12 +693,11 @@
 
             localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
             localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
-            localStorage.setItem('stock_v6_names', JSON.stringify(stockNames));
 
             calculateAndRender();
 
             const now = new Date();
-            status.innerText = "成功同步 " + activeSymbols.length + " 檔最新數據 (" + now.toLocaleTimeString() + ")";
+            status.innerText = "成功同步 " + activeSymbols.length + " 檔最新收盤價 (" + now.toLocaleTimeString() + ")";
             btn.disabled = false;
             btn.innerText = "更新今日收盤價";
         };
@@ -835,8 +770,8 @@
             const totalAsset = cash + stockMarketValue;
 
             // 渲染最上方看板的現金佔比與持股佔比文字
-            const elCashRatio = document.getElementById('cashRatioText');
-            const elStockRatio = document.getElementById('stockRatioText');
+            const elCashRatio = document.getElementById('currentCash').nextElementSibling;
+            const elStockRatio = document.getElementById('stockMarketValue').nextElementSibling;
             if (totalAsset > 0) {
                 if (elCashRatio) elCashRatio.innerText = `佔比: ${((cash / totalAsset) * 100).toFixed(1)}%`;
                 if (elStockRatio) elStockRatio.innerText = `佔比: ${((stockMarketValue / totalAsset) * 100).toFixed(1)}%`;
@@ -1025,21 +960,6 @@
 
         function saveData() {
             localStorage.setItem('stock_v6_tx', JSON.stringify(transactions));
-        }
-
-        function clearAllData() {
-            if (confirm("這會清除網頁中所有的股票交易與資產資料。確定要重設嗎？")) {
-                localStorage.removeItem('stock_v6_tx');
-                localStorage.removeItem('stock_v6_prices');
-                localStorage.removeItem('stock_v6_names');
-                localStorage.removeItem('stock_v7_historical_prices');
-                transactions = [];
-                currentPrices = {};
-                stockNames = { ...defaultNames };
-                historicalPrices = {};
-                render();
-                alert("資料已完全清空");
-            }
         }
 
         // 本週週一至週五智慧計算
@@ -1262,18 +1182,19 @@
             }
         };
 
+        // 預設回測歷史天數 (日->5天, 周->28天, 月->6個月, 年->3年)
         function initDefaultChartRange(scale) {
             const today = new Date();
             let start = new Date();
 
             if (scale === 'weekly') {
-                start.setDate(today.getDate() - 90); // 預設顯示 90 天內週線趨勢
+                start.setDate(today.getDate() - 28); // 預設顯示 28 天 (4 週)
             } else if (scale === 'daily') {
-                start.setDate(today.getDate() - 30);
+                start.setDate(today.getDate() - 5);  // 預設顯示最近 5 天 (5 筆日資料)
             } else if (scale === 'monthly') {
-                start.setMonth(today.getMonth() - 12);
+                start.setMonth(today.getMonth() - 6); // 預設顯示最近 6 個月
             } else if (scale === 'yearly') {
-                start.setFullYear(today.getFullYear() - 3);
+                start.setFullYear(today.getFullYear() - 3); // 預設顯示最近 3 年
             }
 
             document.getElementById('chartStartDate').value = start.toISOString().split('T')[0];
@@ -1409,7 +1330,7 @@
             });
         }
 
-        // --- 6.1 實時資產分配圖表連動 (圓餅圖 + 橫向長條圖，顏色統一) ---
+        // --- 6.1 實時資產分配圖表連動 (圓餅圖 + 橫向長條圖) ---
         function renderAllocationCharts() {
             // 本地重現與計算最新的資產配置狀態
             let cash = 0;
@@ -1443,39 +1364,39 @@
                 }
             });
 
+            // 圖表專用的純代碼標籤 (簡化名稱，不加中文說明)
             const labels = [];
             const dataVals = [];
             const backgroundColors = [
                 '#3B82F6', // 現金 (藍色)
-                '#F59E0B', // 橘黃
-                '#EC4899', // 粉色
-                '#8B5CF6', // 紫色
-                '#06B6D4', // 青色
-                '#10B981', // 綠色
-                '#EF4444', // 紅色
-                '#14B8A6', // 藍綠
-                '#6366F1', // 靛藍
-                '#9CA3AF'  // 灰色
+                '#F59E0B', // 第一檔
+                '#EC4899', // 第二檔
+                '#8B5CF6', // 第三檔
+                '#06B6D4', // 第四檔
+                '#10B981', // 第五檔
+                '#EF4444', // 第六檔
+                '#14B8A6', // 第七檔
+                '#6366F1', // 第八檔
+                '#9CA3AF'  // 其他
             ];
 
-            // 1. 現金佔比
+            // 1. 現金代號 (已依要求從 CASH 改成 現金)
             if (cash > 0) {
-                labels.push('帳戶現金');
+                labels.push('現金');
                 dataVals.push(cash);
             } else if (cash < 0) {
-                labels.push('帳戶現金 (超支)');
+                labels.push('現金');
                 dataVals.push(0);
             }
 
-            // 2. 股票市值佔比
+            // 2. 股票純代碼標籤
             Object.keys(holdings).forEach(sym => {
                 const hold = holdings[sym];
                 if (hold.qty > 0) {
                     const currentPrice = Number(currentPrices[sym]) || 0;
                     const marketVal = hold.qty * currentPrice;
                     if (marketVal > 0) {
-                        const displayName = stockNames[sym] ? `${sym} ${stockNames[sym]}` : sym;
-                        labels.push(displayName);
+                        labels.push(sym); // 僅顯示代碼 (例如: 2330)
                         dataVals.push(marketVal);
                     }
                 }
@@ -1483,7 +1404,7 @@
 
             const total = dataVals.reduce((a, b) => a + b, 0);
             if (total === 0) {
-                labels.push('無資產數據');
+                labels.push('EMPTY');
                 dataVals.push(1);
             }
 
@@ -1491,11 +1412,42 @@
 
             // 渲染圓餅圖
             renderDoughnutChart(labels, dataVals, activeColors, total);
-            // 渲染橫向長條圖 (採用相同色彩 activeColors)
-            renderHorizontalBarChart(labels, dataVals, activeColors, total);
+
+            // 修正：動態產生右側比例進度條 (代碼與%皆融入長條圖上)
+            const listContainer = document.getElementById('allocationListContainer');
+            if (listContainer) {
+                listContainer.innerHTML = '';
+                labels.forEach((label, idx) => {
+                    const val = dataVals[idx];
+                    const pct = total > 0 ? ((val / total) * 100) : 0;
+                    const color = activeColors[idx];
+
+                    // 建立一行，左側為色點，右側為內嵌「代號(左) 與 比例(右)」的質感進度條
+                    const item = document.createElement('div');
+                    item.className = "flex items-center gap-2.5";
+
+                    item.innerHTML = `
+                        <!-- 左側：同步色點指示器 -->
+                        <span class="w-2.5 h-2.5 rounded-full inline-block shrink-0" style="background-color: ${color}"></span>
+                        
+                        <!-- 右側：內嵌文字雙向定位進度條 -->
+                        <div class="w-full bg-gray-200 rounded h-6 relative overflow-hidden border border-gray-300 shadow-sm">
+                            <!-- 彩色進度條主體 -->
+                            <div class="h-full rounded transition-all duration-500" style="width: ${pct.toFixed(1)}%; background-color: ${color}"></div>
+                            
+                            <!-- 雙向疊加文字：代碼(左) / 比例(右) 搭配高對比實心邊框與陰影 (提昇文字清晰度) -->
+                            <div class="absolute inset-0 flex justify-between items-center px-3 pointer-events-none text-white text-xs font-extrabold" style="text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000, 0 2px 4px rgba(0,0,0,0.8);">
+                                <span>${label}</span>
+                                <span>${pct.toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
         }
 
-        // 繪製圓餅圖
+        // 繪製圓餅圖 (已將內建 legend 隱藏)
         function renderDoughnutChart(labels, dataVals, activeColors, total) {
             const canvas = document.getElementById('allocationChart');
             if (!canvas) return;
@@ -1519,71 +1471,16 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { boxWidth: 10, font: { size: 10 } }
-                        },
+                        legend: { display: false }, // 隱藏內建圖例
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
                                     const value = context.raw || 0;
                                     const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                    return ` NT$ ${value.toLocaleString()} (${pct}%)`;
+                                    const code = context.label;
+                                    const nameText = stockNames[code] ? ` (${stockNames[code]})` : '';
+                                    return ` ${code}${nameText}: NT$ ${value.toLocaleString()} (${pct}%)`;
                                 }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // 繪製橫向長條圖
-        function renderHorizontalBarChart(labels, dataVals, activeColors, total) {
-            const canvas = document.getElementById('barChart');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-
-            if (barChartInstance) {
-                barChartInstance.destroy();
-            }
-
-            barChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: dataVals,
-                        backgroundColor: activeColors, // 顏色與圓餅圖完全一致
-                        borderWidth: 1,
-                        barThickness: 15
-                    }]
-                },
-                options: {
-                    indexAxis: 'y', // 設定為橫向
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }, // 由於標籤名稱與圓餅圖一致，長條圖隱藏圖例以擴大可視面積
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const value = context.raw || 0;
-                                    const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                    return ` NT$ ${value.toLocaleString()} (${pct}%)`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: {
-                                font: { size: 10 },
-                                callback: function(value) { return value.toLocaleString(); }
-                            }
-                        },
-                        y: {
-                            ticks: {
-                                font: { size: 10 }
                             }
                         }
                     }
@@ -1643,9 +1540,6 @@
         toggleFormFields();
         initDefaultHistoryRange();
         render();
-        
-        // 頁面開啟後，自動在背景無感更新股票名稱，確保代碼資料庫永遠與證交所同步
-        fetchStockNamesFromTwse();
     </script>
 </body>
 </html>
