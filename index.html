@@ -346,7 +346,7 @@
                         <tr>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">日期</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">類型</th>
-                            <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">標的 / 名稱</th>
+                            <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">標對 / 名稱</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">單價 / 金額</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">數量</th>
                             <th class="px-2.5 py-2 text-left text-gray-500 whitespace-nowrap">收支變動</th>
@@ -652,8 +652,8 @@
                         return;
                     }
 
-                    const Math_today = new Date().toISOString().split('T')[0];
-                    if (dateInput > Math_today) {
+                    const today = new Date().toISOString().split('T')[0];
+                    if (dateInput > today) {
                         alert("交易日期不能大於今天！");
                         return;
                     }
@@ -725,8 +725,8 @@
                         return;
                     }
 
-                    const Math_today = new Date().toISOString().split('T')[0];
-                    if (date > Math_today) {
+                    const today = new Date().toISOString().split('T')[0];
+                    if (date > today) {
                         alert("補登日期不能大於今天！");
                         return;
                     }
@@ -743,7 +743,7 @@
                     historicalPrices[date][symbol] = priceVal;
                     localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
 
-                    if (date === Math_today) {
+                    if (date === today) {
                         currentPrices[symbol] = priceVal;
                         localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
                     }
@@ -774,11 +774,11 @@
             currentPrices[symbol] = price;
             localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
 
-            const Math_today = new Date().toISOString().split('T')[0];
-            if (!historicalPrices[Math_today]) {
-                historicalPrices[Math_today] = {};
+            const today = new Date().toISOString().split('T')[0];
+            if (!historicalPrices[today]) {
+                historicalPrices[today] = {};
             }
-            historicalPrices[Math_today][symbol] = price;
+            historicalPrices[today][symbol] = price;
             localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
 
             calculateAndRender();
@@ -831,9 +831,9 @@
             btn.innerText = "連線中...";
             status.innerText = "連線 TradingView 下載最新數據...";
 
-            const Math_today = new Date().toISOString().split('T')[0];
-            if (!historicalPrices[Math_today]) {
-                historicalPrices[Math_today] = {};
+            const today = new Date().toISOString().split('T')[0];
+            if (!historicalPrices[today]) {
+                historicalPrices[today] = {};
             }
 
             const symbolQueries = [];
@@ -888,7 +888,7 @@
                             const priceVal = parseFloat(item.d[2]);
                             if (!isNaN(priceVal) && priceVal > 0) {
                                 currentPrices[symCode] = priceVal;
-                                historicalPrices[Math_today][symCode] = priceVal; 
+                                historicalPrices[today][symCode] = priceVal; 
                                 tvUpdatedSymbols.add(symCode);
                             }
                         });
@@ -910,7 +910,7 @@
                     const price = await fetchSingleYahooPrice(sym);
                     if (price !== null) {
                         currentPrices[sym] = price;
-                        historicalPrices[Math_today][sym] = price;
+                        historicalPrices[today][sym] = price;
                         yahooUpdatedCount++;
                     }
                 });
@@ -1180,21 +1180,21 @@
         }
 
         function initDefaultHistoryRange(scale) {
-            const Math_today = new Date();
+            const today = new Date();
             let start = new Date();
 
             if (scale === 'daily') {
-                start.setDate(Math_today.getDate() - 5);  
+                start.setDate(today.getDate() - 5);  
             } else if (scale === 'weekly') {
-                start.setDate(Math_today.getDate() - 28); 
+                start.setDate(today.getDate() - 28); 
             } else if (scale === 'monthly') {
-                start.setMonth(Math_today.getMonth() - 6); 
+                start.setMonth(today.getMonth() - 6); 
             } else if (scale === 'yearly') {
-                start.setFullYear(Math_today.getFullYear() - 3); 
+                start.setFullYear(today.getFullYear() - 3); 
             }
 
             const startStr = start.toISOString().split('T')[0];
-            const todayStr = Math_today.toISOString().split('T')[0];
+            const todayStr = today.toISOString().split('T')[0];
 
             const histStartEl = document.getElementById('historyStartDate');
             const histEndEl = document.getElementById('historyEndDate');
@@ -1238,6 +1238,218 @@
             }
 
             renderHistory();
+        };
+
+        // 重新補回漏掉的 render 核心主函數，解決 ReferenceError 衝突
+        function render() {
+            renderHistory();
+            calculateAndRender();
+        }
+
+        // --- 4. 歷史重播與連續時間軸處理邏輯 ---
+
+        function calculateAssetOnSpecificDate(targetDate) {
+            let cash = 0;
+            let stockMarketValue = 0;
+            let totalUnrealizedPnl = 0;
+            const holdings = {};
+
+            const historicalTxs = transactions.filter(tx => tx.date <= targetDate);
+
+            historicalTxs.forEach(tx => {
+                const price = Number(tx.price) || 0;
+                const quantity = Number(tx.quantity) || 0;
+                const fee = Number(tx.fee) || 0;
+                const tax = Number(tx.tax) || 0;
+
+                if (tx.type === 'DEPOSIT') {
+                    cash += price;
+                } else if (tx.type === 'WITHDRAW') {
+                    cash -= price;
+                } else if (tx.type === 'BUY') {
+                    const totalCost = (price * quantity) + fee;
+                    cash -= totalCost;
+                    if (!holdings[tx.symbol]) holdings[tx.symbol] = { qty: 0, totalCost: 0, avgCost: 0 };
+                    holdings[tx.symbol].qty += quantity;
+                    holdings[tx.symbol].totalCost += totalCost;
+                    holdings[tx.symbol].avgCost = holdings[tx.symbol].qty > 0 ? (holdings[tx.symbol].totalCost / holdings[tx.symbol].qty) : 0;
+                } else if (tx.type === 'SELL') {
+                    const totalRevenue = (price * quantity) - fee - tax;
+                    cash += totalRevenue;
+                    const hold = holdings[tx.symbol];
+                    if (hold && hold.qty > 0) {
+                        hold.qty -= quantity;
+                        hold.totalCost = hold.qty * (hold.avgCost || 0);
+                    }
+                }
+            });
+
+            Object.keys(holdings).forEach(sym => {
+                const hold = holdings[sym];
+                if (hold.qty > 0) {
+                    let priceOnDate = 0;
+
+                    if (historicalPrices[targetDate] && historicalPrices[targetDate][sym] !== undefined) {
+                        priceOnDate = historicalPrices[targetDate][sym];
+                    } else {
+                        const symHistory = historicalTxs.filter(t => t.symbol === sym);
+                        const lastTxPrice = symHistory.length > 0 ? symHistory[symHistory.length - 1].price : 0;
+                        priceOnDate = lastTxPrice || hold.avgCost || 0;
+                    }
+
+                    const marketVal = hold.qty * priceOnDate;
+                    const costVal = hold.qty * (hold.avgCost || 0);
+
+                    stockMarketValue += marketVal;
+                    totalUnrealizedPnl += (marketVal - costVal);
+                }
+            });
+
+            return {
+                date: targetDate,
+                cash: cash,
+                stockValue: stockMarketValue,
+                unrealizedPnl: totalUnrealizedPnl,
+                totalAsset: cash + stockMarketValue
+            };
+        }
+
+        function generateDailyDates(startDate, endDate) {
+            const dates = [];
+            let curr = new Date(startDate);
+            const end = new Date(endDate);
+            while (curr <= end) {
+                dates.push(curr.toISOString().split('T')[0]);
+                curr.setDate(curr.getDate() + 1);
+            }
+            return dates;
+        }
+
+        function generateWeeklyDates(startDate, endDate) {
+            const dates = [];
+            let curr = new Date(startDate);
+            const end = new Date(endDate);
+            while (curr <= end) {
+                const day = curr.getDay(); 
+                if (day === 5) { 
+                    dates.push(curr.toISOString().split('T')[0]);
+                }
+                curr.setDate(curr.getDate() + 1);
+            }
+            const endStr = end.toISOString().split('T')[0];
+            if (dates.indexOf(endStr) === -1) {
+                dates.push(endStr);
+            }
+            return [...new Set(dates)].sort();
+        }
+
+        function generateMonthlyDates(startDate, endDate) {
+            const dates = [];
+            let curr = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+            const end = new Date(endDate);
+            while (curr <= end) {
+                const lastDay = new Date(curr.getFullYear(), curr.getMonth() + 1, 0);
+                if (lastDay >= startDate && lastDay <= end) {
+                    dates.push(lastDay.toISOString().split('T')[0]);
+                }
+                curr.setMonth(curr.getMonth() + 1);
+            }
+            const endStr = end.toISOString().split('T')[0];
+            if (dates.indexOf(endStr) === -1) {
+                dates.push(endStr);
+            }
+            return [...new Set(dates)].sort();
+        }
+
+        // --- 5. 分頁切換與尺度控制系統 ---
+
+        window.switchTab = function(tab) {
+            activeTab = tab;
+            const tabMain = document.getElementById('tab-main');
+            const tabChart = document.getElementById('tab-chart');
+            const tabHistory = document.getElementById('tab-history');
+
+            const tabMainBtn = document.getElementById('tab-main-btn');
+            const tabChartBtn = document.getElementById('tab-chart-btn');
+            const tabHistoryBtn = document.getElementById('tab-history-btn');
+
+            if (tabMain) tabMain.style.display = tab === 'main' ? 'block' : 'none';
+            if (tabChart) tabChart.style.display = tab === 'chart' ? 'block' : 'none';
+            if (tabHistory) tabHistory.style.display = tab === 'history' ? 'block' : 'none';
+
+            if (tabMainBtn) {
+                tabMainBtn.className = tab === 'main' 
+                    ? "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-blue-500 text-blue-600 font-semibold text-xs md:text-sm transition"
+                    : "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-xs md:text-sm transition";
+            }
+            if (tabChartBtn) {
+                tabChartBtn.className = tab === 'chart' 
+                    ? "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-blue-500 text-blue-600 font-semibold text-xs md:text-sm transition"
+                    : "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-xs md:text-sm transition";
+            }
+            if (tabHistoryBtn) {
+                tabHistoryBtn.className = tab === 'history' 
+                    ? "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-blue-500 text-blue-600 font-semibold text-xs md:text-sm transition"
+                    : "flex-1 md:flex-initial text-center px-4 py-2.5 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-xs md:text-sm transition";
+            }
+
+            if (tab === 'chart') {
+                initDefaultChartRange(currentChartScale);
+                initTargetLinePersistence();
+                renderChart();
+                renderAllocationCharts(); 
+            } else if (tab === 'history') {
+                initDefaultHistoryRange(currentHistoryScale);
+                
+                const currentBtn = document.getElementById(`btn-hist-${currentHistoryScale}`);
+                if (currentBtn) {
+                    document.querySelectorAll('#btn-hist-daily, #btn-hist-weekly, #btn-hist-monthly, #btn-hist-yearly').forEach(btn => {
+                        btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+                    });
+                    currentBtn.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+                }
+                renderHistory();
+            }
+        };
+
+        function initDefaultChartRange(scale) {
+            const today = new Date();
+            let start = new Date();
+
+            if (scale === 'weekly') {
+                start.setDate(today.getDate() - 28); 
+            } else if (scale === 'daily') {
+                start.setDate(today.getDate() - 5);  
+            } else if (scale === 'monthly') {
+                start.setMonth(today.getMonth() - 6); 
+            } else if (scale === 'yearly') {
+                start.setFullYear(today.getFullYear() - 3); 
+            }
+
+            document.getElementById('chartStartDate').value = start.toISOString().split('T')[0];
+            document.getElementById('chartEndDate').value = today.toISOString().split('T')[0];
+
+            const todayStr = today.toISOString().split('T')[0];
+            document.getElementById('chartStartDate').max = todayStr;
+            document.getElementById('chartEndDate').max = todayStr;
+        }
+
+        window.changeChartScale = function(scale, btnElement) {
+            currentChartScale = scale;
+            
+            document.querySelectorAll('#btn-scale-weekly, #btn-scale-daily, #btn-scale-monthly, #btn-scale-yearly').forEach(btn => {
+                btn.className = "px-2.5 py-1 text-gray-600 hover:text-gray-900 rounded";
+            });
+            if (btnElement) {
+                btnElement.className = "px-2.5 py-1 bg-blue-500 text-white font-medium rounded shadow-sm";
+            }
+
+            initDefaultChartRange(scale);
+            renderChart();
+        };
+
+        window.onCustomRangeChange = function() {
+            renderChart();
         };
 
         // --- 5.1 對照基準線狀態讀取與記憶機制 ---
