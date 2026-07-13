@@ -172,6 +172,19 @@
             #netAssetVal { font-size: 39px !important; }
             #tab-chart > .relative.w-full { height: 295px !important; }
         }
+
+
+        /* === V3 隱私眼睛與最高淨資產回檔欄位 === */
+        .privacy-toggle-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:#eef6ff;color:#2563eb;border:1px solid #dbeafe;transition:.15s;margin-left:8px;flex-shrink:0}
+        .privacy-toggle-btn:active{transform:scale(.94)}
+        .privacy-toggle-btn svg{width:17px;height:17px}
+        .masked-money{letter-spacing:.08em}
+        #drawdownPercent{color:#ea580c}
+        @media (max-width:768px){
+            .privacy-toggle-btn{width:32px;height:32px;margin-left:6px}
+            #netAssetVal.masked-money{font-size:34px!important}
+        }
+
     </style>
 </head>
 <body class="bg-[#f6f8fa] min-h-screen text-slate-800 antialiased pb-24 text-xs md:text-sm">
@@ -213,12 +226,28 @@
             <div class="bg-white rounded-[20px] sm:rounded-[24px] border border-slate-100 p-3.5 sm:p-6 md:p-8 shadow-sm space-y-3 sm:space-y-4 md:space-y-6 relative overflow-hidden">
                 <div class="absolute -right-12 -top-12 w-36 h-36 bg-blue-50/40 rounded-full blur-2xl pointer-events-none"></div>
                 
-                <div>
-                    <p class="text-[11px] sm:text-xs md:text-sm font-semibold text-slate-400 tracking-wider uppercase">淨資產 ($)</p>
-                    <h2 class="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-950 mt-0.5 tracking-tight" id="netAssetVal">$ 0</h2>
+                <!-- 淨資產區（整合「最高淨資產」簡易提示於右側） -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <p class="text-[11px] sm:text-xs md:text-sm font-semibold text-slate-400 tracking-wider uppercase">淨資產 ($)</p>
+                        <div class="flex items-center gap-1 mt-0.5">
+                            <h2 class="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-950 tracking-tight" id="netAssetVal">$ 0</h2>
+                            <button id="privacyToggleBtn" onclick="togglePrivacyMode()" class="privacy-toggle-btn" aria-label="顯示或隱藏金額"></button>
+                        </div>
+                    </div>
+
+                    <!-- 右側小型提醒標籤 -->
+                    <div class="inline-flex items-center gap-2 bg-orange-50/80 border border-orange-100/70 px-3 py-1.5 rounded-xl self-start sm:self-center shadow-sm">
+                        <span class="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shrink-0"></span>
+                        <div class="text-[11px] sm:text-xs text-slate-500 leading-none">
+                            <span class="text-slate-400 font-medium">最高淨資產:</span>
+                            <span class="font-bold text-slate-800" id="highestNetAsset">$ 0</span>
+                            <span class="font-semibold ml-1.5" id="drawdownPercent">回檔 0.0%</span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 雙排主要資產比率 -->
+                <!-- 雙排主要資產比率 (已調整為兩欄對稱版面) -->
                 <div class="grid grid-cols-2 gap-2.5 md:gap-4 pt-3 border-t border-slate-50">
                     <div class="bg-slate-50/60 p-2.5 sm:p-4 rounded-xl border border-slate-100/80">
                         <span class="text-[11px] sm:text-xs md:text-sm text-slate-400 font-medium block">持股市值</span>
@@ -767,6 +796,25 @@
         let editingTxId = null; // 特定編輯中 ID 緩存
 
         const todayStr = new Date().toISOString().split('T')[0];
+        let privacyHidden = localStorage.getItem('stock_v9_privacy_hidden');
+        privacyHidden = privacyHidden === null ? true : privacyHidden === 'true';
+        const moneyElementIds = ['netAssetVal','stockMarketValue','currentCash','highestNetAsset','totalUnrealizedPnl','totalRealizedPnl','totalDividends','totalCombinedReturn'];
+        const moneyOriginalText = {};
+
+        function updatePrivacyIcon(){
+            const btn=document.getElementById('privacyToggleBtn');
+            if(!btn) return;
+            btn.innerHTML = privacyHidden
+              ? `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18"/><path stroke-linecap="round" stroke-linejoin="round" d="M10.58 10.58A2 2 0 0012 14a2 2 0 001.42-.58"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.88 4.24A10.7 10.7 0 0112 4c5 0 9 4 10 8a11.8 11.8 0 01-2.1 3.72M6.1 6.1A11.8 11.8 0 002 12c1 4 5 8 10 8 1.35 0 2.62-.29 3.74-.8"/></svg>`
+              : `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+        }
+        function rememberMoneyText(){ moneyElementIds.forEach(id=>{ const el=document.getElementById(id); if(el && el.innerText !== '***') moneyOriginalText[id]=el.innerText; }); }
+        function applyPrivacyMask(){
+            moneyElementIds.forEach(id=>{ const el=document.getElementById(id); if(!el) return; if(privacyHidden){ el.innerText='***'; el.classList.add('masked-money'); } else { el.innerText=moneyOriginalText[id] || el.innerText; el.classList.remove('masked-money'); } });
+            updatePrivacyIcon();
+        }
+        window.togglePrivacyMode=function(){ privacyHidden=!privacyHidden; localStorage.setItem('stock_v9_privacy_hidden', privacyHidden); applyPrivacyMask(); };
+
 
         function toSlashDate(dateStr) {
             if (!dateStr) return "";
@@ -1138,143 +1186,48 @@
         };
 
         // --- 2. 跨平台雙代理 API 收盤價獲取 ---
-        async function fetchSingleYahooPrice(symbol) {
-            const suffixes = ['.TW', '.TWO'];
-            const proxies = [
-                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-                (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
-            ];
-
-            for (const suffix of suffixes) {
-                const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}${suffix}`;
-                for (const getProxyUrl of proxies) {
-                    const proxyUrl = getProxyUrl(target);
-                    try {
-                        const res = await fetchWithTimeout(proxyUrl, { timeout: 2500 });
-                        if (!res.ok) continue;
-                        const json = await res.json();
-                        const meta = json?.chart?.result?.[0]?.meta;
-                        const price = meta?.regularMarketPrice;
-                        if (price && typeof price === 'number' && price > 0) {
-                            return price; 
-                        }
-                    } catch (e) {
-                        console.warn(`Yahoo Proxy error for ${symbol}${suffix}:`, e);
-                    }
-                }
-            }
-            return null;
+async function fetchSingleYahooPrice(symbol) {
+    // 💡 請將下方的網址，替換成您在步驟 3 複製的 Google Apps Script 網頁應用程式 URL 
+    const gasUrl = "https://script.google.com/macros/s/AKfycbx0IHWBe5372q2N3xYvfkPtoDQ1ATMlvmj4tYKIdpWfONl-Tvv6eu021IgpIrOrjEYTnw/exec"; 
+    
+    try {
+        // 直接向您的專屬 Google 雲端連線，無須經由任何不穩定的第三方 Proxy
+        const targetUrl = `${gasUrl}?symbol=${symbol}`;
+        const res = await fetchWithTimeout(targetUrl, { timeout: 4500 });
+        if (!res.ok) return null;
+        
+        const data = await res.json();
+        if (data && data.price) {
+            return data.price; // 成功取得收盤價
         }
-
-        window.fetchTwsePrices = async function() {
-            const btn = document.getElementById('fetchPriceBtn');
-            const status = document.getElementById('apiStatus');
-            if (!btn || !status) return;
-
-            const activeSymbols = getActiveSymbols();
-            if (activeSymbols.length === 0) {
-                status.innerText = "無持股庫存";
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = "同步中...";
-            status.innerText = "連線 TradingView 下載數據...";
-
-            const today = new Date().toISOString().split('T')[0];
-            if (!historicalPrices[today]) {
-                historicalPrices[today] = {};
-            }
-
-            const symbolQueries = [];
-            activeSymbols.forEach(sym => {
-                symbolQueries.push("TWSE:" + sym);
-                symbolQueries.push("TPEX:" + sym); 
-            });
-
-            const targetUrl = "https://scanner.tradingview.com/taiwan/scan";
-            const payload = {
-                symbols: { tickers: symbolQueries },
-                columns: ["name", "description", "close"] 
-            };
-
-            const tryUrls = [targetUrl, "https://corsproxy.io/?" + encodeURIComponent(targetUrl)];
-            const tvUpdatedSymbols = new Set();
-            let successFetch = false;
-
-            for (let k = 0; k < tryUrls.length; k++) {
-                if (successFetch) break;
-                try {
-                    const response = await fetchWithTimeout(tryUrls[k], {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload),
-                        timeout: 3500
-                    });
-                    
-                    if (!response.ok) continue;
-                    const data = await response.json();
-                    
-                    if (data && Array.isArray(data.data)) {
-                        data.data.forEach(item => {
-                            if (!item || !Array.isArray(item.d)) return;
-                            const symCode = (item.s || '').split(':')[1];
-                            if (!symCode) return;
-
-                            const priceVal = parseFloat(item.d[2]);
-                            if (!isNaN(priceVal) && priceVal > 0) {
-                                currentPrices[symCode] = priceVal;
-                                historicalPrices[today][symCode] = priceVal; 
-                                tvUpdatedSymbols.add(symCode);
-                            }
-                        });
-                        successFetch = true;
-                    }
-                } catch (err) {
-                    console.warn("TradingView scheme failed, switching next.");
-                }
-            }
-
-            const missingSymbols = activeSymbols.filter(sym => !tvUpdatedSymbols.has(sym));
-            let yahooUpdatedCount = 0;
-
-            if (missingSymbols.length > 0) {
-                status.innerText = `TV 更新了 ${tvUpdatedSymbols.size} 檔，Yahoo 補足其餘中...`;
-                const yahooPromises = missingSymbols.map(async (sym) => {
-                    const price = await fetchSingleYahooPrice(sym);
-                    if (price !== null) {
-                        currentPrices[sym] = price;
-                        historicalPrices[today][sym] = price;
-                        yahooUpdatedCount++;
-                    }
-                });
-                await Promise.all(yahooPromises);
-            }
-
-            localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
-            localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
-
-            calculateAndRender();
-
-            const now = new Date();
-            status.innerText = `成功更新 ${tvUpdatedSymbols.size + yahooUpdatedCount} 檔 (${now.toLocaleTimeString()})`;
-            btn.disabled = false;
-            btn.innerText = "🔄 更新今日收盤價";
-        };
-
-        function getActiveSymbols() {
-            const holdings = {};
-            transactions.forEach(tx => {
-                if (tx.type === 'DEPOSIT' || tx.type === 'WITHDRAW' || tx.type === 'DIVIDEND') return;
-                const sym = tx.symbol || 'UNKNOWN';
-                const qty = Number(tx.quantity) || 0;
-                if (!holdings[sym]) holdings[sym] = 0;
-                holdings[sym] += (tx.type === 'BUY' ? qty : -qty);
-            });
-            return Object.keys(holdings).filter(sym => holdings[sym] > 0);
-        }
+    } catch (e) {
+        console.warn(`GAS 雲端更新 ${symbol} 失敗:`, e);
+    }
+    return null;
+}
 
         // --- 3. 核心庫存與財務數據計算 ---
+        function calculateHighestNetAssetDrawdown() {
+            const today = new Date().toISOString().split('T')[0];
+            let startDate = null;
+            const txDates = transactions.map(t => t.date).filter(Boolean).sort();
+            const histDates = Object.keys(historicalPrices || {}).sort();
+            if (txDates.length > 0) startDate = txDates[0];
+            if (!startDate && histDates.length > 0) startDate = histDates[0];
+            if (!startDate) return { highest: 0, current: 0, drawdownPct: 0 };
+            const dates = generateDailyDates(startDate, today);
+            let highest = 0;
+            let current = 0;
+            dates.forEach(d => {
+                const asset = calculateAssetOnSpecificDate(d).totalAsset || 0;
+                if (asset > highest) highest = asset;
+                if (d === today) current = asset;
+            });
+            if (!current && dates.length) current = calculateAssetOnSpecificDate(dates[dates.length - 1]).totalAsset || 0;
+            const drawdownPct = highest > 0 ? Math.max(0, ((highest - current) / highest) * 100) : 0;
+            return { highest, current, drawdownPct };
+        }
+
         function calculateAndRender() {
             let cash = 0;
             let stockMarketValue = 0;
@@ -1488,6 +1441,8 @@
             const elRealized = document.getElementById('totalRealizedPnl');
             const elDividends = document.getElementById('totalDividends');
             const elCombinedReturn = document.getElementById('totalCombinedReturn');
+            const elHighestNetAsset = document.getElementById('highestNetAsset');
+            const elDrawdownPercent = document.getElementById('drawdownPercent');
 
             if (elNetAsset) elNetAsset.innerText = `$ ${totalAsset.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
             if (elCash) elCash.innerText = `$ ${cash.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
@@ -1499,6 +1454,12 @@
                 elDividends.innerText = `$ ${totalDividends.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
             }
             if (elCombinedReturn) formatColorText(elCombinedReturn, totalCombinedReturn);
+
+            const ddInfo = calculateHighestNetAssetDrawdown();
+            if (elHighestNetAsset) elHighestNetAsset.innerText = `$ ${ddInfo.highest.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+            if (elDrawdownPercent) elDrawdownPercent.innerText = `回檔 ${ddInfo.drawdownPct.toFixed(1)}%`;
+            rememberMoneyText();
+            applyPrivacyMask();
 
             return { cash, stockMarketValue, totalUnrealizedPnl };
         }
@@ -2299,6 +2260,7 @@
         initDefaultHistoryRange(currentHistoryScale); 
         initTargetLinePersistence();
         render();
+        updatePrivacyIcon();
     </script>
 </body>
 </html>
