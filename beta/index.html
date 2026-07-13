@@ -2,7 +2,8 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 更新 Viewport 設定：限制手機端螢幕縮放功能 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>股票交易與資產管理系統</title>
     <!-- Tailwind CSS (排版) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -72,20 +73,20 @@
                 <div class="absolute -right-12 -top-12 w-36 h-36 bg-blue-50/40 rounded-full blur-2xl pointer-events-none"></div>
                 
                 <div>
-                    <p class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-400 tracking-wider uppercase">淨資產 (NT$)</p>
-                    <h2 class="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-950 mt-0.5 tracking-tight" id="netAssetVal">NT$ 0</h2>
+                    <p class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-400 tracking-wider uppercase">淨資產 ($)</p>
+                    <h2 class="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-950 mt-0.5 tracking-tight" id="netAssetVal">$ 0</h2>
                 </div>
 
                 <!-- 雙排主要資產比率 -->
                 <div class="grid grid-cols-2 gap-3 md:gap-4 pt-3 border-t border-slate-50">
                     <div class="bg-slate-50/60 p-3 md:p-4 rounded-xl border border-slate-100/80">
                         <span class="text-[10px] sm:text-xs md:text-sm text-slate-400 font-medium block">持股市值</span>
-                        <span class="text-sm sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block" id="stockMarketValue">NT$ 0</span>
+                        <span class="text-sm sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block" id="stockMarketValue">$ 0</span>
                         <span class="text-[10px] md:text-xs text-blue-600 font-semibold mt-0.5 block" id="stockRatioText">佔比 0.0%</span>
                     </div>
                     <div class="bg-slate-50/60 p-3 md:p-4 rounded-xl border border-slate-100/80 relative">
                         <span class="text-[10px] sm:text-xs md:text-sm text-slate-400 font-medium block">可用現金</span>
-                        <span class="text-sm sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block" id="currentCash">NT$ 0</span>
+                        <span class="text-sm sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block" id="currentCash">$ 0</span>
                         <span class="text-[10px] md:text-xs text-indigo-600 font-semibold mt-0.5 block" id="cashRatioText">佔比 0.0%</span>
                         <div id="cashAlert" class="absolute right-2 bottom-2"></div>
                     </div>
@@ -95,19 +96,19 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-slate-50 text-[11px] sm:text-xs md:text-sm">
                     <div>
                         <p class="text-slate-400 font-medium">未實現損益</p>
-                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5" id="totalUnrealizedPnl">NT$ 0</p>
+                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5" id="totalUnrealizedPnl">$ 0</p>
                     </div>
                     <div>
                         <p class="text-slate-400 font-medium">已實現損益</p>
-                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5" id="totalRealizedPnl">NT$ 0</p>
+                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5" id="totalRealizedPnl">$ 0</p>
                     </div>
                     <div>
                         <p class="text-slate-400 font-medium">累積股息</p>
-                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5 text-teal-600" id="totalDividends">NT$ 0</p>
+                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5 text-teal-600" id="totalDividends">$ 0</p>
                     </div>
                     <div>
                         <p class="text-slate-400 font-medium">總報酬</p>
-                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5" id="totalCombinedReturn">NT$ 0</p>
+                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5" id="totalCombinedReturn">$ 0</p>
                     </div>
                 </div>
             </div>
@@ -126,20 +127,20 @@
 
                 <!-- 庫存列表 -->
                 <div class="overflow-hidden">
-                    <!-- 電腦版表格 -->
+                    <!-- 電腦版表格 (上下左右置中) -->
                     <div class="hidden md:block overflow-x-auto">
                         <table class="min-w-full text-xs md:text-sm">
-                            <thead class="text-slate-400 font-semibold border-b border-slate-50 text-left">
+                            <thead class="text-slate-400 font-semibold border-b border-slate-50">
                                 <tr>
-                                    <th class="pb-2 font-medium">標的代號</th>
-                                    <th class="pb-2 font-medium">資產佔比 %</th>
-                                    <th class="pb-2 font-medium">持股股數</th>
-                                    <th class="pb-2 font-medium">未實現損益 (報酬率)</th>
-                                    <th class="pb-2 font-medium">平均成本</th>
-                                    <th class="pb-2 font-medium w-28">目前市價</th>
+                                    <th class="pb-2 font-medium text-center">標的代號</th>
+                                    <th class="pb-2 font-medium text-center">資產佔比 %</th>
+                                    <th class="pb-2 font-medium text-center">持股股數</th>
+                                    <th class="pb-2 font-medium text-center">未實現損益 (報酬率)</th>
+                                    <th class="pb-2 font-medium text-center">平均成本</th>
+                                    <th class="pb-2 font-medium text-center w-28">收盤價</th>
                                 </tr>
                             </thead>
-                            <tbody id="holdingsTable" class="divide-y divide-slate-50">
+                            <tbody id="holdingsTable" class="divide-y divide-slate-50 text-center">
                                 <!-- 動態生成 -->
                             </tbody>
                         </table>
@@ -265,21 +266,21 @@
                 </div>
             </div>
 
-            <!-- 歷史表格 -->
+            <!-- 歷史表格 (上下左右置中，無 NT$) -->
             <div class="overflow-x-auto">
                 <table class="min-w-full text-[11px] sm:text-xs md:text-sm">
-                    <thead class="text-slate-400 font-semibold border-b border-slate-50 text-left">
+                    <thead class="text-slate-400 font-semibold border-b border-slate-50">
                         <tr>
-                            <th class="pb-2 font-medium">交易日期</th>
-                            <th class="pb-2 font-medium">類型</th>
-                            <th class="pb-2 font-medium">標的 / 名稱</th>
-                            <th class="pb-2 font-medium">單價 / 總額</th>
-                            <th class="pb-2 font-medium">股數</th>
-                            <th class="pb-2 font-medium">收支變動</th>
+                            <th class="pb-2 font-medium text-center">交易日期</th>
+                            <th class="pb-2 font-medium text-center">類型</th>
+                            <th class="pb-2 font-medium text-center">標的</th>
+                            <th class="pb-2 font-medium text-center">單價</th>
+                            <th class="pb-2 font-medium text-center">股數</th>
+                            <th class="pb-2 font-medium text-center">收支變動</th>
                             <th class="pb-2 font-medium text-center">管理</th>
                         </tr>
                     </thead>
-                    <tbody id="txHistoryTable" class="divide-y divide-slate-50 text-slate-700">
+                    <tbody id="txHistoryTable" class="divide-y divide-slate-50 text-slate-700 text-center">
                         <!-- 動態生成 -->
                     </tbody>
                 </table>
@@ -339,6 +340,7 @@
     </button>
 
     <!-- ==================== 懸浮視窗：新增交易/補登 (Action Modal) ==================== -->
+    <!-- 所有 input 與 select 的文字在手機端皆採用 text-base (16px) 以防聚焦縮放 -->
     <div id="actionModal" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-3">
         <div class="bg-white rounded-[24px] shadow-2xl border border-slate-100 max-w-sm w-full max-h-[90vh] flex flex-col overflow-hidden animate-fade-in text-xs md:text-sm">
             
@@ -367,7 +369,7 @@
                 <form id="txForm" class="space-y-3" novalidate>
                     <div>
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">交易類型</label>
-                        <select id="type" onchange="toggleFormFields()" class="mt-1 block w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 border p-2 bg-slate-50/50">
+                        <select id="type" onchange="toggleFormFields()" class="mt-1 block w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 border p-2 bg-slate-50/50 text-base md:text-xs text-slate-700">
                             <option value="BUY">買入股票</option>
                             <option value="SELL">賣出股票</option>
                             <option value="DEPOSIT">帳戶入金 (存入現金)</option>
@@ -377,29 +379,29 @@
                     </div>
                     <div id="stockFields">
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">股票代號</label>
-                        <input type="text" id="symbol" placeholder="如: 2330" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                        <input type="text" id="symbol" placeholder="如: 2330" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
                     <div>
                         <label id="amountLabel" class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">單價 (元)</label>
-                        <input type="number" step="any" inputmode="decimal" id="price" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                        <input type="number" step="any" inputmode="decimal" id="price" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
                     <div id="qtyField">
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">股數</label>
-                        <input type="number" inputmode="numeric" pattern="[0-9]*" id="quantity" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                        <input type="number" inputmode="numeric" pattern="[0-9]*" id="quantity" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
                     <div id="feeField">
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">手續費 (元)</label>
-                        <input type="number" step="1" inputmode="numeric" pattern="[0-9]*" id="fee" value="0" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                        <input type="number" step="1" inputmode="numeric" pattern="[0-9]*" id="fee" value="0" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
                     <div id="taxField" class="hidden">
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">交易稅 (元)</label>
-                        <input type="number" step="1" inputmode="numeric" pattern="[0-9]*" id="tax" value="0" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                        <input type="number" step="1" inputmode="numeric" pattern="[0-9]*" id="tax" value="0" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
                     <div>
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">日期</label>
-                        <input type="date" id="date" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                        <input type="date" id="date" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition text-[11px] md:text-xs shadow-sm">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition text-sm md:text-xs shadow-sm">
                         儲存交易紀錄
                     </button>
                 </form>
@@ -408,17 +410,17 @@
                 <form id="histForm" class="space-y-3 hidden" novalidate>
                     <div>
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">選擇日期</label>
-                        <input type="date" id="histDate" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                        <input type="date" id="histDate" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
                     <div>
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">股票代號</label>
-                        <input type="text" id="histSymbol" placeholder="如: 2330" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                        <input type="text" id="histSymbol" placeholder="如: 2330" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
                     <div>
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">當日收盤價 (元)</label>
-                        <input type="number" step="0.01" inputmode="decimal" id="histPrice" placeholder="輸入收盤價" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                        <input type="number" step="any" inputmode="decimal" id="histPrice" placeholder="輸入收盤價" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
-                    <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg transition text-[11px] md:text-xs shadow-sm">
+                    <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg transition text-sm md:text-xs shadow-sm">
                         確認補登收盤價
                     </button>
                 </form>
@@ -489,7 +491,7 @@
             </div>
             
             <div class="p-3 border-t border-slate-50 flex justify-end bg-slate-50/80">
-                <button onclick="closeExcelHelpModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-1.5 rounded-lg transition-all">我知道了</button>
+                <button onclick="closeExcelHelpModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-1.5 rounded-lg transition-all font-semibold">我知道了</button>
             </div>
         </div>
     </div>
@@ -1040,7 +1042,7 @@
                 }
             }
 
-            // 同時渲染庫存介面
+            // 同時渲染庫存介面 (將今日市價更名為收盤價，手動輸入部分優化為 decimal 數字鍵盤，16px 字體避免自動放大)
             if (holdingsTable && holdingsCardContainer) {
                 holdingsTable.innerHTML = '';
                 holdingsCardContainer.innerHTML = '';
@@ -1088,31 +1090,33 @@
                             ? `<span class="text-[10px] md:text-xs text-slate-400 font-normal block truncate max-w-[120px]">${stockNames[sym]}</span>` 
                             : '';
 
-                        // 1. 桌機版表格行 (Row)
+                        // 1. 桌機版表格行 (上下左右置中)
                         const tr = document.createElement('tr');
-                        tr.className = "hover:bg-slate-50/50 transition-all text-xs md:text-sm";
+                        tr.className = "hover:bg-slate-50/50 transition-all text-xs md:text-sm text-center";
                         tr.innerHTML = `
-                            <td class="py-3.5 pr-2">
-                                <div class="font-bold text-slate-900">${sym}</div>
-                                ${nameText}
+                            <td class="py-3.5 pr-2 align-middle text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <div class="font-bold text-slate-900">${sym}</div>
+                                    ${nameText}
+                                </div>
                             </td>
-                            <td class="py-3.5">
+                            <td class="py-3.5 align-middle text-center">
                                 <span class="${holdPercentStyle}">
                                     ${holdingPercentOfTotal.toFixed(1)}%
                                 </span>
                             </td>
-                            <td class="py-3.5 font-medium">${hold.qty.toLocaleString()}</td>
-                            <td class="py-3.5 ${pnlColorClass}">
+                            <td class="py-3.5 font-medium align-middle text-center">${hold.qty.toLocaleString()}</td>
+                            <td class="py-3.5 ${pnlColorClass} align-middle text-center">
                                 ${currentPrice > 0 ? `
-                                    <div class="flex flex-col">
+                                    <div class="flex flex-col items-center justify-center">
                                         <span class="font-bold">${pnlSign}${unrealized.toLocaleString('zh-TW', {maximumFractionDigits: 0})}</span>
                                         <span class="${pnlBadgeStyle || 'text-[10px] md:text-xs text-slate-400 font-medium'}">${percent > 0 ? '+' : ''}${percent.toFixed(2)}%</span>
                                     </div>
                                 ` : '--'}
                             </td>
-                            <td class="py-3.5 text-slate-600">NT$ ${(hold.avgCost || 0).toFixed(1)}</td>
-                            <td class="py-3.5">
-                                <input type="number" step="0.01" value="${currentPrice || ''}" placeholder="自訂市價" onchange="updateCurrentPrice('${sym}', this.value)" class="w-20 border border-slate-200/80 rounded-lg px-2 py-1 text-xs bg-slate-50/50 hover:bg-white focus:bg-white focus:outline-none focus:border-blue-500">
+                            <td class="py-3.5 text-slate-600 align-middle text-center">$ ${(hold.avgCost || 0).toFixed(1)}</td>
+                            <td class="py-3.5 align-middle text-center">
+                                <input type="number" step="any" inputmode="decimal" value="${currentPrice || ''}" placeholder="收盤價" onchange="updateCurrentPrice('${sym}', this.value)" class="w-20 border border-slate-200/80 rounded-lg px-2 py-1 text-base md:text-xs bg-slate-50/50 hover:bg-white focus:bg-white focus:outline-none focus:border-blue-500 text-center">
                             </td>
                         `;
                         holdingsTable.appendChild(tr);
@@ -1143,8 +1147,8 @@
                                     <span class="${pnlColorClass} font-bold">${pnlSign}${unrealized.toLocaleString('zh-TW', {maximumFractionDigits: 0})} (${percent > 0 ? '+' : ''}${percent.toFixed(1)}%) ${pnlBadgeStyle ? pnlBadgeStyle : ''}</span>
                                 </div>
                                 <div class="flex justify-between col-span-2 items-center pt-1 border-t border-slate-100/50">
-                                    <span class="text-slate-400">今日市價</span>
-                                    <input type="number" step="0.01" value="${currentPrice || ''}" placeholder="手動輸入" onchange="updateCurrentPrice('${sym}', this.value)" class="w-20 border border-slate-200 rounded px-1.5 py-0.5 bg-white text-slate-800 text-right">
+                                    <span class="text-slate-400">收盤價</span>
+                                    <input type="number" step="any" inputmode="decimal" value="${currentPrice || ''}" placeholder="自訂市價" onchange="updateCurrentPrice('${sym}', this.value)" class="w-20 border border-slate-200 rounded px-1.5 py-0.5 bg-white text-slate-800 text-right text-base">
                                 </div>
                             </div>
                         `;
@@ -1162,14 +1166,14 @@
             const elDividends = document.getElementById('totalDividends');
             const elCombinedReturn = document.getElementById('totalCombinedReturn');
 
-            if (elNetAsset) elNetAsset.innerText = `NT$ ${totalAsset.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
-            if (elCash) elCash.innerText = `NT$ ${cash.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
-            if (elMarket) elMarket.innerText = `NT$ ${stockMarketValue.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+            if (elNetAsset) elNetAsset.innerText = `$ ${totalAsset.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+            if (elCash) elCash.innerText = `$ ${cash.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+            if (elMarket) elMarket.innerText = `$ ${stockMarketValue.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
             
             if (elUnrealized) formatColorText(elUnrealized, totalUnrealizedPnl);
             if (elRealized) formatColorText(elRealized, totalRealizedPnl);
             if (elDividends) {
-                elDividends.innerText = `NT$ ${totalDividends.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+                elDividends.innerText = `$ ${totalDividends.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
             }
             if (elCombinedReturn) formatColorText(elCombinedReturn, totalCombinedReturn);
 
@@ -1178,7 +1182,7 @@
 
         function formatColorText(el, val) {
             if (!el) return;
-            el.innerText = "NT$ " + val.toLocaleString('zh-TW', {maximumFractionDigits: 0});
+            el.innerText = "$ " + val.toLocaleString('zh-TW', {maximumFractionDigits: 0});
             if (val > 0) {
                 el.className = "text-xs sm:text-sm md:text-base font-bold text-[#e63946]";
             } else if (val < 0) {
@@ -1188,7 +1192,7 @@
             }
         }
 
-        // 明細渲染
+        // 明細渲染 (移除所有 NT$、支援上下左右置中)
         function renderHistory() {
             if (!txHistoryTable) return;
             txHistoryTable.innerHTML = '';
@@ -1219,19 +1223,19 @@
 
                 if (tx.type === 'BUY') {
                     typeText = "買入"; typeClass = "bg-rose-50 text-rose-700 border border-rose-100"; 
-                    changeText = "-NT$ " + ((price * quantity) + fee).toLocaleString();
+                    changeText = "- $ " + ((price * quantity) + fee).toLocaleString();
                 } else if (tx.type === 'SELL') {
                     typeText = "賣出"; typeClass = "bg-emerald-50 text-emerald-700 border border-emerald-100"; 
-                    changeText = "+NT$ " + ((price * quantity) - fee - tax).toLocaleString();
+                    changeText = "+ $ " + ((price * quantity) - fee - tax).toLocaleString();
                 } else if (tx.type === 'DEPOSIT') {
                     typeText = "入金"; typeClass = "bg-blue-50 text-blue-700 border border-blue-100"; 
-                    changeText = "+NT$ " + price.toLocaleString();
+                    changeText = "+ $ " + price.toLocaleString();
                 } else if (tx.type === 'WITHDRAW') {
                     typeText = "出金"; typeClass = "bg-amber-50 text-amber-700 border border-amber-100"; 
-                    changeText = "-NT$ " + price.toLocaleString();
+                    changeText = "- $ " + price.toLocaleString();
                 } else if (tx.type === 'DIVIDEND') {
                     typeText = "配息"; typeClass = "bg-teal-50 text-teal-700 border border-teal-100";
-                    changeText = "+NT$ " + price.toLocaleString();
+                    changeText = "+ $ " + price.toLocaleString();
                 }
 
                 let itemText = tx.symbol === 'CASH' ? '<div class="font-bold text-slate-800">資金帳戶</div>' : `<div class="font-bold text-slate-800">${tx.symbol}</div>`;
@@ -1245,17 +1249,19 @@
                 }
 
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50/50 transition-all text-xs md:text-sm";
+                tr.className = "hover:bg-slate-50/50 transition-all text-xs md:text-sm text-center";
                 tr.innerHTML = `
-                    <td class="py-2.5 text-slate-500 whitespace-nowrap">${tx.date}</td>
-                    <td class="py-2.5 whitespace-nowrap"><span class="px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-bold ${typeClass}">${typeText}</span></td>
-                    <td class="py-2.5 whitespace-nowrap">${itemText}</td>
-                    <td class="py-2.5 whitespace-nowrap">NT$ ${price.toLocaleString()}</td>
-                    <td class="py-2.5 whitespace-nowrap">${tx.type==='DEPOSIT'||tx.type==='WITHDRAW'||tx.type==='DIVIDEND' ? '--' : quantity.toLocaleString()}</td>
-                    <td class="py-2.5 whitespace-nowrap font-bold ${changeText.startsWith('+') ? 'text-[#e63946]' : 'text-[#2a9d8f]'}">
-                        <div>${changeText}${detailTooltip}</div>
+                    <td class="py-2.5 text-slate-500 whitespace-nowrap align-middle text-center">${tx.date}</td>
+                    <td class="py-2.5 whitespace-nowrap align-middle text-center"><span class="px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-bold ${typeClass}">${typeText}</span></td>
+                    <td class="py-2.5 whitespace-nowrap align-middle text-center">
+                        <div class="flex flex-col items-center justify-center">${itemText}</div>
                     </td>
-                    <td class="py-2.5 whitespace-nowrap text-center"><button onclick="deleteTx('${tx.id}')" class="text-rose-500 hover:text-rose-700 font-semibold">刪除</button></td>
+                    <td class="py-2.5 whitespace-nowrap align-middle text-center">$ ${price.toLocaleString()}</td>
+                    <td class="py-2.5 whitespace-nowrap align-middle text-center">${tx.type==='DEPOSIT'||tx.type==='WITHDRAW'||tx.type==='DIVIDEND' ? '--' : quantity.toLocaleString()}</td>
+                    <td class="py-2.5 whitespace-nowrap font-bold align-middle text-center ${changeText.startsWith('+') ? 'text-[#e63946]' : 'text-[#2a9d8f]'}">
+                        <div class="flex flex-col items-center justify-center">${changeText}${detailTooltip}</div>
+                    </td>
+                    <td class="py-2.5 whitespace-nowrap text-center align-middle"><button onclick="deleteTx('${tx.id}')" class="text-rose-500 hover:text-rose-700 font-semibold">刪除</button></td>
                 `;
                 txHistoryTable.appendChild(tr);
             });
@@ -1596,7 +1602,7 @@
                 const targetData = totalAssetData.map(() => targetVal);
                 
                 datasets.push({
-                    label: `對照組 (${targetPercent}% of 區間最高額: NT$ ${Math.round(targetVal).toLocaleString()})`,
+                    label: `對照組 (${targetPercent}% of 區間最高額: $ ${Math.round(targetVal).toLocaleString()})`,
                     data: targetData,
                     borderColor: '#EF4444', 
                     borderDash: [5, 5],     
@@ -1629,7 +1635,7 @@
                             grid: { color: '#f1f5f9' },
                             ticks: {
                                 font: { size: 9 },
-                                callback: function(value) { return 'NT$ ' + value.toLocaleString(); }
+                                callback: function(value) { return '$ ' + value.toLocaleString(); }
                             }
                         },
                         x: {
@@ -1766,7 +1772,7 @@
                                     const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                     const code = context.label;
                                     const nameText = stockNames[code] ? ` (${stockNames[code]})` : '';
-                                    return ` ${code}${nameText}: NT$ ${value.toLocaleString()} (${pct}%)`;
+                                    return ` ${code}${nameText}: $ ${value.toLocaleString()} (${pct}%)`;
                                 }
                             }
                         }
