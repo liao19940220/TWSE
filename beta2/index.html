@@ -18,20 +18,10 @@
             --safe-top: env(safe-area-inset-top);
             --safe-bottom: env(safe-area-inset-bottom);
             --app-bg: #f4f7fb;
-            --card-bg: rgba(255, 255, 255, 0.94);
-            --line-soft: rgba(148, 163, 184, 0.16);
             --text-main: #0f172a;
-            --text-muted: #64748b;
-            --blue: #2563eb;
-            --green: #059669;
-            --red: #dc2626;
         }
 
-        html {
-            background: var(--app-bg);
-            -webkit-text-size-adjust: 100%;
-        }
-
+        html { background: var(--app-bg); -webkit-text-size-adjust: 100%; }
         body {
             font-family: 'Inter', 'Noto Sans TC', sans-serif;
             background:
@@ -42,21 +32,11 @@
             letter-spacing: -0.01em;
             padding-bottom: calc(96px + var(--safe-bottom)) !important;
         }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.97); }
-            to { opacity: 1; transform: scale(1); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
         .animate-fade-in { animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-        @keyframes sheetUp {
-            from { opacity: 0; transform: translateY(26px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
+        @keyframes sheetUp { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: translateY(0); } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
         button, input, select { -webkit-tap-highlight-color: transparent; }
         button { touch-action: manipulation; }
         input, select { border-radius: 12px !important; }
@@ -66,68 +46,111 @@
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
             background: #ffffff !important;
         }
-
         .max-w-5xl { max-width: 980px; }
 
         @media (max-width: 768px) {
             input, select { font-size: 16px !important; }
-            body { font-size: 13px; padding-bottom: calc(108px + var(--safe-bottom)) !important; }
+            body { font-size: 13px; padding-bottom: calc(96px + var(--safe-bottom)) !important; }
             .max-w-5xl { padding-left: 10px !important; padding-right: 10px !important; padding-top: calc(10px + var(--safe-top)) !important; }
 
+            /* Header 不固定置頂 */
             header {
-                position: sticky; top: calc(8px + var(--safe-top)); z-index: 30;
+                position: static !important;
+                top: auto !important;
+                z-index: auto !important;
                 border-radius: 22px !important;
-                background: rgba(255, 255, 255, 0.84) !important;
-                backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+                background: rgba(255,255,255,0.84) !important;
+                backdrop-filter: blur(18px);
+                -webkit-backdrop-filter: blur(18px);
+                box-shadow: 0 10px 30px rgba(15,23,42,0.07);
             }
             header h1 { font-size: 17px !important; }
             header p { display: none; }
 
+            /* 淺色小型底部 App 導覽 */
             body > div > .flex.justify-center:nth-of-type(1) {
-                position: fixed; left: 10px; right: 10px; bottom: calc(12px + var(--safe-bottom));
-                z-index: 45; justify-content: center; pointer-events: none;
+                position: fixed;
+                left: 10px; right: 10px;
+                bottom: calc(12px + var(--safe-bottom));
+                z-index: 45;
+                justify-content: center;
+                pointer-events: none;
             }
             body > div > .flex.justify-center:nth-of-type(1) > div {
-                pointer-events: auto; width: 100%; display: grid !important; grid-template-columns: repeat(4, 1fr);
-                gap: 4px; padding: 6px !important; border-radius: 24px !important;
-                background: rgba(15, 23, 42, 0.84) !important;
-                backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-                box-shadow: 0 18px 42px rgba(15, 23, 42, 0.28); overflow: visible !important;
+                pointer-events: auto;
+                width: 92%; max-width: 360px;
+                display: grid !important;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 3px;
+                padding: 5px !important;
+                border-radius: 22px !important;
+                background: rgba(255,255,255,0.88) !important;
+                backdrop-filter: blur(18px);
+                -webkit-backdrop-filter: blur(18px);
+                border: 1px solid rgba(226,232,240,0.9);
+                box-shadow: 0 12px 30px rgba(15,23,42,0.12);
+                overflow: visible !important;
             }
             body > div > .flex.justify-center:nth-of-type(1) button {
-                width: 100%; min-height: 42px; padding: 6px 4px !important; border-radius: 18px !important;
-                font-size: 11px !important; line-height: 1.15; white-space: normal;
+                width: 100%; min-height: 34px;
+                padding: 4px 3px !important;
+                border-radius: 16px !important;
+                font-size: 10px !important;
+                line-height: 1.1;
+                white-space: normal;
             }
-            body > div > .flex.justify-center:nth-of-type(1) button.bg-white { background: #ffffff !important; color: #0f172a !important; }
-            body > div > .flex.justify-center:nth-of-type(1) button:not(.bg-white) { color: rgba(255, 255, 255, 0.7) !important; }
+            body > div > .flex.justify-center:nth-of-type(1) button.bg-white {
+                background: #dbeafe !important;
+                color: #1d4ed8 !important;
+                box-shadow: none !important;
+            }
+            body > div > .flex.justify-center:nth-of-type(1) button:not(.bg-white) {
+                color: #64748b !important;
+                background: transparent !important;
+            }
 
             #tab-main > div:first-child {
                 border-radius: 28px !important; padding: 18px !important;
                 background: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(255,255,255,0.9)) !important;
-                box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+                box-shadow: 0 16px 40px rgba(15,23,42,0.08);
             }
             #netAssetVal { font-size: 36px !important; line-height: 1.05; margin-top: 6px; }
             #stockMarketValue, #currentCash { font-size: 19px !important; }
             #totalUnrealizedPnl, #totalRealizedPnl, #totalDividends, #totalCombinedReturn { font-size: 14px !important; }
-
-            .bg-white { border-color: rgba(226, 232, 240, 0.85) !important; }
-            #tab-main .bg-white, #tab-chart, #tab-history, #tab-settings { border-radius: 26px !important; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06); }
+            .bg-white { border-color: rgba(226,232,240,0.85) !important; }
+            #tab-main .bg-white, #tab-chart, #tab-history, #tab-settings { border-radius: 26px !important; box-shadow: 0 12px 32px rgba(15,23,42,0.06); }
             #tab-main .bg-white:nth-child(2) > .flex.justify-between { align-items: flex-start !important; gap: 10px; }
             #fetchPriceBtn { min-height: 34px; padding-left: 12px !important; padding-right: 12px !important; font-size: 11px !important; border-radius: 999px !important; box-shadow: 0 8px 18px rgba(5,150,105,0.18); }
-
             #holdingsCardContainer > div { border-radius: 22px !important; padding: 14px !important; box-shadow: 0 10px 24px rgba(15,23,42,0.05); border-color: rgba(226,232,240,0.9) !important; }
             #holdingsCardContainer input { min-height: 32px; font-size: 16px !important; }
             #tab-main .bg-slate-50\/60 .grid { grid-template-columns: 1fr !important; gap: 6px !important; }
 
-            #tab-chart .flex.flex-nowrap, #tab-history .flex.flex-nowrap { padding-bottom: 4px; scrollbar-width: none; }
-            #tab-chart input[type="date"], #tab-history input[type="date"] { width: 118px !important; min-height: 34px; font-size: 13px !important; border-radius: 12px !important; }
-            #historySearch { min-height: 34px; width: 86px !important; font-size: 13px !important; }
-            #tab-chart .relative.w-full { height: 270px !important; }
+            /* 僅調整資產趨勢圖，不影響配置長條 */
+            #tab-chart > .relative.w-full { height: 270px !important; }
 
+            /* 時間篩選一行顯示 */
+            #tab-chart .flex.flex-nowrap, #tab-history .flex.flex-nowrap { width: 100%; overflow-x: auto; flex-wrap: nowrap !important; gap: 5px !important; padding-bottom: 4px; }
+            #tab-chart input[type="text"], #tab-history input[type="text"] {
+                width: 92px !important; min-width: 92px !important; max-width: 92px !important;
+                height: 32px !important; min-height: 32px !important;
+                font-size: 11px !important; padding: 3px 5px !important;
+                text-align: center; border-radius: 10px !important;
+            }
+            #historySearch { width: 66px !important; min-width: 66px !important; max-width: 66px !important; height: 32px !important; min-height: 32px !important; font-size: 11px !important; padding: 3px 5px !important; }
+            #tab-chart .flex.bg-slate-100, #tab-history .flex.bg-slate-100 { flex-shrink: 0 !important; }
+            #tab-chart .flex.bg-slate-100 button, #tab-history .flex.bg-slate-100 button { padding-left: 8px !important; padding-right: 8px !important; font-size: 10px !important; }
+
+            /* 資產配置比例長條圖修正 */
+            #allocationListContainer { width: 100%; }
+            #allocationListContainer > div { width: 100%; display: flex !important; align-items: center !important; gap: 8px !important; }
+            #allocationListContainer .w-full.bg-slate-100 { width: 100% !important; height: 18px !important; min-height: 18px !important; border-radius: 999px !important; overflow: hidden !important; position: relative !important; }
+            #allocationListContainer .w-full.bg-slate-100 > div:first-child { height: 100% !important; border-radius: 999px !important; }
+            #allocationListContainer .absolute.inset-0 { position: absolute !important; inset: 0 !important; display: flex !important; justify-content: space-between !important; align-items: center !important; padding-left: 8px !important; padding-right: 8px !important; font-size: 10px !important; line-height: 1 !important; white-space: nowrap !important; }
+
+            /* 明細手機卡片 */
             #tab-history table { border-collapse: separate; border-spacing: 0 8px; }
             #tab-history thead { display: none; }
-            #tab-history tbody tr { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; background: #ffffff; border: 1px solid rgba(226,232,240,0.9); border-radius: 18px; padding: 11px; box-shadow: 0 8px 18px rgba(15,23,42,0.04); }
+            #tab-history tbody tr { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; background: #fff; border: 1px solid rgba(226,232,240,0.9); border-radius: 18px; padding: 11px; box-shadow: 0 8px 18px rgba(15,23,42,0.04); }
             #tab-history tbody td { display: flex; align-items: center; justify-content: flex-start; padding: 0 !important; border: 0 !important; white-space: normal !important; text-align: left !important; }
             #tab-history tbody td:nth-child(1) { grid-column: 1; color: #64748b; font-size: 11px; font-weight: 600; }
             #tab-history tbody td:nth-child(2) { grid-column: 2; grid-row: 1; justify-content: flex-end; }
@@ -137,8 +160,7 @@
             #tab-history tbody td:nth-child(6) { grid-column: 2; justify-content: flex-end; }
             #tab-history tbody td:nth-child(3) .flex, #tab-history tbody td:nth-child(4) .flex, #tab-history tbody td:nth-child(5) .flex { align-items: flex-start !important; }
 
-            body > button.fixed.bottom-6.right-6 { bottom: calc(86px + var(--safe-bottom)) !important; right: 16px !important; width: 58px !important; height: 58px !important; border-radius: 22px !important; background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; box-shadow: 0 18px 36px rgba(37,99,235,0.36); }
-
+            body > button.fixed.bottom-6.right-6 { bottom: calc(72px + var(--safe-bottom)) !important; right: 16px !important; width: 58px !important; height: 58px !important; border-radius: 22px !important; background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; box-shadow: 0 18px 36px rgba(37,99,235,0.36); }
             #actionModal, #editTxModal, #excelHelpModal { align-items: flex-end !important; padding: 0 !important; }
             #actionModal > div, #editTxModal > div, #excelHelpModal > div { max-width: none !important; width: 100% !important; max-height: calc(92vh - var(--safe-top)) !important; border-radius: 28px 28px 0 0 !important; padding-bottom: var(--safe-bottom); animation: sheetUp 0.22s cubic-bezier(0.16,1,0.3,1) forwards; }
             #actionModal input, #actionModal select, #editTxModal input, #editTxModal select { min-height: 44px; font-size: 16px !important; }
@@ -148,17 +170,7 @@
 
         @media (min-width: 390px) and (max-width: 768px) {
             #netAssetVal { font-size: 39px !important; }
-            #tab-chart .relative.w-full { height: 295px !important; }
-        }
-
-        @media (prefers-color-scheme: dark) {
-            body { background: radial-gradient(circle at top right, rgba(37,99,235,0.18), transparent 32rem), #0f172a; color: #e5e7eb; }
-            header, #tab-main > div:first-child, #tab-main .bg-white, #tab-chart, #tab-history, #tab-settings, #holdingsCardContainer > div { background: rgba(15,23,42,0.88) !important; border-color: rgba(51,65,85,0.9) !important; color: #e5e7eb !important; }
-            .text-slate-950, .text-slate-900, .text-slate-800 { color: #f8fafc !important; }
-            .text-slate-700, .text-slate-600, .text-slate-500, .text-slate-400 { color: #94a3b8 !important; }
-            .bg-slate-50, .bg-slate-50\/40, .bg-slate-50\/50, .bg-slate-50\/60, .bg-slate-100 { background-color: rgba(30,41,59,0.82) !important; }
-            input, select { background: rgba(15,23,42,0.9) !important; color: #f8fafc !important; border-color: rgba(71,85,105,0.9) !important; }
-            #tab-history tbody tr { background: rgba(15,23,42,0.86) !important; border-color: rgba(51,65,85,0.9) !important; }
+            #tab-chart > .relative.w-full { height: 295px !important; }
         }
     </style>
 </head>
@@ -194,7 +206,7 @@
             </div>
         </div>
 
-        <!-- ==================== 分頁一：交易與庫存 ==================== -->
+        <!-- ==================== 分頁一：庫存 ==================== -->
         <div id="tab-main" class="space-y-3 sm:space-y-6 block animate-fade-in">
             
             <!-- 核心資產大看板 -->
@@ -326,9 +338,9 @@
                     
                     <div class="flex items-center gap-1 text-[10px] md:text-xs text-slate-400 shrink-0">
                         <!-- 💡 限制手機端日期選擇器寬度為 102px，避免拉長排版 -->
-                        <input type="date" id="chartStartDate" onchange="onCustomRangeChange()" class="border border-slate-200 rounded-md p-1 text-slate-600 bg-slate-50/50 w-[102px] sm:w-auto focus:outline-none">
-                        <span>至</span>
-                        <input type="date" id="chartEndDate" onchange="onCustomRangeChange()" class="border border-slate-200 rounded-md p-1 text-slate-600 bg-slate-50/50 w-[102px] sm:w-auto focus:outline-none">
+                        <input type="text" id="chartStartDate" inputmode="numeric" placeholder="YYYY/MM/DD" onchange="onCustomRangeChange()" class="border border-slate-200 rounded-md p-1 text-slate-600 bg-slate-50/50 w-[96px] sm:w-auto focus:outline-none">
+                        <span>~</span>
+                        <input type="text" id="chartEndDate" inputmode="numeric" placeholder="YYYY/MM/DD" onchange="onCustomRangeChange()" class="border border-slate-200 rounded-md p-1 text-slate-600 bg-slate-50/50 w-[96px] sm:w-auto focus:outline-none">
                     </div>
                 </div>
             </div>
@@ -370,7 +382,7 @@
             </div>
         </div>
 
-        <!-- ==================== 分頁三：交易明細 ==================== -->
+        <!-- ==================== 分頁三：明細 ==================== -->
         <div id="tab-history" class="hidden bg-white p-3.5 sm:p-5 md:p-6 rounded-[24px] border border-slate-100 space-y-3 shadow-sm animate-fade-in">
             <!-- 💡 調整歷史紀錄標頭：比照資產統計分析，將篩選面板於大螢幕時排在最右側 -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-50 pb-3">
@@ -379,7 +391,7 @@
                     <p class="text-[10px] md:text-xs text-slate-400 mt-0.5">預設顯示 5 天。可調整上方尺度切換或自訂日期篩選。</p>
                 </div>
                 
-                <!-- 💡 篩選面板 (完全比照資產分析之排版，靠右對齊，手機端強制單行不折行且可滑動) -->
+                <!-- 💡 篩選面板 (完全比照分析之排版，靠右對齊，手機端強制單行不折行且可滑動) -->
                 <div class="flex flex-nowrap items-center gap-1.5 overflow-x-auto no-scrollbar w-full md:w-auto justify-start md:justify-end">
                     <div class="flex bg-slate-100 rounded-full p-0.5 text-[10px] sm:text-xs font-semibold text-slate-500 shrink-0">
                         <button id="btn-hist-daily" onclick="changeHistoryScale('daily', this)" class="px-2.5 py-1 rounded-full transition-all">日</button>
@@ -391,9 +403,9 @@
                     <input type="text" id="historySearch" oninput="renderHistory()" placeholder="搜尋..." class="border border-slate-200 rounded-md p-1 text-[11px] md:text-xs w-16 sm:w-24 bg-slate-50/50 focus:outline-none shrink-0">
                     
                     <div class="flex items-center gap-1 text-[10px] md:text-xs text-slate-400 shrink-0">
-                        <input type="date" id="historyStartDate" onchange="renderHistory()" class="border border-slate-200 rounded-md p-1 text-slate-600 bg-slate-50/50 w-[102px] sm:w-auto focus:outline-none">
-                        <span>至</span>
-                        <input type="date" id="historyEndDate" onchange="renderHistory()" class="border border-slate-200 rounded-md p-1 text-slate-600 bg-slate-50/50 w-[102px] sm:w-auto focus:outline-none">
+                        <input type="text" id="historyStartDate" inputmode="numeric" placeholder="YYYY/MM/DD" onchange="renderHistory()" class="border border-slate-200 rounded-md p-1 text-slate-600 bg-slate-50/50 w-[96px] sm:w-auto focus:outline-none">
+                        <span>~</span>
+                        <input type="text" id="historyEndDate" inputmode="numeric" placeholder="YYYY/MM/DD" onchange="renderHistory()" class="border border-slate-200 rounded-md p-1 text-slate-600 bg-slate-50/50 w-[96px] sm:w-auto focus:outline-none">
                     </div>
                 </div>
             </div>
@@ -418,7 +430,7 @@
             </div>
         </div>
 
-        <!-- ==================== 分頁四：系統設定 ==================== -->
+        <!-- ==================== 分頁四：設定 ==================== -->
         <div id="tab-settings" class="hidden bg-white p-4 sm:p-6 rounded-[24px] border border-slate-100 space-y-5 shadow-sm animate-fade-in">
             <div>
                 <h2 class="text-base md:text-lg font-bold text-slate-900">系統與備份設定</h2>
@@ -755,6 +767,24 @@
         let editingTxId = null; // 特定編輯中 ID 緩存
 
         const todayStr = new Date().toISOString().split('T')[0];
+
+        function toSlashDate(dateStr) {
+            if (!dateStr) return "";
+            return String(dateStr).replaceAll("-", "/").substring(0, 10);
+        }
+
+        function toDashDate(dateStr) {
+            if (!dateStr) return "";
+            return String(dateStr).replaceAll("/", "-").substring(0, 10);
+        }
+
+        function normalizeDateInputValue(id) {
+            const el = document.getElementById(id);
+            if (!el) return "";
+            const val = toDashDate(el.value.trim());
+            el.value = toSlashDate(val);
+            return val;
+        }
 
         const dateInputEl = document.getElementById('date');
         if (dateInputEl) {
@@ -1490,8 +1520,8 @@
             if (!txHistoryTable) return;
             txHistoryTable.innerHTML = '';
 
-            const startVal = document.getElementById('historyStartDate').value;
-            const endVal = document.getElementById('historyEndDate').value;
+            const startVal = normalizeDateInputValue('historyStartDate');
+            const endVal = normalizeDateInputValue('historyEndDate');
             const searchKeyword = (document.getElementById('historySearch')?.value || '').trim().toLowerCase();
 
             const filteredTxs = transactions.filter(tx => {
@@ -1601,10 +1631,8 @@
             const histEndEl = document.getElementById('historyEndDate');
 
             if (histStartEl && histEndEl) {
-                histStartEl.value = startStr;
-                histEndEl.value = todayStr;
-                histStartEl.max = todayStr;
-                histEndEl.max = todayStr;
+                histStartEl.value = toSlashDate(startStr);
+                histEndEl.value = toSlashDate(todayStr);
             }
         }
 
@@ -1803,11 +1831,8 @@
                 start.setFullYear(today.getFullYear() - 3); 
             }
 
-            document.getElementById('chartStartDate').value = start.toISOString().split('T')[0];
-            document.getElementById('chartEndDate').value = today.toISOString().split('T')[0];
-
-            document.getElementById('chartStartDate').max = todayStr;
-            document.getElementById('chartEndDate').max = todayStr;
+            document.getElementById('chartStartDate').value = toSlashDate(start.toISOString().split('T')[0]);
+            document.getElementById('chartEndDate').value = toSlashDate(today.toISOString().split('T')[0]);
         }
 
         window.changeChartScale = function(scale, btnElement) {
@@ -1864,8 +1889,8 @@
                 assetChartInstance.destroy();
             }
 
-            const startVal = document.getElementById('chartStartDate').value;
-            const endVal = document.getElementById('chartEndDate').value;
+            const startVal = normalizeDateInputValue('chartStartDate');
+            const endVal = normalizeDateInputValue('chartEndDate');
 
             if (!startVal || !endVal) return;
 
@@ -2240,8 +2265,8 @@
                         localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
 
                         if (transactions.length > 0) {
-                            document.getElementById('historyStartDate').value = transactions[0].date;
-                            document.getElementById('historyEndDate').value = transactions[transactions.length - 1].date;
+                            document.getElementById('historyStartDate').value = toSlashDate(transactions[0].date);
+                            document.getElementById('historyEndDate').value = toSlashDate(transactions[transactions.length - 1].date);
                         }
 
                         render();
