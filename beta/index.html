@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <!-- 更新 Viewport 設定：限制手機端螢幕縮放功能 -->
+    <!-- Viewport 設定：限制手機端手動螢幕縮放功能 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>股票交易與資產管理系統</title>
     <!-- Tailwind CSS (排版) -->
@@ -32,68 +32,76 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+        
+        /* 智慧型手機防縮放 CSS (在小螢幕時背景強制使用 16px 喚起鍵盤以防縮放，但版面不受影響) */
+        @media (max-width: 768px) {
+            input, select {
+                font-size: 16px !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-[#f6f8fa] min-h-screen text-slate-800 antialiased pb-24 text-xs md:text-sm">
 
-    <div class="max-w-5xl mx-auto px-3 pt-4 md:pt-8 space-y-4 sm:space-y-6">
+    <!-- 手機端縮減外距(px-2.5)，使畫面更飽滿 -->
+    <div class="max-w-5xl mx-auto px-2.5 pt-3 md:pt-8 space-y-3 sm:space-y-6">
         
         <!-- 標頭區 (精簡版) -->
-        <header class="flex justify-between items-center bg-white/60 backdrop-blur-md px-4 py-3 sm:px-5 sm:py-4 rounded-[20px] border border-slate-100 shadow-sm">
-            <div class="flex items-center gap-2">
-                <span class="w-2 h-5 bg-blue-600 rounded-full"></span>
+        <header class="flex justify-between items-center bg-white/60 backdrop-blur-md px-4 py-3 sm:px-5 sm:py-4 rounded-[16px] sm:rounded-[20px] border border-slate-100 shadow-sm">
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <span class="w-1.5 h-4 sm:w-2 sm:h-5 bg-blue-600 rounded-full"></span>
                 <h1 class="text-base sm:text-lg md:text-xl font-bold tracking-tight text-slate-950">資產管理系統</h1>
             </div>
             <p class="text-[10px] md:text-xs text-slate-400">本地加密儲存</p>
         </header>
 
-        <!-- 導覽切換區 (包含設定分頁) -->
+        <!-- 導覽切換區 -->
         <div class="flex justify-center">
             <div class="inline-flex bg-slate-200/60 p-0.5 rounded-full max-w-full overflow-x-auto no-scrollbar">
-                <button id="tab-main-btn" onclick="switchTab('main')" class="px-4 sm:px-6 py-1.5 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold transition-all duration-150 bg-white text-slate-900 shadow-sm">
+                <button id="tab-main-btn" onclick="switchTab('main')" class="px-3 sm:px-6 py-1 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold transition-all duration-150 bg-white text-slate-900 shadow-sm">
                     交易與庫存
                 </button>
-                <button id="tab-chart-btn" onclick="switchTab('chart')" class="px-4 sm:px-6 py-1.5 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold transition-all duration-150 text-slate-500 hover:text-slate-800">
+                <button id="tab-chart-btn" onclick="switchTab('chart')" class="px-3 sm:px-6 py-1 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold transition-all duration-150 text-slate-500 hover:text-slate-800">
                     資產分析
                 </button>
-                <button id="tab-history-btn" onclick="switchTab('history')" class="px-4 sm:px-6 py-1.5 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold transition-all duration-150 text-slate-500 hover:text-slate-800">
+                <button id="tab-history-btn" onclick="switchTab('history')" class="px-3 sm:px-6 py-1 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold transition-all duration-150 text-slate-500 hover:text-slate-800">
                     交易明細
                 </button>
-                <button id="tab-settings-btn" onclick="switchTab('settings')" class="px-4 sm:px-6 py-1.5 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold transition-all duration-150 text-slate-500 hover:text-slate-800">
+                <button id="tab-settings-btn" onclick="switchTab('settings')" class="px-3 sm:px-6 py-1 rounded-full text-[11px] sm:text-xs md:text-sm font-semibold transition-all duration-150 text-slate-500 hover:text-slate-800">
                     系統設定
                 </button>
             </div>
         </div>
 
         <!-- ==================== 分頁一：交易與庫存 ==================== -->
-        <div id="tab-main" class="space-y-4 sm:space-y-6 block animate-fade-in">
+        <div id="tab-main" class="space-y-3 sm:space-y-6 block animate-fade-in">
             
             <!-- 核心資產大看板 -->
-            <div class="bg-white rounded-[24px] border border-slate-100 p-4 sm:p-6 md:p-8 shadow-sm space-y-4 md:space-y-6 relative overflow-hidden">
+            <div class="bg-white rounded-[20px] sm:rounded-[24px] border border-slate-100 p-3.5 sm:p-6 md:p-8 shadow-sm space-y-3 sm:space-y-4 md:space-y-6 relative overflow-hidden">
                 <div class="absolute -right-12 -top-12 w-36 h-36 bg-blue-50/40 rounded-full blur-2xl pointer-events-none"></div>
                 
                 <div>
-                    <p class="text-[10px] sm:text-xs md:text-sm font-semibold text-slate-400 tracking-wider uppercase">淨資產 ($)</p>
+                    <p class="text-[11px] sm:text-xs md:text-sm font-semibold text-slate-400 tracking-wider uppercase">淨資產 ($)</p>
                     <h2 class="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-950 mt-0.5 tracking-tight" id="netAssetVal">$ 0</h2>
                 </div>
 
                 <!-- 雙排主要資產比率 -->
-                <div class="grid grid-cols-2 gap-3 md:gap-4 pt-3 border-t border-slate-50">
-                    <div class="bg-slate-50/60 p-3 md:p-4 rounded-xl border border-slate-100/80">
-                        <span class="text-[10px] sm:text-xs md:text-sm text-slate-400 font-medium block">持股市值</span>
-                        <span class="text-sm sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block" id="stockMarketValue">$ 0</span>
+                <div class="grid grid-cols-2 gap-2.5 md:gap-4 pt-3 border-t border-slate-50">
+                    <div class="bg-slate-50/60 p-2.5 sm:p-4 rounded-xl border border-slate-100/80">
+                        <span class="text-[11px] sm:text-xs md:text-sm text-slate-400 font-medium block">持股市值</span>
+                        <span class="text-base sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block" id="stockMarketValue">$ 0</span>
                         <span class="text-[10px] md:text-xs text-blue-600 font-semibold mt-0.5 block" id="stockRatioText">佔比 0.0%</span>
                     </div>
-                    <div class="bg-slate-50/60 p-3 md:p-4 rounded-xl border border-slate-100/80 relative">
-                        <span class="text-[10px] sm:text-xs md:text-sm text-slate-400 font-medium block">可用現金</span>
-                        <span class="text-sm sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block" id="currentCash">$ 0</span>
+                    <div class="bg-slate-50/60 p-2.5 sm:p-4 rounded-xl border border-slate-100/80 relative">
+                        <span class="text-[11px] sm:text-xs md:text-sm text-slate-400 font-medium block">可用現金</span>
+                        <span class="text-base sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block" id="currentCash">$ 0</span>
                         <span class="text-[10px] md:text-xs text-indigo-600 font-semibold mt-0.5 block" id="cashRatioText">佔比 0.0%</span>
                         <div id="cashAlert" class="absolute right-2 bottom-2"></div>
                     </div>
                 </div>
 
                 <!-- 四格財務詳細數據 -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-slate-50 text-[11px] sm:text-xs md:text-sm">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 pt-3 border-t border-slate-50 text-[11px] sm:text-xs md:text-sm">
                     <div>
                         <p class="text-slate-400 font-medium">未實現損益</p>
                         <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5" id="totalUnrealizedPnl">$ 0</p>
@@ -114,11 +122,11 @@
             </div>
 
             <!-- 現有持股庫存 -->
-            <div class="bg-white p-4 sm:p-5 md:p-6 rounded-[24px] border border-slate-100 space-y-4 shadow-sm">
+            <div class="bg-white p-3.5 sm:p-5 md:p-6 rounded-[20px] sm:rounded-[24px] border border-slate-100 space-y-3.5 shadow-sm">
                 <div class="flex justify-between items-center">
                     <h3 class="text-xs sm:text-sm md:text-base font-bold text-slate-900 tracking-tight">目前所有持股</h3>
                     <div class="flex items-center gap-2">
-                        <button id="fetchPriceBtn" onclick="fetchTwsePrices()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] sm:text-[11px] md:text-xs font-semibold py-1.5 px-3 rounded-full transition-all">
+                        <button id="fetchPriceBtn" onclick="fetchTwsePrices()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] sm:text-[11px] md:text-xs font-semibold py-1 px-2.5 rounded-full transition-all">
                             🔄 更新今日收盤價
                         </button>
                         <span id="apiStatus" class="text-[9px] md:text-xs text-slate-400 hidden sm:inline">尚未更新價格</span>
@@ -153,7 +161,7 @@
                 </div>
 
                 <!-- 警示說明看板 -->
-                <div class="p-3 bg-slate-50/60 rounded-xl border border-slate-100 text-[10px] md:text-xs text-slate-400 space-y-1">
+                <div class="p-2.5 bg-slate-50/60 rounded-xl border border-slate-100 text-[10px] md:text-xs text-slate-400 space-y-1">
                     <p class="font-bold text-slate-600">⚠️ 庫存配置警示說明</p>
                     <div class="grid grid-cols-2 gap-x-2 gap-y-0.5">
                         <div class="flex items-center gap-1">
@@ -178,7 +186,7 @@
         </div>
 
         <!-- ==================== 分頁二：資產統計 ==================== -->
-        <div id="tab-chart" class="hidden bg-white p-4 sm:p-6 md:p-8 rounded-[24px] border border-slate-100 space-y-4 shadow-sm animate-fade-in">
+        <div id="tab-chart" class="hidden bg-white p-3.5 sm:p-6 md:p-8 rounded-[24px] border border-slate-100 space-y-4 shadow-sm animate-fade-in">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-50 pb-3">
                 <div>
                     <h2 class="text-sm sm:text-base md:text-lg font-bold text-slate-900">資產統計分析</h2>
@@ -240,7 +248,7 @@
         </div>
 
         <!-- ==================== 分頁三：交易明細 ==================== -->
-        <div id="tab-history" class="hidden bg-white p-4 sm:p-5 md:p-6 rounded-[24px] border border-slate-100 space-y-3 shadow-sm animate-fade-in">
+        <div id="tab-history" class="hidden bg-white p-3.5 sm:p-5 md:p-6 rounded-[24px] border border-slate-100 space-y-3 shadow-sm animate-fade-in">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-50 pb-3">
                 <div>
                     <h2 class="text-sm sm:text-base md:text-lg font-bold text-slate-900">歷史交易紀錄</h2>
@@ -266,7 +274,7 @@
                 </div>
             </div>
 
-            <!-- 歷史表格 (上下左右置中，無 NT$) -->
+            <!-- 歷史表格 (單價與股數合併、支援上下左右置中) -->
             <div class="overflow-x-auto">
                 <table class="min-w-full text-[11px] sm:text-xs md:text-sm">
                     <thead class="text-slate-400 font-semibold border-b border-slate-50">
@@ -274,8 +282,7 @@
                             <th class="pb-2 font-medium text-center">交易日期</th>
                             <th class="pb-2 font-medium text-center">類型</th>
                             <th class="pb-2 font-medium text-center">標的</th>
-                            <th class="pb-2 font-medium text-center">單價</th>
-                            <th class="pb-2 font-medium text-center">股數</th>
+                            <th class="pb-2 font-medium text-center">單價 / 股數</th>
                             <th class="pb-2 font-medium text-center">收支變動</th>
                             <th class="pb-2 font-medium text-center">管理</th>
                         </tr>
@@ -288,7 +295,7 @@
         </div>
 
         <!-- ==================== 分頁四：系統設定 ==================== -->
-        <div id="tab-settings" class="hidden bg-white p-5 md:p-6 rounded-[24px] border border-slate-100 space-y-6 shadow-sm animate-fade-in">
+        <div id="tab-settings" class="hidden bg-white p-4 sm:p-6 rounded-[24px] border border-slate-100 space-y-5 shadow-sm animate-fade-in">
             <div>
                 <h2 class="text-base md:text-lg font-bold text-slate-900">系統與備份設定</h2>
                 <p class="text-xs md:text-sm text-slate-400 mt-0.5">在此管理您的資產資料，可安全地匯入或匯出備份檔案。</p>
@@ -340,7 +347,6 @@
     </button>
 
     <!-- ==================== 懸浮視窗：新增交易/補登 (Action Modal) ==================== -->
-    <!-- 所有 input 與 select 的文字在手機端皆採用 text-base (16px) 以防聚焦縮放 -->
     <div id="actionModal" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-3">
         <div class="bg-white rounded-[24px] shadow-2xl border border-slate-100 max-w-sm w-full max-h-[90vh] flex flex-col overflow-hidden animate-fade-in text-xs md:text-sm">
             
@@ -369,7 +375,7 @@
                 <form id="txForm" class="space-y-3" novalidate>
                     <div>
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">交易類型</label>
-                        <select id="type" onchange="toggleFormFields()" class="mt-1 block w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 border p-2 bg-slate-50/50 text-base md:text-xs text-slate-700">
+                        <select id="type" onchange="toggleFormFields()" class="mt-1 block w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 border p-2 bg-slate-50/50 text-slate-700">
                             <option value="BUY">買入股票</option>
                             <option value="SELL">賣出股票</option>
                             <option value="DEPOSIT">帳戶入金 (存入現金)</option>
@@ -379,27 +385,27 @@
                     </div>
                     <div id="stockFields">
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">股票代號</label>
-                        <input type="text" id="symbol" placeholder="如: 2330" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
+                        <input type="text" id="symbol" placeholder="如: 2330" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
                     </div>
                     <div>
                         <label id="amountLabel" class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">單價 (元)</label>
-                        <input type="number" step="any" inputmode="decimal" id="price" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
+                        <input type="number" step="any" inputmode="decimal" id="price" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
                     </div>
                     <div id="qtyField">
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">股數</label>
-                        <input type="number" inputmode="numeric" pattern="[0-9]*" id="quantity" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
+                        <input type="number" inputmode="numeric" pattern="[0-9]*" id="quantity" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
                     </div>
                     <div id="feeField">
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">手續費 (元)</label>
-                        <input type="number" step="1" inputmode="numeric" pattern="[0-9]*" id="fee" value="0" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
+                        <input type="number" step="1" inputmode="numeric" pattern="[0-9]*" id="fee" value="0" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
                     </div>
                     <div id="taxField" class="hidden">
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">交易稅 (元)</label>
-                        <input type="number" step="1" inputmode="numeric" pattern="[0-9]*" id="tax" value="0" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
+                        <input type="number" step="1" inputmode="numeric" pattern="[0-9]*" id="tax" value="0" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
                     </div>
                     <div>
                         <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">日期</label>
-                        <input type="date" id="date" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
+                        <input type="date" id="date" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
                     </div>
                     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition text-sm md:text-xs shadow-sm">
                         儲存交易紀錄
@@ -425,6 +431,60 @@
                     </button>
                 </form>
 
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 懸浮視窗：編輯/刪除特定交易紀錄 (Edit Tx Modal) ==================== -->
+    <div id="editTxModal" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-3 animate-fade-in text-xs md:text-sm">
+        <div class="bg-white rounded-[24px] shadow-2xl border border-slate-100 max-w-sm w-full max-h-[90vh] flex flex-col overflow-hidden text-xs">
+            <!-- 頁頭 -->
+            <div class="p-3 border-b border-slate-50 flex justify-between items-center bg-slate-50/80">
+                <span class="font-bold text-slate-800">管理交易紀錄</span>
+                <button onclick="closeEditTxModal()" class="text-slate-400 hover:text-slate-600 text-base font-bold">&times;</button>
+            </div>
+            
+            <!-- 表單內容 -->
+            <div class="p-4 overflow-y-auto space-y-4">
+                <form id="editTxForm" class="space-y-3" novalidate>
+                    <input type="hidden" id="editTxId">
+                    <div>
+                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">交易類型</label>
+                        <select id="editType" onchange="toggleEditFormFields()" class="mt-1 block w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 border p-2 bg-slate-50/50 text-slate-700">
+                            <option value="BUY">買入股票</option>
+                            <option value="SELL">賣出股票</option>
+                            <option value="DEPOSIT">帳戶入金 (存入現金)</option>
+                            <option value="WITHDRAW">帳戶出金 (提現)</option>
+                            <option value="DIVIDEND">收到股息 (配息)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">標的代號</label>
+                        <input type="text" id="editSymbol" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 uppercase text-slate-800">
+                    </div>
+                    <div>
+                        <label id="editAmountLabel" class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">單價 (元)</label>
+                        <input type="number" step="any" inputmode="decimal" id="editPrice" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                    </div>
+                    <div id="editQtyField">
+                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">股數</label>
+                        <input type="number" inputmode="numeric" pattern="[0-9]*" id="editQuantity" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">交易日期</label>
+                        <input type="date" id="editDate" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50">
+                    </div>
+                    
+                    <!-- 按鈕：刪除與儲存 -->
+                    <div class="pt-2 flex gap-2">
+                        <button type="button" onclick="deleteTxFromEditModal()" class="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold py-2.5 rounded-lg transition text-sm md:text-xs border border-rose-100">
+                            🗑️ 刪除此筆
+                        </button>
+                        <button type="submit" class="flex-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-6 rounded-lg transition text-sm md:text-xs shadow-sm">
+                            💾 儲存修改
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -563,12 +623,14 @@
         const txHistoryTable = document.getElementById('txHistoryTable');
         const holdingsTable = document.getElementById('holdingsTable');
         const holdingsCardContainer = document.getElementById('holdingsCardContainer');
+        const editTxForm = document.getElementById('editTxForm');
         
         let activeTab = 'main';
         let assetChartInstance = null;
         let allocationChartInstance = null; 
         let currentChartScale = 'daily'; 
         let currentHistoryScale = 'daily'; 
+        let editingTxId = null; // 特定編輯中 ID 緩存
 
         const todayStr = new Date().toISOString().split('T')[0];
 
@@ -655,6 +717,107 @@
                 histFormEl.style.display = 'block';
                 btnTx.className = "flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800";
                 btnHist.className = "flex-1 py-1.5 rounded-md bg-white text-slate-900 shadow-xs font-bold";
+            }
+        };
+
+        // --- ✏️ 特定紀錄編輯與刪除彈窗管理邏輯 ---
+        window.openEditTxModal = function(id) {
+            const tx = transactions.find(t => t.id === id);
+            if (!tx) return;
+
+            editingTxId = id;
+            document.getElementById('editTxId').value = tx.id;
+            document.getElementById('editType').value = tx.type;
+            document.getElementById('editSymbol').value = tx.symbol;
+            document.getElementById('editPrice').value = tx.price;
+            document.getElementById('editQuantity').value = tx.quantity || 1;
+            document.getElementById('editDate').value = tx.date;
+
+            toggleEditFormFields();
+
+            const modal = document.getElementById('editTxModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        window.closeEditTxModal = function() {
+            const modal = document.getElementById('editTxModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        };
+
+        window.toggleEditFormFields = function() {
+            const type = document.getElementById('editType').value;
+            const qtyField = document.getElementById('editQtyField');
+            const amountLabel = document.getElementById('editAmountLabel');
+            const symbolInput = document.getElementById('editSymbol');
+
+            if (type === 'DEPOSIT' || type === 'WITHDRAW') {
+                qtyField.style.display = 'none';
+                amountLabel.innerText = "金額 (元)";
+                symbolInput.value = 'CASH';
+                symbolInput.disabled = true;
+            } else if (type === 'DIVIDEND') {
+                qtyField.style.display = 'none';
+                amountLabel.innerText = "配息總金額 (元)";
+                symbolInput.disabled = false;
+            } else {
+                qtyField.style.display = 'block';
+                amountLabel.innerText = "單價 (元)";
+                symbolInput.disabled = false;
+            }
+        };
+
+        if (editTxForm) {
+            editTxForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                try {
+                    const id = document.getElementById('editTxId').value;
+                    const type = document.getElementById('editType').value;
+                    const symbol = document.getElementById('editSymbol').value.trim().toUpperCase();
+                    const price = parseFloat(document.getElementById('editPrice').value);
+                    const qty = parseInt(document.getElementById('editQuantity').value) || 1;
+                    const date = document.getElementById('editDate').value;
+
+                    if (isNaN(price) || price <= 0) {
+                        alert("請輸入大於 0 的金額。");
+                        return;
+                    }
+
+                    if (!date) {
+                        alert("請選擇有效的日期。");
+                        return;
+                    }
+
+                    const txIdx = transactions.findIndex(t => t.id === id);
+                    if (txIdx !== -1) {
+                        transactions[txIdx].type = type;
+                        transactions[txIdx].symbol = symbol;
+                        transactions[txIdx].price = price;
+                        transactions[txIdx].quantity = (type === 'DEPOSIT' || type === 'WITHDRAW' || type === 'DIVIDEND') ? 1 : qty;
+                        transactions[txIdx].date = date;
+
+                        transactions.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+                        saveData();
+                        render();
+                        closeEditTxModal();
+                    }
+                } catch (err) {
+                    alert("更新失敗: " + err.message);
+                }
+            });
+        }
+
+        window.deleteTxFromEditModal = function() {
+            if (editingTxId) {
+                if (confirm("確定要刪除這筆交易紀錄嗎？此動作將立即重新計算資產數值。")) {
+                    deleteTx(editingTxId);
+                    closeEditTxModal();
+                }
             }
         };
 
@@ -1042,7 +1205,7 @@
                 }
             }
 
-            // 同時渲染庫存介面 (將今日市價更名為收盤價，手動輸入部分優化為 decimal 數字鍵盤，16px 字體避免自動放大)
+            // 同時渲染庫存介面
             if (holdingsTable && holdingsCardContainer) {
                 holdingsTable.innerHTML = '';
                 holdingsCardContainer.innerHTML = '';
@@ -1065,10 +1228,10 @@
                         let pnlSign = "";
                         if (currentPrice > 0) {
                             if (unrealized > 0) { 
-                                pnlColorClass = "text-[#e63946] font-semibold"; 
+                                pnlColorClass = "text-[#e63946]"; 
                                 pnlSign = "+"; 
                             } else if (unrealized < 0) { 
-                                pnlColorClass = "text-[#2a9d8f] font-semibold"; 
+                                pnlColorClass = "text-[#2a9d8f]"; 
                             }
                         }
 
@@ -1080,9 +1243,9 @@
                         let pnlBadgeStyle = "";
                         if (currentPrice > 0) {
                             if (percent <= -15) {
-                                pnlBadgeStyle = "bg-teal-50 text-teal-800 border border-teal-100 px-1.5 py-0.5 rounded font-bold text-[9px] md:text-[10px]";
+                                pnlBadgeStyle = "bg-[#2a9d8f]/10 text-[#2a9d8f] border border-[#2a9d8f]/20 px-1.5 py-0.5 rounded-full font-bold text-[9px] md:text-[10px]";
                             } else if (percent >= 50) {
-                                pnlBadgeStyle = "bg-rose-50 text-rose-800 border border-rose-100 px-1.5 py-0.5 rounded font-bold text-[9px] md:text-[10px]";
+                                pnlBadgeStyle = "bg-[#e63946]/10 text-[#e63946] border border-[#e63946]/20 px-1.5 py-0.5 rounded-full font-bold text-[9px] md:text-[10px]";
                             }
                         }
 
@@ -1090,7 +1253,7 @@
                             ? `<span class="text-[10px] md:text-xs text-slate-400 font-normal block truncate max-w-[120px]">${stockNames[sym]}</span>` 
                             : '';
 
-                        // 1. 桌機版表格行 (上下左右置中)
+                        // 1. 桌機版表格行 (「未實現損益」字體放大加粗，輸入框縮小並維持置中)
                         const tr = document.createElement('tr');
                         tr.className = "hover:bg-slate-50/50 transition-all text-xs md:text-sm text-center";
                         tr.innerHTML = `
@@ -1105,50 +1268,58 @@
                                     ${holdingPercentOfTotal.toFixed(1)}%
                                 </span>
                             </td>
-                            <td class="py-3.5 font-medium align-middle text-center">${hold.qty.toLocaleString()}</td>
+                            <td class="py-3.5 font-semibold align-middle text-center">${hold.qty.toLocaleString()}</td>
                             <td class="py-3.5 ${pnlColorClass} align-middle text-center">
                                 ${currentPrice > 0 ? `
                                     <div class="flex flex-col items-center justify-center">
-                                        <span class="font-bold">${pnlSign}${unrealized.toLocaleString('zh-TW', {maximumFractionDigits: 0})}</span>
-                                        <span class="${pnlBadgeStyle || 'text-[10px] md:text-xs text-slate-400 font-medium'}">${percent > 0 ? '+' : ''}${percent.toFixed(2)}%</span>
+                                        <span class="text-sm md:text-base font-extrabold tracking-tight">${pnlSign}${unrealized.toLocaleString('zh-TW', {maximumFractionDigits: 0})}</span>
+                                        <span class="${pnlBadgeStyle || 'text-[10px] md:text-xs text-slate-400 font-bold'}">${percent > 0 ? '+' : ''}${percent.toFixed(2)}%</span>
                                     </div>
                                 ` : '--'}
                             </td>
                             <td class="py-3.5 text-slate-600 align-middle text-center">$ ${(hold.avgCost || 0).toFixed(1)}</td>
                             <td class="py-3.5 align-middle text-center">
-                                <input type="number" step="any" inputmode="decimal" value="${currentPrice || ''}" placeholder="收盤價" onchange="updateCurrentPrice('${sym}', this.value)" class="w-20 border border-slate-200/80 rounded-lg px-2 py-1 text-base md:text-xs bg-slate-50/50 hover:bg-white focus:bg-white focus:outline-none focus:border-blue-500 text-center">
+                                <input type="number" step="any" inputmode="decimal" value="${currentPrice || ''}" placeholder="自訂" onchange="updateCurrentPrice('${sym}', this.value)" class="w-16 md:w-20 border border-slate-200/80 rounded-lg px-2 py-0.5 text-[11px] md:text-xs bg-slate-50/50 hover:bg-white focus:bg-white focus:outline-none focus:border-blue-500 text-center font-medium">
                             </td>
                         `;
                         holdingsTable.appendChild(tr);
 
-                        // 2. 行動裝置版精簡卡片 (Card)
+                        // 2. 行動裝置版精簡卡片 (新增高對比損益看板、將輸入框收盤價進行窄化美化並防縮放)
                         const card = document.createElement('div');
-                        card.className = "bg-slate-50/50 rounded-xl p-3 border border-slate-100/80 space-y-1 relative text-[11px]";
+                        card.className = "bg-white rounded-2xl p-4 border border-slate-100 shadow-xs space-y-2 relative text-[11px]";
                         card.innerHTML = `
-                            <div class="flex justify-between items-center border-b border-slate-100/55 pb-1">
+                            <div class="flex justify-between items-center border-b border-slate-50 pb-1.5">
                                 <div class="flex items-center gap-1.5">
-                                    <span class="font-bold text-slate-900">${sym}</span>
-                                    <span class="text-slate-400 truncate max-w-[80px]">${stockNames[sym] || ''}</span>
+                                    <span class="font-bold text-slate-900 text-xs">${sym}</span>
+                                    <span class="text-slate-400 truncate max-w-[100px]">${stockNames[sym] || ''}</span>
                                 </div>
-                                <span class="${holdPercentStyle}">${holdingPercentOfTotal.toFixed(1)}% 比重</span>
+                                <span class="${holdPercentStyle} text-[10px] font-semibold">${holdingPercentOfTotal.toFixed(1)}% 比重</span>
                             </div>
                             
-                            <div class="grid grid-cols-2 gap-x-3 gap-y-1 pt-1 text-slate-600">
+                            <!-- 💡 損益區高對比：置中高對比呈現，方便快速閱讀 -->
+                            <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-100/50">
+                                <span class="text-slate-500 font-semibold text-xs">未實現損益</span>
+                                <span class="${pnlColorClass} text-sm sm:text-base font-extrabold flex items-center gap-1.5">
+                                    <span>${pnlSign}${unrealized.toLocaleString('zh-TW', {maximumFractionDigits: 0})}</span>
+                                    <span class="text-[9px] font-bold bg-white/80 px-1.5 py-0.5 rounded-full border border-slate-100">${percent > 0 ? '+' : ''}${percent.toFixed(1)}%</span>
+                                </span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-1 text-slate-500 text-[10px]">
                                 <div class="flex justify-between">
-                                    <span class="text-slate-400">持股數量</span>
-                                    <span class="font-semibold text-slate-800">${hold.qty.toLocaleString()}</span>
+                                    <span>持股數量</span>
+                                    <span class="font-bold text-slate-800">${hold.qty.toLocaleString()} 股</span>
                                 </div>
                                 <div class="flex justify-between">
-                                    <span class="text-slate-400">平均成本</span>
-                                    <span class="font-semibold text-slate-800">${(hold.avgCost || 0).toFixed(1)}</span>
+                                    <span>平均成本</span>
+                                    <span class="font-bold text-slate-800">$ ${(hold.avgCost || 0).toFixed(1)}</span>
                                 </div>
-                                <div class="flex justify-between col-span-2 items-center">
-                                    <span class="text-slate-400">未實現損益</span>
-                                    <span class="${pnlColorClass} font-bold">${pnlSign}${unrealized.toLocaleString('zh-TW', {maximumFractionDigits: 0})} (${percent > 0 ? '+' : ''}${percent.toFixed(1)}%) ${pnlBadgeStyle ? pnlBadgeStyle : ''}</span>
-                                </div>
-                                <div class="flex justify-between col-span-2 items-center pt-1 border-t border-slate-100/50">
-                                    <span class="text-slate-400">收盤價</span>
-                                    <input type="number" step="any" inputmode="decimal" value="${currentPrice || ''}" placeholder="自訂市價" onchange="updateCurrentPrice('${sym}', this.value)" class="w-20 border border-slate-200 rounded px-1.5 py-0.5 bg-white text-slate-800 text-right text-base">
+                                <div class="flex justify-between col-span-2 items-center pt-1.5 border-t border-slate-100/50">
+                                    <span class="font-medium text-slate-400">收盤價</span>
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-[9px] text-slate-300">點選修改</span>
+                                        <input type="number" step="any" inputmode="decimal" value="${currentPrice || ''}" placeholder="輸入收盤價" onchange="updateCurrentPrice('${sym}', this.value)" class="w-16 border border-slate-200 rounded-md px-1.5 py-0.5 bg-slate-50 text-slate-800 text-center font-medium focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -1184,15 +1355,15 @@
             if (!el) return;
             el.innerText = "$ " + val.toLocaleString('zh-TW', {maximumFractionDigits: 0});
             if (val > 0) {
-                el.className = "text-xs sm:text-sm md:text-base font-bold text-[#e63946]";
+                el.className = "text-xs sm:text-sm md:text-base font-extrabold text-[#e63946]";
             } else if (val < 0) {
-                el.className = "text-xs sm:text-sm md:text-base font-bold text-[#2a9d8f]";
+                el.className = "text-xs sm:text-sm md:text-base font-extrabold text-[#2a9d8f]";
             } else {
                 el.className = "text-xs sm:text-sm md:text-base font-bold text-slate-800";
             }
         }
 
-        // 明細渲染 (移除所有 NT$、支援上下左右置中)
+        // 明細渲染 (單價與股數合併、移除所有 NT$、支援上下左右置中)
         function renderHistory() {
             if (!txHistoryTable) return;
             txHistoryTable.innerHTML = '';
@@ -1248,6 +1419,11 @@
                     detailTooltip = `<span class="text-[9px] md:text-[10px] text-slate-400 block font-normal">(手續費:${fee}/稅:${tax})</span>`;
                 }
 
+                // 💡 結合單價與股數
+                const qtyDisplay = (tx.type==='DEPOSIT'||tx.type==='WITHDRAW'||tx.type==='DIVIDEND') 
+                    ? '<span class="text-[10px] text-slate-400 block mt-0.5">--</span>' 
+                    : `<span class="text-[10px] text-slate-400 block mt-0.5">${quantity.toLocaleString()} 股</span>`;
+
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50/50 transition-all text-xs md:text-sm text-center";
                 tr.innerHTML = `
@@ -1256,12 +1432,22 @@
                     <td class="py-2.5 whitespace-nowrap align-middle text-center">
                         <div class="flex flex-col items-center justify-center">${itemText}</div>
                     </td>
-                    <td class="py-2.5 whitespace-nowrap align-middle text-center">$ ${price.toLocaleString()}</td>
-                    <td class="py-2.5 whitespace-nowrap align-middle text-center">${tx.type==='DEPOSIT'||tx.type==='WITHDRAW'||tx.type==='DIVIDEND' ? '--' : quantity.toLocaleString()}</td>
+                    <!-- 單價與股數結合顯示 -->
+                    <td class="py-2.5 whitespace-nowrap align-middle text-center">
+                        <div class="flex flex-col items-center justify-center">
+                            <span class="font-semibold text-slate-800">$ ${price.toLocaleString()}</span>
+                            ${qtyDisplay}
+                        </div>
+                    </td>
                     <td class="py-2.5 whitespace-nowrap font-bold align-middle text-center ${changeText.startsWith('+') ? 'text-[#e63946]' : 'text-[#2a9d8f]'}">
                         <div class="flex flex-col items-center justify-center">${changeText}${detailTooltip}</div>
                     </td>
-                    <td class="py-2.5 whitespace-nowrap text-center align-middle"><button onclick="deleteTx('${tx.id}')" class="text-rose-500 hover:text-rose-700 font-semibold">刪除</button></td>
+                    <!-- ✏️ 管理功能按鈕 -->
+                    <td class="py-2.5 whitespace-nowrap text-center align-middle">
+                        <button onclick="openEditTxModal('${tx.id}')" class="text-blue-600 hover:text-blue-800 font-semibold p-1" title="編輯或刪除">
+                            ✏️
+                        </button>
+                    </td>
                 `;
                 txHistoryTable.appendChild(tr);
             });
@@ -1271,6 +1457,7 @@
             localStorage.setItem('stock_v6_tx', JSON.stringify(transactions));
         }
 
+        // 💡 補回漏掉的 initDefaultHistoryRange 核心主函數
         function initDefaultHistoryRange(scale) {
             const today = new Date();
             let start = new Date();
