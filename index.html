@@ -205,10 +205,10 @@
             #tab-history tbody td:nth-child(3) .flex, #tab-history tbody td:nth-child(4) .flex, #tab-history tbody td:nth-child(5) .flex { align-items: flex-start !important; }
 
             body > button.fixed.bottom-6.right-6 { bottom: calc(72px + var(--safe-bottom)) !important; right: 16px !important; width: 58px !important; height: 58px !important; border-radius: 22px !important; background: linear-gradient(135deg, #2563eb, #1d4ed8) !important; box-shadow: 0 18px 36px rgba(37,99,235,0.36); }
-            #actionModal, #editTxModal, #excelHelpModal { align-items: flex-end !important; padding: 0 !important; }
-            #actionModal > div, #editTxModal > div, #excelHelpModal > div { max-width: none !important; width: 100% !important; max-height: calc(92vh - var(--safe-top)) !important; border-radius: 28px 28px 0 0 !important; padding-bottom: var(--safe-bottom); animation: sheetUp 0.22s cubic-bezier(0.16,1,0.3,1) forwards; }
-            #actionModal input, #actionModal select, #editTxModal input, #editTxModal select { min-height: 44px; font-size: 16px !important; }
-            #actionModal button[type="submit"], #editTxModal button[type="submit"] { min-height: 46px; border-radius: 16px !important; font-size: 14px !important; }
+            #actionModal, #editTxModal, #editBrokerModal, #excelHelpModal { align-items: flex-end !important; padding: 0 !important; }
+            #actionModal > div, #editTxModal > div, #editBrokerModal > div, #excelHelpModal > div { max-width: none !important; width: 100% !important; max-height: calc(92vh - var(--safe-top)) !important; border-radius: 28px 28px 0 0 !important; padding-bottom: var(--safe-bottom); animation: sheetUp 0.22s cubic-bezier(0.16,1,0.3,1) forwards; }
+            #actionModal input, #actionModal select, #editTxModal input, #editTxModal select, #editBrokerModal input { min-height: 44px; font-size: 16px !important; }
+            #actionModal button[type="submit"], #editTxModal button[type="submit"], #editBrokerModal button[type="submit"] { min-height: 46px; border-radius: 16px !important; font-size: 14px !important; }
             #tab-settings button, #tab-settings label { min-height: 44px; border-radius: 16px !important; }
         }
 
@@ -217,6 +217,20 @@
             #tab-chart > .relative.w-full { height: 295px !important; }
         }
     
+
+        /* === Privacy eye toggle & peak asset card === */
+        .privacy-toggle-btn {
+            width: 34px; height: 34px; border-radius: 999px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(241,245,249,.85); border: 1px solid rgba(226,232,240,.95);
+            color: #475569; transition: all .15s ease;
+        }
+        .privacy-toggle-btn:hover { background: #e2e8f0; color: #0f172a; }
+        .privacy-mask { letter-spacing: .08em; }
+        @media (max-width: 768px) {
+            .privacy-toggle-btn { width: 32px; height: 32px; }
+            #peakAssetVal { font-size: 18px !important; }
+        }
 
         /* === Settings UI compact fix v3 === */
         #tab-settings{padding:14px!important;border-radius:24px!important;gap:0!important;}
@@ -279,21 +293,33 @@
             <div class="bg-white rounded-[20px] sm:rounded-[24px] border border-slate-100 p-3.5 sm:p-6 md:p-8 shadow-sm space-y-3 sm:space-y-4 md:space-y-6 relative overflow-hidden">
                 <div class="absolute -right-12 -top-12 w-36 h-36 bg-blue-50/40 rounded-full blur-2xl pointer-events-none"></div>
                 
-                <div>
-                    <p class="text-[11px] sm:text-xs md:text-sm font-semibold text-slate-400 tracking-wider uppercase">淨資產 ($)</p>
-                    <h2 class="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-950 mt-0.5 tracking-tight" id="netAssetVal">$ 0</h2>
+                <div class="flex justify-between items-start gap-3 relative z-10">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <p class="text-[11px] sm:text-xs md:text-sm font-semibold text-slate-400 tracking-wider uppercase">淨資產 ($)</p>
+                            <button id="privacyToggleBtn" onclick="togglePrivacyMode()" class="privacy-toggle-btn" aria-label="切換金額顯示" title="切換金額顯示">
+                                <span id="privacyEyeIcon" class="text-base leading-none">🔒</span>
+                            </button>
+                        </div>
+                        <h2 class="text-2xl sm:text-4xl md:text-5xl font-bold text-slate-950 mt-0.5 tracking-tight privacy-amount" id="netAssetVal">$ 0</h2>
+                    </div>
+                    <div class="text-right shrink-0 bg-slate-50/70 border border-slate-100 rounded-2xl px-3 py-2 min-w-[132px]">
+                        <p class="text-[10px] sm:text-xs font-semibold text-slate-400 tracking-wider uppercase">最高淨資產 ($)</p>
+                        <p class="text-base sm:text-xl md:text-2xl font-extrabold text-slate-900 mt-0.5 privacy-amount" id="peakAssetVal">$ 0</p>
+                        <p class="text-[10px] sm:text-xs font-bold mt-0.5" id="drawdownPctVal">回檔 0.0%</p>
+                    </div>
                 </div>
 
                 <!-- 雙排主要資產比率 -->
                 <div class="grid grid-cols-2 gap-2.5 md:gap-4 pt-3 border-t border-slate-50">
                     <div class="bg-slate-50/60 p-2.5 sm:p-4 rounded-xl border border-slate-100/80">
                         <span class="text-[11px] sm:text-xs md:text-sm text-slate-400 font-medium block">持股市值</span>
-                        <span class="text-base sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block" id="stockMarketValue">$ 0</span>
+                        <span class="text-base sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block privacy-amount" id="stockMarketValue">$ 0</span>
                         <span class="text-[10px] md:text-xs text-blue-600 font-semibold mt-0.5 block" id="stockRatioText">佔比 0.0%</span>
                     </div>
                     <div class="bg-slate-50/60 p-3 md:p-4 rounded-xl border border-slate-100/80 relative">
                         <span class="text-[11px] sm:text-xs md:text-sm text-slate-400 font-medium block">可用現金</span>
-                        <span class="text-base sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block" id="currentCash">$ 0</span>
+                        <span class="text-base sm:text-lg md:text-2xl font-bold text-slate-800 mt-0.5 block privacy-amount" id="currentCash">$ 0</span>
                         <span class="text-[10px] md:text-xs text-indigo-600 font-semibold mt-0.5 block" id="cashRatioText">佔比 0.0%</span>
                         <div id="cashAlert" class="absolute right-2 bottom-2"></div>
                     </div>
@@ -303,19 +329,19 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 pt-3 border-t border-slate-50 text-[11px] sm:text-xs md:text-sm">
                     <div>
                         <p class="text-slate-400 font-medium">未實現損益</p>
-                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5" id="totalUnrealizedPnl">$ 0</p>
+                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5 privacy-amount" id="totalUnrealizedPnl">$ 0</p>
                     </div>
                     <div>
                         <p class="text-slate-400 font-medium">已實現損益</p>
-                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5" id="totalRealizedPnl">$ 0</p>
+                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5 privacy-amount" id="totalRealizedPnl">$ 0</p>
                     </div>
                     <div>
                         <p class="text-slate-400 font-medium">累積股息</p>
-                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5 text-teal-600" id="totalDividends">$ 0</p>
+                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5 text-teal-600 privacy-amount" id="totalDividends">$ 0</p>
                     </div>
                     <div>
                         <p class="text-slate-400 font-medium">總報酬</p>
-                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5" id="totalCombinedReturn">$ 0</p>
+                        <p class="text-xs sm:text-sm md:text-base font-bold mt-0.5 privacy-amount" id="totalCombinedReturn">$ 0</p>
                     </div>
                 </div>
             </div>
@@ -740,6 +766,43 @@
         </div>
     </div>
 
+
+    <!-- ==================== 懸浮視窗：編輯券商資料 (Edit Broker Modal) ==================== -->
+    <div id="editBrokerModal" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-3 animate-fade-in text-xs md:text-sm">
+        <div class="bg-white rounded-[24px] shadow-2xl border border-slate-100 max-w-sm w-full max-h-[90vh] flex flex-col overflow-hidden text-xs">
+            <div class="p-3 border-b border-slate-50 flex justify-between items-center bg-slate-50/80">
+                <span class="font-bold text-slate-800">編輯券商資料</span>
+                <button onclick="closeEditBrokerModal()" class="text-slate-400 hover:text-slate-600 text-base font-bold">&times;</button>
+            </div>
+            <div class="p-4 overflow-y-auto space-y-4">
+                <form id="editBrokerForm" class="space-y-3" novalidate>
+                    <input type="hidden" id="editBrokerId">
+                    <div>
+                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">券商名稱</label>
+                        <input type="text" id="editBrokerName" placeholder="例如：富邦證券" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-slate-800 font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">手續費率 %</label>
+                        <input type="number" step="0.0001" inputmode="decimal" id="editBrokerFeeRate" placeholder="例如：0.0399" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-slate-800 font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">最低收費 元</label>
+                        <input type="number" step="1" inputmode="numeric" id="editBrokerMinFee" placeholder="例如：20" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-slate-800 font-bold">
+                    </div>
+                    <p class="text-[11px] text-slate-400 font-semibold leading-relaxed">費率請填折讓後百分比，例如 28 折約為 0.0399%。</p>
+                    <div class="pt-2 flex gap-2">
+                        <button type="button" onclick="closeEditBrokerModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-lg transition text-sm md:text-xs border border-slate-200">
+                            取消
+                        </button>
+                        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition text-sm md:text-xs shadow-sm">
+                            儲存修改
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Excel 規則說明燈箱 (Modal) -->
     <div id="excelHelpModal" style="display: none;" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-3 animate-fade-in">
         <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-lg w-full max-h-[80vh] flex flex-col overflow-hidden text-xs md:text-sm">
@@ -875,6 +938,7 @@
         const holdingsTable = document.getElementById('holdingsTable');
         const holdingsCardContainer = document.getElementById('holdingsCardContainer');
         const editTxForm = document.getElementById('editTxForm');
+        const editBrokerForm = document.getElementById('editBrokerForm');
         
         let activeTab = 'main';
         let assetChartInstance = null;
@@ -884,6 +948,50 @@
         let editingTxId = null; // 特定編輯中 ID 緩存
 
         const todayStr = new Date().toISOString().split('T')[0];
+
+
+        // --- 隱私眼睛切換：預設關閉，關閉時金額顯示 *** ---
+        let privacyModeHidden = true;
+
+        function setPrivacyText(el, text) {
+            if (!el) return;
+            el.dataset.realText = text;
+            el.innerText = privacyModeHidden ? '***' : text;
+            el.classList.toggle('privacy-mask', privacyModeHidden);
+        }
+
+        function applyPrivacyMode() {
+            document.querySelectorAll('.privacy-amount').forEach(el => {
+                const real = el.dataset.realText || el.innerText || '';
+                el.dataset.realText = real;
+                el.innerText = privacyModeHidden ? '***' : real;
+                el.classList.toggle('privacy-mask', privacyModeHidden);
+            });
+            const icon = document.getElementById('privacyEyeIcon');
+            const btn = document.getElementById('privacyToggleBtn');
+            if (icon) icon.innerText = privacyModeHidden ? '🔒' : '🔓';
+            if (btn) btn.title = privacyModeHidden ? '目前隱藏金額，點擊顯示' : '目前顯示金額，點擊隱藏';
+        }
+
+        window.togglePrivacyMode = function() {
+            privacyModeHidden = !privacyModeHidden;
+            applyPrivacyMode();
+        };
+
+        function calculatePeakAssetStats(currentAsset) {
+            if (!transactions || transactions.length === 0) {
+                return { peakAsset: currentAsset || 0, drawdownPct: 0 };
+            }
+            const firstDate = transactions[0].date || todayStr;
+            const dates = generateDailyDates(firstDate, todayStr);
+            let peak = currentAsset || 0;
+            dates.forEach(d => {
+                const asset = calculateAssetOnSpecificDate(d).totalAsset;
+                if (asset > peak) peak = asset;
+            });
+            const drawdownPct = peak > 0 ? Math.max(0, ((peak - (currentAsset || 0)) / peak) * 100) : 0;
+            return { peakAsset: peak, drawdownPct };
+        }
 
         function toSlashDate(dateStr) {
             if (!dateStr) return "";
@@ -1606,23 +1714,33 @@
             const elDividends = document.getElementById('totalDividends');
             const elCombinedReturn = document.getElementById('totalCombinedReturn');
 
-            if (elNetAsset) elNetAsset.innerText = `$ ${totalAsset.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
-            if (elCash) elCash.innerText = `$ ${cash.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
-            if (elMarket) elMarket.innerText = `$ ${stockMarketValue.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+            if (elNetAsset) setPrivacyText(elNetAsset, `$ ${totalAsset.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`);
+            if (elCash) setPrivacyText(elCash, `$ ${cash.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`);
+            if (elMarket) setPrivacyText(elMarket, `$ ${stockMarketValue.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`);
             
             if (elUnrealized) formatColorText(elUnrealized, totalUnrealizedPnl);
             if (elRealized) formatColorText(elRealized, totalRealizedPnl);
             if (elDividends) {
-                elDividends.innerText = `$ ${totalDividends.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`;
+                setPrivacyText(elDividends, `$ ${totalDividends.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`);
             }
             if (elCombinedReturn) formatColorText(elCombinedReturn, totalCombinedReturn);
+
+            const peakStats = calculatePeakAssetStats(totalAsset);
+            const elPeakAsset = document.getElementById('peakAssetVal');
+            const elDrawdown = document.getElementById('drawdownPctVal');
+            if (elPeakAsset) setPrivacyText(elPeakAsset, `$ ${peakStats.peakAsset.toLocaleString('zh-TW', {maximumFractionDigits: 0})}`);
+            if (elDrawdown) {
+                elDrawdown.innerText = `回檔 ${peakStats.drawdownPct.toFixed(1)}%`;
+                elDrawdown.className = peakStats.drawdownPct > 0 ? 'text-[10px] sm:text-xs font-bold mt-0.5 text-rose-600' : 'text-[10px] sm:text-xs font-bold mt-0.5 text-emerald-600';
+            }
+            applyPrivacyMode();
 
             return { cash, stockMarketValue, totalUnrealizedPnl };
         }
 
         function formatColorText(el, val) {
             if (!el) return;
-            el.innerText = "$ " + val.toLocaleString('zh-TW', {maximumFractionDigits: 0});
+            setPrivacyText(el, "$ " + val.toLocaleString('zh-TW', {maximumFractionDigits: 0}));
             if (val > 0) {
                 el.className = "text-xs sm:text-sm md:text-base font-extrabold text-[#e63946]";
             } else if (val < 0) {
@@ -2411,11 +2529,202 @@
             }
         };
 
+
+        // --- 券商管理功能：修復 addNewBroker is not defined ---
+        let brokers = [];
+
+        function initBrokers() {
+            try {
+                brokers = JSON.parse(localStorage.getItem('stock_v9_brokers')) || [];
+            } catch (e) {
+                brokers = [];
+            }
+
+            if (!Array.isArray(brokers) || brokers.length === 0) {
+                brokers = [{
+                    id: 'default_broker',
+                    name: '預設券商',
+                    feeRate: 0.0399,
+                    minFee: 20
+                }];
+                saveBrokers();
+            }
+
+            renderBrokers();
+        }
+
+        function saveBrokers() {
+            localStorage.setItem('stock_v9_brokers', JSON.stringify(brokers));
+        }
+
+        function addNewBroker() {
+            const nameInput = document.getElementById('newBrokerName');
+            const feeRateInput = document.getElementById('newBrokerFeeRate');
+            const minFeeInput = document.getElementById('newBrokerMinFee');
+
+            if (!nameInput || !feeRateInput || !minFeeInput) {
+                alert('找不到券商輸入欄位，請檢查 HTML 元素 ID。');
+                return;
+            }
+
+            const name = nameInput.value.trim();
+            const feeRate = Number(feeRateInput.value);
+            const minFee = Number(minFeeInput.value);
+
+            if (!name) {
+                alert('請輸入券商名稱');
+                return;
+            }
+
+            if (!Number.isFinite(feeRate) || feeRate < 0) {
+                alert('請輸入正確的手續費率');
+                return;
+            }
+
+            if (!Number.isFinite(minFee) || minFee < 0) {
+                alert('請輸入正確的最低收費');
+                return;
+            }
+
+            brokers.push({
+                id: 'broker_' + Date.now(),
+                name,
+                feeRate,
+                minFee
+            });
+
+            saveBrokers();
+            renderBrokers();
+
+            nameInput.value = '';
+            feeRateInput.value = '';
+            minFeeInput.value = '';
+        }
+
+        function deleteBroker(id) {
+            if (brokers.length <= 1) {
+                alert('至少需要保留一家券商');
+                return;
+            }
+
+            if (!confirm('確定要刪除此券商嗎？')) return;
+
+            brokers = brokers.filter(b => b.id !== id);
+            saveBrokers();
+            renderBrokers();
+        }
+
+        function renderBrokers() {
+            const tableBody = document.getElementById('brokersTableBody');
+            const mobileList = document.getElementById('brokersMobileList');
+
+            if (tableBody) {
+                tableBody.innerHTML = '';
+                brokers.forEach(broker => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-50 transition';
+                    tr.innerHTML = `
+                        <td class="p-3 pl-5 font-bold text-slate-800">${escapeHtml(broker.name)}</td>
+                        <td class="p-3 text-center text-slate-700 font-semibold">${Number(broker.feeRate).toFixed(4)}%</td>
+                        <td class="p-3 text-center text-slate-700 font-semibold">${Number(broker.minFee).toLocaleString('zh-TW')} 元</td>
+                        <td class="p-3 pr-5 text-right whitespace-nowrap">
+                            <button onclick="editBroker('${broker.id}')" class="text-blue-600 hover:text-blue-800 font-bold px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 transition mr-2">
+                                編輯
+                            </button>
+                            <button onclick="deleteBroker('${broker.id}')" class="text-red-600 hover:text-red-800 font-bold px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 transition">
+                                刪除
+                            </button>
+                        </td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+            }
+
+            if (mobileList) {
+                mobileList.innerHTML = '';
+                brokers.forEach(broker => {
+                    const div = document.createElement('div');
+                    div.className = 'p-4 flex items-center justify-between gap-3 bg-white';
+                    div.innerHTML = `
+                        <div class="min-w-0">
+                            <div class="font-bold text-slate-900 truncate">${escapeHtml(broker.name)}</div>
+                            <div class="text-xs text-slate-500 mt-1">費率 ${Number(broker.feeRate).toFixed(4)}%｜最低 ${Number(broker.minFee).toLocaleString('zh-TW')} 元</div>
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            <button onclick="editBroker('${broker.id}')" class="text-xs text-blue-600 font-bold px-3 py-1.5 rounded-lg bg-blue-50">編輯</button>
+                            <button onclick="deleteBroker('${broker.id}')" class="text-xs text-red-600 font-bold px-3 py-1.5 rounded-lg bg-red-50">刪除</button>
+                        </div>
+                    `;
+                    mobileList.appendChild(div);
+                });
+            }
+        }
+
+
+        function editBroker(id) {
+            const broker = brokers.find(b => b.id === id);
+            if (!broker) {
+                alert('找不到此券商資料');
+                return;
+            }
+            document.getElementById('editBrokerId').value = broker.id;
+            document.getElementById('editBrokerName').value = broker.name || '';
+            document.getElementById('editBrokerFeeRate').value = broker.feeRate ?? '';
+            document.getElementById('editBrokerMinFee').value = broker.minFee ?? '';
+            const modal = document.getElementById('editBrokerModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeEditBrokerModal() {
+            const modal = document.getElementById('editBrokerModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+
+        if (editBrokerForm) {
+            editBrokerForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const id = document.getElementById('editBrokerId').value;
+                const name = document.getElementById('editBrokerName').value.trim();
+                const feeRate = Number(document.getElementById('editBrokerFeeRate').value);
+                const minFee = Number(document.getElementById('editBrokerMinFee').value);
+                if (!name) { alert('券商名稱不可空白'); return; }
+                if (!Number.isFinite(feeRate) || feeRate < 0) { alert('請輸入正確的手續費率'); return; }
+                if (!Number.isFinite(minFee) || minFee < 0) { alert('請輸入正確的最低收費'); return; }
+                const broker = brokers.find(b => b.id === id);
+                if (!broker) { alert('找不到此券商資料'); return; }
+                broker.name = name;
+                broker.feeRate = feeRate;
+                broker.minFee = minFee;
+                saveBrokers();
+                renderBrokers();
+                closeEditBrokerModal();
+            });
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+        }
+
+        window.addNewBroker = addNewBroker;
+        window.deleteBroker = deleteBroker;
+        window.editBroker = editBroker;
+        window.closeEditBrokerModal = closeEditBrokerModal;
+        window.renderBrokers = renderBrokers;
+        window.initBrokers = initBrokers;
+
         // 首次啟動與初始化
         toggleFormFields();
         initDefaultHistoryRange(currentHistoryScale); 
         initTargetLinePersistence();
+        initBrokers();
         render();
+        applyPrivacyMode();
     </script>
 </body>
 </html>
