@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -1206,6 +1207,102 @@ async function fetchSingleYahooPrice(symbol) {
     return null;
 }
 
+window.fetchTwsePrices = async function() {
+    const btn = document.getElementById('fetchPriceBtn');
+    const status = document.getElementById('apiStatus');
+    if (!btn || !status) return;
+
+    const activeSymbols = getActiveSymbols();
+    if (activeSymbols.length === 0) {
+        status.innerText = "無持股庫存";
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "同步中...";
+    status.innerText = "連線 TradingView 下載數據...";
+
+    const today = new Date().toISOString().split('T')[0];
+    if (!historicalPrices[today]) {
+        historicalPrices[today] = {};
+    }
+
+    const symbolQueries = [];
+    activeSymbols.forEach(sym => {
+        symbolQueries.push("TWSE:" + sym);
+        symbolQueries.push("TPEX:" + sym); 
+    });
+
+    const targetUrl = "https://scanner.tradingview.com/taiwan/scan";
+    const payload = {
+        symbols: { tickers: symbolQueries },
+        columns: ["name", "description", "close"] 
+    };
+
+    const tryUrls = [targetUrl, "https://corsproxy.io/?" + encodeURIComponent(targetUrl)];
+    const tvUpdatedSymbols = new Set();
+    let successFetch = false;
+
+    for (let k = 0; k < tryUrls.length; k++) {
+        if (successFetch) break;
+        try {
+            const response = await fetchWithTimeout(tryUrls[k], {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                timeout: 3500
+            });
+            
+            if (!response.ok) continue;
+            const data = await response.json();
+            
+            if (data && Array.isArray(data.data)) {
+                data.data.forEach(item => {
+                    if (!item || !Array.isArray(item.d)) return;
+                    const symCode = (item.s || '').split(':')[1];
+                    if (!symCode) return;
+
+                    const priceVal = parseFloat(item.d[2]);
+                    if (!isNaN(priceVal) && priceVal > 0) {
+                        currentPrices[symCode] = priceVal;
+                        historicalPrices[today][symCode] = priceVal; 
+                        tvUpdatedSymbols.add(symCode);
+                    }
+                });
+                successFetch = true;
+            }
+        } catch (err) {
+            console.warn("TradingView scheme failed, switching next.");
+        }
+    }
+
+    const missingSymbols = activeSymbols.filter(sym => !tvUpdatedSymbols.has(sym));
+    let yahooUpdatedCount = 0;
+
+    if (missingSymbols.length > 0) {
+        status.innerText = `TV 更新了 ${tvUpdatedSymbols.size} 檔，Yahoo 補足其餘中...`;
+        const yahooPromises = missingSymbols.map(async (sym) => {
+            const price = await fetchSingleYahooPrice(sym);
+            if (price !== null) {
+                currentPrices[sym] = price;
+                historicalPrices[today][sym] = price;
+                yahooUpdatedCount++;
+            }
+        });
+        await Promise.all(yahooPromises);
+    }
+
+    localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
+    localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
+
+    calculateAndRender();
+
+    const now = new Date();
+    status.innerText = `成功更新 ${tvUpdatedSymbols.size + yahooUpdatedCount} 檔 (${now.toLocaleTimeString()})`;
+    btn.disabled = false;
+    btn.innerText = "🔄 更新今日收盤價";
+};
+
         // --- 3. 核心庫存與財務數據計算 ---
         function calculateHighestNetAssetDrawdown() {
             const today = new Date().toISOString().split('T')[0];
@@ -1572,6 +1669,7 @@ async function fetchSingleYahooPrice(symbol) {
 
         // 💡 補回漏掉的 initDefaultHistoryRange 核心主函數
         function initDefaultHistoryRange(scale) {
+            const Math_max = Math.max;
             const today = new Date();
             let start = new Date();
 
@@ -2167,7 +2265,7 @@ async function fetchSingleYahooPrice(symbol) {
 
                         const rawTx = XLSX.utils.sheet_to_json(wsTx);
                         const importedTx = rawTx.map(row => {
-                            const rawDate = row["日記"] || row["date"];
+                            const rawDate = row["日期"] || row["date"];
                             const parsedDate = parseExcelDate(rawDate);
                             return {
                                 id: String(row["ID"] || row["id"] || Date.now().toString() + Math.random()),
@@ -2264,4 +2362,3 @@ async function fetchSingleYahooPrice(symbol) {
     </script>
 </body>
 </html>
---- END OF FILE Paste July 13, 2026 - 2:34PM ---
