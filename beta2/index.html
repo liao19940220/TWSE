@@ -2167,7 +2167,7 @@ async function fetchSingleYahooPrice(symbol) {
 
                         const rawTx = XLSX.utils.sheet_to_json(wsTx);
                         const importedTx = rawTx.map(row => {
-                            const rawDate = row["日期"] || row["date"];
+                            const rawDate = row["日記"] || row["date"];
                             const parsedDate = parseExcelDate(rawDate);
                             return {
                                 id: String(row["ID"] || row["id"] || Date.now().toString() + Math.random()),
@@ -2264,3 +2264,4 @@ async function fetchSingleYahooPrice(symbol) {
     </script>
 </body>
 </html>
+--- END OF FILE Paste July 13, 2026 - 2:34PM ---
