@@ -934,17 +934,11 @@ let currentUser = null;
 let useSupabaseMode = true;
 
 // --- 0. 全域除錯小幫手 ---
+// --- 0. 全域除錯小幫手 ---
 window.onerror = function(message, source, lineno, colno, error) {
-    if (message === "Script error." || !source || lineno === 0) return true;
-
-    console.error("系統錯誤：", {
-        message: message,
-        source: source,
-        lineno: lineno,
-        colno: colno,
-        error: error
-    });
-
+    console.error(message, source, lineno, colno, error);
+    return false;
+};
     alert(
         "系統偵測到錯誤，請將此訊息提供給開發人員：" +
         "\\n錯誤: " + message +
