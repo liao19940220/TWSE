@@ -934,20 +934,10 @@ let currentUser = null;
 let useSupabaseMode = true;
 
 // --- 0. 全域除錯小幫手 ---
-// --- 0. 全域除錯小幫手 ---
 window.onerror = function(message, source, lineno, colno, error) {
     console.error(message, source, lineno, colno, error);
     return false;
 };
-    alert(
-        "系統偵測到錯誤，請將此訊息提供給開發人員：" +
-        "\\n錯誤: " + message +
-        "\\n行號: " + lineno
-    );
-
-    return false;
-};
-
         // --- 0.1 網路請求安全逾時控制 ---
         async function fetchWithTimeout(resource, options = {}) {
             const { timeout = 2500 } = options; 
