@@ -932,6 +932,25 @@ const SUPABASE_ANON_KEY = "sb_publishable_wyJFQK5oDmom7q6qs6vOFQ_EyhMgq6o";
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 let useSupabaseMode = true;
+        let autoPriceUpdateDone = false;
+
+async function autoUpdatePricesAfterLogin() {
+    if (autoPriceUpdateDone) return;
+    autoPriceUpdateDone = true;
+
+    setTimeout(async () => {
+        try {
+            if (typeof fetchTwsePrices === 'function') {
+                await fetchTwsePrices();
+            } else {
+                console.warn('找不到 fetchTwsePrices 函式，無法自動更新股價');
+            }
+        } catch (error) {
+            console.error('登入後自動更新最新價格失敗：', error);
+        }
+    }, 800);
+}
+
 
 // --- 0. 全域除錯小幫手 ---
 window.onerror = function(message, source, lineno, colno, error) {
@@ -1058,11 +1077,15 @@ async function signIn() {
         return;
     }
 
-    currentUser = data.user;
-    await loadAllDataFromSupabase();
-    showApp();
+currentUser = data.user;
+await loadAllDataFromSupabase();
+showApp();
 
-    if (status) status.innerText = '';
+// 登入成功後自動更新最新價格
+await autoUpdatePricesAfterLogin();
+
+if (status) status.innerText = '';
+
 }
 
 async function signOut() {
@@ -1195,10 +1218,14 @@ async function initAppAuth() {
     const { data } = await supabaseClient.auth.getSession();
 
     if (data.session && data.session.user) {
-        currentUser = data.session.user;
-        await loadAllDataFromSupabase();
-        showApp();
-    } else {
+    currentUser = data.session.user;
+    await loadAllDataFromSupabase();
+    showApp();
+
+    // 如果使用者本來就已登入，重新打開網頁後也自動更新最新價格
+    await autoUpdatePricesAfterLogin();
+} else {
+
         const authPanel = document.getElementById('authPanel');
         const appPanel = document.getElementById('appPanel');
 
@@ -1206,15 +1233,20 @@ async function initAppAuth() {
         if (appPanel) appPanel.style.display = 'none';
     }
 
-    supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        if (session && session.user) {
-            currentUser = session.user;
-            await loadAllDataFromSupabase();
-            showApp();
-        } else {
-            currentUser = null;
-        }
-    });
+   supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (session && session.user) {
+        currentUser = session.user;
+        await loadAllDataFromSupabase();
+        showApp();
+
+        // 登入狀態變更後自動更新最新價格
+        await autoUpdatePricesAfterLogin();
+    } else {
+        currentUser = null;
+        autoPriceUpdateDone = false;
+    }
+});
+
 }
 
         const txForm = document.getElementById('txForm');
@@ -2314,16 +2346,25 @@ window.fetchTwsePrices = async function() {
         }
 
         function formatColorText(el, val) {
-            if (!el) return;
-            setPrivacyText(el, "$ " + val.toLocaleString('zh-TW', {maximumFractionDigits: 0}));
-            if (val > 0) {
-                el.className = "text-xs sm:text-sm md:text-base font-extrabold text-[#e63946]";
-            } else if (val < 0) {
-                el.className = "text-xs sm:text-sm md:text-base font-extrabold text-[#2a9d8f]";
-            } else {
-                el.className = "text-xs sm:text-sm md:text-base font-bold text-slate-800";
-            }
-        }
+    if (!el) return;
+
+    // 重要：一定要保留 privacy-amount，否則隱私遮罩會失效
+    const baseClass = "text-xs sm:text-sm md:text-base mt-0.5 privacy-amount";
+
+    setPrivacyText(el, "$ " + val.toLocaleString('zh-TW', { maximumFractionDigits: 0 }));
+
+    if (val > 0) {
+        el.className = `${baseClass} font-extrabold text-[#e63946]`;
+    } else if (val < 0) {
+        el.className = `${baseClass} font-extrabold text-[#2a9d8f]`;
+    } else {
+        el.className = `${baseClass} font-bold text-slate-800`;
+    }
+
+    // 再套用一次遮罩，確保重新 render 後仍然隱藏
+    applyPrivacyMode();
+}
+
 
         // 明細渲染 (單價與股數合併、移除所有 NT$、支援上下左右置中)
         function renderHistory() {
