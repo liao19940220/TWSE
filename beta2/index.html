@@ -394,7 +394,7 @@
                     <h3 class="text-xs sm:text-sm md:text-base font-bold text-slate-900 tracking-tight">目前所有持股</h3>
                     <div class="flex items-center gap-2">
                         <button id="fetchPriceBtn" onclick="fetchTwsePrices()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] sm:text-[11px] md:text-xs font-semibold py-1 px-2.5 rounded-full transition-all">
-                            🔄 更新今日收盤價
+                            🔄 更新股價
                         </button>
                         <span id="apiStatus" class="text-[9px] md:text-xs text-slate-400 hidden sm:inline">尚未更新價格</span>
                     </div>
@@ -412,7 +412,7 @@
                                     <th class="pb-2 font-medium text-center">持股股數</th>
                                     <th class="pb-2 font-medium text-center">未實現損益 (報酬率)</th>
                                     <th class="pb-2 font-medium text-center">平均成本</th>
-                                    <th class="pb-2 font-medium text-center w-28">收盤價</th>
+                                    <th class="pb-2 font-medium text-center w-28">目前價格</th>
                                 </tr>
                             </thead>
                             <tbody id="holdingsTable" class="divide-y divide-slate-50 text-center">
@@ -682,7 +682,7 @@
                         新增交易 / 配息
                     </button>
                     <button id="btn-modal-hist" onclick="switchActionModalTab('hist')" class="flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800">
-                        補登歷史收盤價
+                        補登歷史價格
                     </button>
                 </div>
             </div>
@@ -748,11 +748,11 @@
                         <input type="text" id="histSymbol" placeholder="如: 2330" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
                     <div>
-                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">當日收盤價 (元)</label>
-                        <input type="number" step="any" inputmode="decimal" id="histPrice" placeholder="輸入收盤價" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
+                        <label class="block text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">當日目前價格 (元)</label>
+                        <input type="number" step="any" inputmode="decimal" id="histPrice" placeholder="輸入目前價格" class="mt-1 block w-full rounded-lg border-slate-200 border p-2 bg-slate-50/50 text-base md:text-xs">
                     </div>
                     <button type="submit" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg transition text-sm md:text-xs shadow-sm">
-                        確認補登收盤價
+                        確認補登目前價格
                     </button>
                 </form>
 
@@ -954,10 +954,12 @@ window.onerror = function(message, source, lineno, colno, error) {
         }
 
         // --- 1. 資料初始化 ---
-        let transactions = [];
-        let currentPrices = {};
-        let stockNames = {}; 
-        let historicalPrices = {}; 
+let transactions = [];
+let currentPrices = {};
+let stockNames = {}; 
+let historicalPrices = {};
+let priceMeta = {};
+
 
         const defaultNames = {
             "2330": "台積電",
@@ -983,6 +985,9 @@ window.onerror = function(message, source, lineno, colno, error) {
                 stockNames = { ...defaultNames, ...savedNames };
 
                 historicalPrices = JSON.parse(localStorage.getItem('stock_v7_historical_prices')) || {};
+                
+                priceMeta = JSON.parse(localStorage.getItem('stock_v10_price_meta')) || {};
+window.priceMeta = priceMeta;
             } catch (e) {
                 console.error("載入本地儲存失敗", e);
                 stockNames = { ...defaultNames };
@@ -1144,6 +1149,9 @@ async function loadAllDataFromSupabase() {
     try {
         currentPrices = JSON.parse(localStorage.getItem('stock_v6_prices')) || {};
         historicalPrices = JSON.parse(localStorage.getItem('stock_v7_historical_prices')) || {};
+        priceMeta = JSON.parse(localStorage.getItem('stock_v10_price_meta')) || {};
+window.priceMeta = priceMeta;
+
         const savedNames = JSON.parse(localStorage.getItem('stock_v6_names')) || {};
         stockNames = { ...defaultNames, ...savedNames };
     } catch (e) {
@@ -1732,146 +1740,327 @@ window.deleteTx = async function(id) {
 };
 
 
-        window.updateCurrentPrice = function(symbol, value) {
-            const parsedVal = parseFloat(value);
-            const price = isNaN(parsedVal) ? 0 : parsedVal;
-            currentPrices[symbol] = price;
-            localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
+window.updateCurrentPrice = function(symbol, value) {
+    const parsedVal = parseFloat(value);
+    const price = isNaN(parsedVal) ? 0 : parsedVal;
 
-            const today = new Date().toISOString().split('T')[0];
-            if (!historicalPrices[today]) {
-                historicalPrices[today] = {};
-            }
-            historicalPrices[today][symbol] = price;
-            localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
+    currentPrices[symbol] = price;
+    localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
 
-            calculateAndRender();
-        };
+    const today = typeof getTaiwanTodayString === "function"
+        ? getTaiwanTodayString()
+        : new Date().toISOString().split('T')[0];
 
-        // --- 2. 跨平台雙代理 API 收盤價獲取 ---
-        async function fetchSingleYahooPrice(symbol) {
-            const suffixes = ['.TW', '.TWO'];
-            const proxies = [
-                (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-                (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
-            ];
+    if (!historicalPrices[today]) {
+        historicalPrices[today] = {};
+    }
 
-            for (const suffix of suffixes) {
-                const target = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}${suffix}`;
-                for (const getProxyUrl of proxies) {
-                    const proxyUrl = getProxyUrl(target);
-                    try {
-                        const res = await fetchWithTimeout(proxyUrl, { timeout: 2500 });
-                        if (!res.ok) continue;
-                        const json = await res.json();
-                        const meta = json?.chart?.result?.[0]?.meta;
-                        const price = meta?.regularMarketPrice;
-                        if (price && typeof price === 'number' && price > 0) {
-                            return price; 
-                        }
-                    } catch (e) {
-                        console.warn(`Yahoo Proxy error for ${symbol}${suffix}:`, e);
-                    }
-                }
-            }
-            return null;
+    historicalPrices[today][symbol] = price;
+    localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
+
+    if (!priceMeta) {
+        priceMeta = {};
+    }
+
+    priceMeta[symbol] = {
+        source: "Manual",
+        type: "manual",
+        label: "手動輸入",
+        date: today,
+        time: new Date().toLocaleTimeString("zh-TW", { hour12: false }),
+        marketStatus: "手動"
+    };
+
+    window.priceMeta = priceMeta;
+    localStorage.setItem('stock_v10_price_meta', JSON.stringify(priceMeta));
+
+    calculateAndRender();
+};
+
+
+// --- 2. Netlify + TWSE MIS + FinMind 統一估值價格更新 ---
+// 邏輯：
+// 1. 股市交易期間：TWSE MIS 盤中即時價
+// 2. 收盤後 / 非交易日：FinMind 最新目前價格
+// 3. 13:35 ~ 18:00：TWSE MIS 最後成交價優先，FinMind 備援
+
+async function fetchJsonWithTimeout(url, options = {}) {
+    const { timeout = 8000 } = options;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const res = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+
+        clearTimeout(timer);
+
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
         }
 
-        window.fetchTwsePrices = async function() {
-            const btn = document.getElementById('fetchPriceBtn');
-            const status = document.getElementById('apiStatus');
-            if (!btn || !status) return;
+        return await res.json();
 
-            const activeSymbols = getActiveSymbols();
-            if (activeSymbols.length === 0) {
-                status.innerText = "無持股庫存";
-                return;
-            }
+    } catch (error) {
+        clearTimeout(timer);
+        throw error;
+    }
+}
 
-            btn.disabled = true;
-            btn.innerText = "同步中...";
-            status.innerText = "連線 TradingView 下載數據...";
+function getDateBeforeDays(days) {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return d.toISOString().split("T")[0];
+}
 
-            const today = new Date().toISOString().split('T')[0];
-            if (!historicalPrices[today]) {
-                historicalPrices[today] = {};
-            }
+function getTaiwanTodayString() {
+    const now = new Date();
+    const taipeiNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+    const y = taipeiNow.getFullYear();
+    const m = String(taipeiNow.getMonth() + 1).padStart(2, "0");
+    const d = String(taipeiNow.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
 
-            const symbolQueries = [];
-            activeSymbols.forEach(sym => {
-                symbolQueries.push("TWSE:" + sym);
-                symbolQueries.push("TPEX:" + sym); 
+function getTaiwanMarketStatus() {
+    const now = new Date();
+
+    const taipeiNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Taipei" }));
+
+    const day = taipeiNow.getDay();
+    const hour = taipeiNow.getHours();
+    const minute = taipeiNow.getMinutes();
+    const totalMinutes = hour * 60 + minute;
+
+    const isWeekday = day >= 1 && day <= 5;
+
+    const marketOpen = 9 * 60;
+    const marketCloseBuffer = 13 * 60 + 35;
+    const eveningStable = 18 * 60;
+
+    if (!isWeekday) {
+        return {
+            status: "closed",
+            label: "非交易日",
+            preferredSource: "daily"
+        };
+    }
+
+    if (totalMinutes >= marketOpen && totalMinutes <= marketCloseBuffer) {
+        return {
+            status: "trading",
+            label: "盤中交易",
+            preferredSource: "realtime"
+        };
+    }
+
+    if (totalMinutes > marketCloseBuffer && totalMinutes < eveningStable) {
+        return {
+            status: "after_close_buffer",
+            label: "收盤後資料整理中",
+            preferredSource: "realtime_first"
+        };
+    }
+
+    return {
+        status: "closed",
+        label: "收盤後",
+        preferredSource: "daily"
+    };
+}
+
+async function fetchRealtimeQuotesFromNetlify(symbols) {
+    if (!Array.isArray(symbols) || symbols.length === 0) return {};
+
+    const query = encodeURIComponent(symbols.join(","));
+    const url = `/.netlify/functions/quotes?symbols=${query}`;
+
+    const json = await fetchJsonWithTimeout(url, { timeout: 10000 });
+
+    if (!json.ok) {
+        throw new Error(json.message || "即時股價 API 回傳失敗");
+    }
+
+    return json.data || {};
+}
+
+async function fetchDailyCloseFromNetlify(symbol) {
+    const startDate = getDateBeforeDays(60);
+    const url = `/.netlify/functions/daily?symbol=${encodeURIComponent(symbol)}&start_date=${startDate}`;
+
+    const json = await fetchJsonWithTimeout(url, { timeout: 12000 });
+
+    if (!json.ok) {
+        throw new Error(json.message || `${symbol} 每日收盤資料取得失敗`);
+    }
+
+    return json;
+}
+
+async function updatePricesByBestSource(activeSymbols, statusEl) {
+    const marketStatus = getTaiwanMarketStatus();
+    const today = getTaiwanTodayString();
+
+    if (!historicalPrices[today]) {
+        historicalPrices[today] = {};
+    }
+
+    if (!priceMeta) {
+        priceMeta = {};
+    }
+
+    window.priceMeta = priceMeta;
+
+    let updatedCount = 0;
+    const failedSymbols = [];
+
+    async function applyRealtimeFirst(symbols) {
+        const missing = [];
+
+        try {
+            const quotes = await fetchRealtimeQuotesFromNetlify(symbols);
+
+            symbols.forEach(sym => {
+                const q = quotes[sym];
+
+                if (q && Number(q.price) > 0) {
+                    const price = Number(q.price);
+
+                    currentPrices[sym] = price;
+                    historicalPrices[today][sym] = price;
+
+                    if (q.name) {
+                        stockNames[sym] = q.name;
+                    }
+
+                    priceMeta[sym] = {
+                        source: "TWSE MIS",
+                        type: "realtime",
+                        label: "盤中即時",
+                        date: q.date || today,
+                        time: q.time || "",
+                        marketStatus: marketStatus.label
+                    };
+
+                    updatedCount++;
+                } else {
+                    missing.push(sym);
+                }
             });
 
-            const targetUrl = "https://scanner.tradingview.com/taiwan/scan";
-            const payload = {
-                symbols: { tickers: symbolQueries },
-                columns: ["name", "description", "close"] 
-            };
+        } catch (error) {
+            console.warn("即時報價失敗：", error.message);
+            missing.push(...symbols);
+        }
 
-            const tryUrls = [targetUrl, "https://corsproxy.io/?" + encodeURIComponent(targetUrl)];
-            const tvUpdatedSymbols = new Set();
-            let successFetch = false;
+        if (missing.length > 0) {
+            await applyDailyClose(missing);
+        }
+    }
 
-            for (let k = 0; k < tryUrls.length; k++) {
-                if (successFetch) break;
-                try {
-                    const response = await fetchWithTimeout(tryUrls[k], {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload),
-                        timeout: 3500
-                    });
-                    
-                    if (!response.ok) continue;
-                    const data = await response.json();
-                    
-                    if (data && Array.isArray(data.data)) {
-                        data.data.forEach(item => {
-                            if (!item || !Array.isArray(item.d)) return;
-                            const symCode = (item.s || '').split(':')[1];
-                            if (!symCode) return;
+    async function applyDailyClose(symbols) {
+        for (const sym of [...new Set(symbols)]) {
+            try {
+                const daily = await fetchDailyCloseFromNetlify(sym);
+                const latest = daily.latest;
 
-                            const priceVal = parseFloat(item.d[2]);
-                            if (!isNaN(priceVal) && priceVal > 0) {
-                                currentPrices[symCode] = priceVal;
-                                historicalPrices[today][symCode] = priceVal; 
-                                tvUpdatedSymbols.add(symCode);
-                            }
-                        });
-                        successFetch = true;
-                    }
-                } catch (err) {
-                    console.warn("TradingView scheme failed, switching next.");
+                if (latest && Number(latest.close) > 0) {
+                    const price = Number(latest.close);
+
+                    currentPrices[sym] = price;
+
+                    historicalPrices[latest.date] = historicalPrices[latest.date] || {};
+                    historicalPrices[latest.date][sym] = price;
+
+                    historicalPrices[today][sym] = price;
+
+                    priceMeta[sym] = {
+                        source: "FinMind",
+                        type: "close",
+                        label: "每日收盤",
+                        date: latest.date,
+                        time: "",
+                        marketStatus: marketStatus.label
+                    };
+
+                    updatedCount++;
+                } else {
+                    failedSymbols.push(sym);
                 }
+
+            } catch (error) {
+                console.warn(`${sym} 目前價格取得失敗：`, error.message);
+                failedSymbols.push(sym);
             }
+        }
+    }
 
-            const missingSymbols = activeSymbols.filter(sym => !tvUpdatedSymbols.has(sym));
-            let yahooUpdatedCount = 0;
+    if (marketStatus.preferredSource === "realtime") {
+        if (statusEl) statusEl.innerText = "盤中交易：使用即時價更新...";
+        await applyRealtimeFirst(activeSymbols);
 
-            if (missingSymbols.length > 0) {
-                status.innerText = `TV 更新了 ${tvUpdatedSymbols.size} 檔，Yahoo 補足其餘中...`;
-                const yahooPromises = missingSymbols.map(async (sym) => {
-                    const price = await fetchSingleYahooPrice(sym);
-                    if (price !== null) {
-                        currentPrices[sym] = price;
-                        historicalPrices[today][sym] = price;
-                        yahooUpdatedCount++;
-                    }
-                });
-                await Promise.all(yahooPromises);
-            }
+    } else if (marketStatus.preferredSource === "realtime_first") {
+        if (statusEl) statusEl.innerText = "收盤後資料整理中：即時價優先，收盤價備援...";
+        await applyRealtimeFirst(activeSymbols);
 
-            localStorage.setItem('stock_v6_prices', JSON.stringify(currentPrices));
-            localStorage.setItem('stock_v7_historical_prices', JSON.stringify(historicalPrices));
+    } else {
+        if (statusEl) statusEl.innerText = "收盤後 / 非交易日：使用每日收盤價更新...";
+        await applyDailyClose(activeSymbols);
+    }
 
-            calculateAndRender();
+    localStorage.setItem("stock_v6_prices", JSON.stringify(currentPrices));
+    localStorage.setItem("stock_v7_historical_prices", JSON.stringify(historicalPrices));
+    localStorage.setItem("stock_v6_names", JSON.stringify(stockNames));
+    localStorage.setItem("stock_v10_price_meta", JSON.stringify(priceMeta));
 
-            const now = new Date();
-            status.innerText = `成功更新 ${tvUpdatedSymbols.size + yahooUpdatedCount} 檔 (${now.toLocaleTimeString()})`;
-            btn.disabled = false;
-            btn.innerText = "🔄 更新今日收盤價";
-        };
+    return {
+        updatedCount,
+        failedSymbols,
+        marketStatus
+    };
+}
+
+window.fetchTwsePrices = async function() {
+    const btn = document.getElementById("fetchPriceBtn");
+    const status = document.getElementById("apiStatus");
+
+    if (!btn || !status) return;
+
+    const activeSymbols = getActiveSymbols();
+
+    if (activeSymbols.length === 0) {
+        status.innerText = "無持股庫存";
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "同步中...";
+
+    try {
+        const result = await updatePricesByBestSource(activeSymbols, status);
+
+        calculateAndRender();
+
+        const now = new Date();
+        const failText = result.failedSymbols.length > 0
+            ? `，失敗 ${result.failedSymbols.length} 檔`
+            : "";
+
+        status.innerText = `${result.marketStatus.label}｜成功更新 ${result.updatedCount} 檔${failText}｜${now.toLocaleTimeString()}`;
+
+    } catch (error) {
+        console.error("更新股價失敗：", error);
+        status.innerText = "更新失敗";
+        alert("更新股價失敗：" + error.message);
+
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "🔄 更新股價";
+    }
+};
+
 
         function getActiveSymbols() {
             const holdings = {};
@@ -2047,7 +2236,7 @@ window.deleteTx = async function(id) {
                         `;
                         holdingsTable.appendChild(tr);
 
-                        // 2. 行動裝置版精簡卡片 (新增高對比損益看板、將輸入框收盤價進行窄化美化並防縮放)
+                        // 2. 行動裝置版精簡卡片 (新增高對比損益看板、將輸入框目前價格進行窄化美化並防縮放)
                         const card = document.createElement('div');
                         card.className = "bg-white rounded-2xl p-4 border border-slate-100 shadow-xs space-y-2 relative text-[11px]";
                         card.innerHTML = `
@@ -2078,10 +2267,10 @@ window.deleteTx = async function(id) {
                                     <span class="font-bold text-slate-800">$ ${(hold.avgCost || 0).toFixed(1)}</span>
                                 </div>
                                 <div class="flex justify-between col-span-2 items-center pt-1.5 border-t border-slate-100/50">
-                                    <span class="font-medium text-slate-400">收盤價</span>
+                                    <span class="font-medium text-slate-400">目前價格</span>
                                     <div class="flex items-center gap-1">
                                         <span class="text-[9px] text-slate-300">點選修改</span>
-                                        <input type="number" step="any" inputmode="decimal" value="${currentPrice || ''}" placeholder="輸入收盤價" onchange="updateCurrentPrice('${sym}', this.value)" class="w-16 border border-slate-200 rounded-md px-1.5 py-0.5 bg-slate-50 text-slate-800 text-center font-medium focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                        <input type="number" step="any" inputmode="decimal" value="${currentPrice || ''}" placeholder="輸入目前價格" onchange="updateCurrentPrice('${sym}', this.value)" class="w-16 border border-slate-200 rounded-md px-1.5 py-0.5 bg-slate-50 text-slate-800 text-center font-medium focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
                                     </div>
                                 </div>
                             </div>
@@ -2778,7 +2967,7 @@ window.deleteTx = async function(id) {
                         histData.push({
                             "日期": date,
                             "股票代號": sym,
-                            "收盤價": Number(historicalPrices[date][sym]) || 0
+                            "目前價格": Number(historicalPrices[date][sym]) || 0
                         });
                     });
                 });
@@ -2868,7 +3057,7 @@ window.deleteTx = async function(id) {
                             XLSX.utils.sheet_to_json(wsHist).forEach(row => {
                                 const date = String(row["日期"] || row["date"] || "").trim();
                                 const sym = String(row["股票代號"] || row["symbol"] || "").trim();
-                                const price = parseFloat(row["收盤價"] || row["price"]) || 0;
+                                const price = parseFloat(row["目前價格"] || row["price"]) || 0;
                                 if (date && sym) {
                                     if (!importedHistoricalPrices[date]) importedHistoricalPrices[date] = {};
                                     importedHistoricalPrices[date][sym] = price;
