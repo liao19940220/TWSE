@@ -722,29 +722,169 @@ body.light-mode .mini-alert-rose {
         white-space: nowrap !important;
     }
 }
-/* === Mobile cost / current price compact alignment === */
+
+
+/* === Mobile holdings UI polish === */
 @media (max-width: 768px) {
+    /* 整張持股大卡片 */
+    #holdingsCardContainer .mobile-holdings-group {
+        padding: 16px 18px 92px 18px !important;
+        border-radius: 28px !important;
+        overflow: hidden;
+    }
+
+    /* 每一檔股票 */
+    .mobile-holding-row {
+        padding-top: 18px !important;
+        padding-bottom: 20px !important;
+    }
+
+    .mobile-holding-row:first-child {
+        padding-top: 4px !important;
+    }
+
+    .mobile-holding-row:last-child {
+        padding-bottom: 26px !important;
+    }
+
+    .mobile-holding-row.border-b {
+        border-color: rgba(100, 116, 139, 0.45) !important;
+    }
+
+    /* 股票標頭：左資訊 / 右比例與集中度警示 */
+    .mobile-stock-header-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 104px;
+        column-gap: 12px;
+        row-gap: 4px;
+        align-items: center;
+    }
+
+    .mobile-stock-header-right {
+        width: 104px;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        justify-self: end;
+        text-align: right;
+    }
+
+    .mobile-ratio-percent {
+        white-space: nowrap;
+        text-align: right;
+        font-size: 18px !important;
+        line-height: 1.15 !important;
+    }
+
+    .mobile-stock-name {
+        font-size: 13px !important;
+        line-height: 1.25 !important;
+        color: #94a3b8 !important;
+        font-weight: 900 !important;
+    }
+
+    /* 第二區：損益 / 報酬率 */
+    .mobile-pnl-return-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 104px;
+        column-gap: 12px;
+        align-items: start;
+        margin-top: 16px;
+    }
+
+    .mobile-holding-main-value {
+        font-size: 25px !important;
+        line-height: 1.05 !important;
+        letter-spacing: -0.04em;
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+    }
+
+    .mobile-return-box {
+        width: 104px;
+        max-width: none !important;
+        justify-self: end;
+        text-align: right;
+    }
+
+    .mobile-return-percent {
+        font-size: 18px !important;
+        line-height: 1.15 !important;
+        white-space: nowrap !important;
+        text-align: right;
+    }
+
+    /* 報酬率警示 */
+    .mobile-return-alert-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+        min-height: 20px;
+        padding-right: 0;
+    }
+
+    /* 第三區：成本 / 現價 */
     .mobile-cost-price-grid {
         display: grid;
-        grid-template-columns: 96px 96px;
-        column-gap: 32px;
-        justify-content: start;
+        grid-template-columns: minmax(0, 1fr) 104px;
+        column-gap: 12px;
+        align-items: start;
+        margin-top: 16px !important;
     }
 
     .mobile-price-col {
-        text-align: left !important;
+        width: 104px;
+        justify-self: end;
+        text-align: right !important;
     }
 
     .mobile-price-col .mobile-holding-label {
-        text-align: left !important;
+        text-align: right !important;
     }
 
     .mobile-price-col .holding-price-input {
-        text-align: left !important;
-        width: 96px !important;
+        width: 104px !important;
+        text-align: right !important;
+        font-size: 18px !important;
+        line-height: 1.15 !important;
+    }
+
+    .mobile-holding-label {
+        font-size: 12px !important;
+        line-height: 1.1 !important;
+        color: #94a3b8 !important;
+        font-weight: 900 !important;
+    }
+
+    .mobile-holding-sub-value {
+        font-size: 18px !important;
+        line-height: 1.15 !important;
+        margin-top: 8px !important;
+    }
+
+    /* 小警示標籤 */
+    .mini-alert {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px !important;
+        border-radius: 999px !important;
+        font-size: 10px !important;
+        line-height: 1 !important;
+        font-weight: 900 !important;
+        white-space: nowrap !important;
+        margin-top: 0 !important;
+    }
+
+    /* FAB 不遮最後一筆 */
+    #fabAddTxBtn {
+        bottom: calc(86px + var(--safe-bottom)) !important;
+        right: 18px !important;
+        width: 58px !important;
+        height: 58px !important;
+        border-radius: 22px !important;
     }
 }
-
 
     </style>
 </head>
@@ -2579,14 +2719,13 @@ p.holdingRows.forEach((row, index) => {
     const holdingRatio = ratio;
     const pnlClass = row.unrealized > 0 ? "profit" : row.unrealized < 0 ? "loss" : "text-slate-300";
 
-        const pnlSign = row.unrealized > 0 ? "+" : "";
-        const returnSign = row.percent > 0 ? "+" : "";
+            const returnSign = row.percent > 0 ? "+" : "";
         const name = stockNames[row.sym] || "";
 
-        const marketValueText = money(row.marketVal);
-        const ratioText = `${ratio.toFixed(1)}%`;
-        const pnlText = `${pnlSign}${money(row.unrealized)}`;
-        const returnText = `${returnSign}${row.percent.toFixed(2)}%`;
+const marketValueText = money(row.marketVal);
+const ratioText = `${ratio.toFixed(1)}%`;
+const pnlText = signedMoney(row.unrealized);
+const returnText = `${returnSign}${row.percent.toFixed(2)}%`;
         const rowBorderClass = index === p.holdingRows.length - 1 ? "" : "border-b border-slate-700/80";
 
         /*
@@ -2694,17 +2833,18 @@ ${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利 > 50%`) : ""}
 </div>
 
 <!-- 第二區：損益 / 報酬率 -->
-<div class="flex justify-between items-start gap-3 mt-4">
+<div class="mobile-pnl-return-row">
     <div class="${pnlClass} mobile-holding-main-value font-black">
         ${pnlText}
     </div>
 
-    <div class="text-right mobile-return-box">
-        <div class="${pnlClass} mobile-return-percent font-black text-lg">
+    <div class="mobile-return-box">
+        <div class="${pnlClass} mobile-return-percent font-black">
             ${returnText}
         </div>
     </div>
 </div>
+
 
 <!-- 報酬率警示：獨立一行，不影響百分比位置 -->
 ${(row.percent < -15 || row.percent > 50) ? `
@@ -2716,15 +2856,15 @@ ${(row.percent < -15 || row.percent > 50) ? `
    
                 <!-- 第三區：損益 / 成本 / 現價 -->
 <!-- 第三區：成本 / 現價 -->
-<div class="grid grid-cols-2 gap-3 mt-3 mobile-cost-price-grid">
+<div class="mobile-cost-price-grid">
     <div class="min-w-0">
         <div class="mobile-holding-label">成本</div>
-        <div class="mobile-holding-sub-value font-black text-slate-100 mt-2">
+        <div class="mobile-holding-sub-value font-black text-slate-100">
             ${money(row.avgCost, 2)}
         </div>
     </div>
 
-    <div class="min-w-0 mobile-price-col">
+    <div class="mobile-price-col">
         <div class="mobile-holding-label">現價</div>
         <input 
             type="number" 
@@ -2737,6 +2877,7 @@ ${(row.percent < -15 || row.percent > 50) ? `
         >
     </div>
 </div>
+
 
             </div>
         `;
