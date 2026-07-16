@@ -672,6 +672,46 @@ body.light-mode .mini-alert-rose {
         margin-top: 0;
     }
 }
+/* === Mobile stock header two-column aligned layout === */
+@media (max-width: 768px) {
+    .mobile-stock-header-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 108px;
+        column-gap: 12px;
+        row-gap: 4px;
+        align-items: center;
+    }
+
+    .mobile-stock-header-right {
+        width: 108px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        justify-self: end;
+        text-align: center;
+    }
+
+    .mobile-ratio-percent {
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .mobile-stock-header-right .mini-alert {
+            display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 0;
+    padding: 4px 7px;
+    border-radius: 999px;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 900;
+    border: 1px solid transparent;
+    max-width: 100%;
+    text-align: left;
+    white-space: nowrap;
+}
+}
 
     </style>
 </head>
@@ -2585,30 +2625,40 @@ ${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利 > 50%`) : ""}
         */
         mobileRowsHtml += `
             <div class="mobile-holding-row ${rowBorderClass} py-4 first:pt-1 last:pb-1">
-                <!-- 第一區：代號 / 股數 / 比例 -->
-                <div class="flex justify-between items-start gap-3">
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <span class="font-black text-xl text-slate-100 shrink-0">${row.sym}</span>
-                            <span class="text-sm muted font-black shrink-0">
-                                ${row.qty.toLocaleString("zh-TW")} 股
-                            </span>
-                        </div>
-                        ${name ? `
-                            <div class="text-sm muted font-black mt-1 truncate">
-                                ${escapeHtml(name)}
-                            </div>
-                        ` : ""}
-                    </div>
+               <!-- 第一區：左側股票資訊 / 右側比例與集中度警示 -->
+<div class="mobile-stock-header-grid">
+    <!-- 第一列左：代號 / 股數 -->
+    <div class="min-w-0">
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="font-black text-xl text-slate-100 shrink-0">${row.sym}</span>
+            <span class="text-sm muted font-black shrink-0">
+                ${row.qty.toLocaleString("zh-TW")} 股
+            </span>
+        </div>
+    </div>
 
-<div class="text-right shrink-0 mobile-ratio-box">
-    <div class="mobile-ratio-percent text-blue-300 font-black text-lg">
-        ${ratioText}
+    <!-- 第一列右：持股比例 -->
+    <div class="mobile-stock-header-right">
+        <div class="mobile-ratio-percent text-blue-300 font-black text-lg">
+            ${ratioText}
+        </div>
+    </div>
+
+    <!-- 第二列左：中文名稱 -->
+    <div class="min-w-0">
+        ${name ? `
+            <div class="text-sm muted font-black truncate">
+                ${escapeHtml(name)}
+            </div>
+        ` : ""}
+    </div>
+
+    <!-- 第二列右：集中度警示 -->
+    <div class="mobile-stock-header-right">
+        ${holdingRatio > 30 ? getMiniAlertHtml("concentration", `佔比 > 30%`) : ""}
     </div>
 </div>
 
-
-                </div>
 ${holdingRatio > 30 ? `
     <div class="mobile-ratio-alert-row">
         ${getMiniAlertHtml("concentration", `佔比 > 30%`)}
