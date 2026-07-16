@@ -3318,6 +3318,58 @@ ${(row.percent < -15 || row.percent > 50) ? `
             if (!json.ok) throw new Error(json.message || `${symbol} 每日收盤資料取得失敗`);
             return json;
         }
+async function fetchStockInfoFromNetlify(symbols) {
+    const uniqueSymbols = [...new Set(symbols)]
+        .map(sym => String(sym).trim().toUpperCase())
+        .filter(Boolean);
+
+    if (!uniqueSymbols.length) return {};
+
+    const query = encodeURIComponent(uniqueSymbols.join(","));
+    const url = `/.netlify/functions/stock-info?symbols=${query}`;
+
+    const json = await fetchJsonWithTimeout(url, { timeout: 12000 });
+
+    if (!json.ok) {
+        throw new Error(json.message || "股票名稱 API 回傳失敗");
+    }
+
+    return json.data || {};
+}
+
+async function updateStockNamesByInfoApi(symbols) {
+    const uniqueSymbols = [...new Set(symbols)]
+        .map(sym => String(sym).trim().toUpperCase())
+        .filter(Boolean);
+
+    if (!uniqueSymbols.length) return 0;
+
+    try {
+        const infoMap = await fetchStockInfoFromNetlify(uniqueSymbols);
+
+        let updatedNameCount = 0;
+
+        uniqueSymbols.forEach(sym => {
+            const info = infoMap[sym];
+
+            const resolvedName =
+                info?.name ||
+                info?.stockName ||
+                info?.stock_name ||
+                "";
+
+            if (resolvedName) {
+                stockNames[sym] = resolvedName;
+                updatedNameCount++;
+            }
+        });
+
+        return updatedNameCount;
+    } catch (err) {
+        console.warn("股票中文名稱更新失敗", err);
+        return 0;
+    }
+}
 
         async function updatePricesByBestSource(activeSymbols, statusEl) {
             const marketStatus = getTaiwanMarketStatus();
@@ -3336,6 +3388,18 @@ async function applyDailyClose(symbols) {
             if (latest && Number(latest.close) > 0) {
                 const price = Number(latest.close);
                 currentPrices[sym] = price;
+const resolvedName =
+    daily.name ||
+    daily.stockName ||
+    daily.stock_name ||
+    latest.name ||
+    latest.stockName ||
+    latest.stock_name ||
+    "";
+
+if (resolvedName) {
+    stockNames[sym] = resolvedName;
+}
 
                 historicalPrices[latest.date] = historicalPrices[latest.date] || {};
                 historicalPrices[latest.date][sym] = price;
@@ -3424,9 +3488,17 @@ async function applyDailyClose(symbols) {
                 await applyDailyClose(activeSymbols);
             }
 
-            saveLocalData();
+            const updatedNameCount = await updateStockNamesByInfoApi(activeSymbols);
 
-            return { updatedCount, failedSymbols, marketStatus };
+saveLocalData();
+
+return {
+    updatedCount,
+    updatedNameCount,
+    failedSymbols,
+    marketStatus
+};
+
         }
 
         async function fetchTwsePrices() {
@@ -3446,10 +3518,13 @@ async function applyDailyClose(symbols) {
                 const result = await updatePricesByBestSource(activeSymbols, status);
                 render();
 
-                const failText = result.failedSymbols.length ? `，失敗 ${result.failedSymbols.length} 檔` : "";
-                if (status) {
-                    status.innerText = `${result.marketStatus.label}｜成功 ${result.updatedCount} 檔${failText}｜${new Date().toLocaleTimeString("zh-TW")}`;
-                }
+              const failText = result.failedSymbols.length ? `，失敗 ${result.failedSymbols.length} 檔` : "";
+const nameText = result.updatedNameCount ? `，名稱 ${result.updatedNameCount} 檔` : "";
+
+if (status) {
+    status.innerText = `${result.marketStatus.label}｜成功 ${result.updatedCount} 檔${nameText}${failText}｜${new Date().toLocaleTimeString("zh-TW")}`;
+}
+
             } catch (err) {
                 console.error(err);
                 if (status) status.innerText = "更新失敗";
