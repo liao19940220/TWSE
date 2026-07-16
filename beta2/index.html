@@ -722,6 +722,29 @@ body.light-mode .mini-alert-rose {
         white-space: nowrap !important;
     }
 }
+/* === Mobile cost / current price compact alignment === */
+@media (max-width: 768px) {
+    .mobile-cost-price-grid {
+        display: grid;
+        grid-template-columns: 96px 96px;
+        column-gap: 32px;
+        justify-content: start;
+    }
+
+    .mobile-price-col {
+        text-align: left !important;
+    }
+
+    .mobile-price-col .mobile-holding-label {
+        text-align: left !important;
+    }
+
+    .mobile-price-col .holding-price-input {
+        text-align: left !important;
+        width: 96px !important;
+    }
+}
+
 
     </style>
 </head>
@@ -2693,7 +2716,7 @@ ${(row.percent < -15 || row.percent > 50) ? `
    
                 <!-- 第三區：損益 / 成本 / 現價 -->
 <!-- 第三區：成本 / 現價 -->
-<div class="grid grid-cols-2 gap-3 mt-3">
+<div class="grid grid-cols-2 gap-3 mt-3 mobile-cost-price-grid">
     <div class="min-w-0">
         <div class="mobile-holding-label">成本</div>
         <div class="mobile-holding-sub-value font-black text-slate-100 mt-2">
@@ -2701,7 +2724,7 @@ ${(row.percent < -15 || row.percent > 50) ? `
         </div>
     </div>
 
-    <div class="min-w-0 text-right">
+    <div class="min-w-0 mobile-price-col">
         <div class="mobile-holding-label">現價</div>
         <input 
             type="number" 
