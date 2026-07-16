@@ -3341,17 +3341,6 @@ async function applyDailyClose(symbols) {
                 historicalPrices[latest.date][sym] = price;
                 historicalPrices[today][sym] = price;
 
-                /*
-                    補股票中文名稱：
-                    支援多種可能欄位，避免 Netlify Function 回傳格式不同。
-                    例如：
-                    daily.name
-                    daily.stockName
-                    daily.stock_name
-                    latest.name
-                    latest.stockName
-                    latest.stock_name
-                */
                 const resolvedName =
                     daily.name ||
                     daily.stockName ||
