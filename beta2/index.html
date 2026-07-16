@@ -291,6 +291,73 @@
                 display: none;
             }
         }
+      /* === Holdings current price inline style === */
+.holding-price-input {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    color: #e5e7eb !important;
+    font-weight: 900 !important;
+    text-align: right !important;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.holding-price-input::-webkit-outer-spin-button,
+.holding-price-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.holding-price-input:focus {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+@media (min-width: 769px) {
+    .holding-price-input {
+        width: 92px !important;
+        font-size: 14px !important;
+        line-height: 1.25 !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #holdingsCardContainer .mobile-card {
+        padding: 18px !important;
+        border-radius: 26px !important;
+    }
+
+    #holdingsCardContainer .holding-price-input {
+        width: 78px !important;
+        min-height: auto !important;
+        font-size: 18px !important;
+        line-height: 1.15 !important;
+    }
+
+    .mobile-holding-main-value {
+        font-size: 24px !important;
+        line-height: 1.1 !important;
+        letter-spacing: -0.02em;
+    }
+
+    .mobile-holding-sub-value {
+        font-size: 18px !important;
+        line-height: 1.15 !important;
+    }
+
+    .mobile-holding-label {
+        font-size: 12px !important;
+        color: #94a3b8 !important;
+        font-weight: 900 !important;
+    }
+}
+  
     </style>
 </head>
 
@@ -1997,12 +2064,9 @@ function renderHoldings() {
         const returnText = `${returnSign}${row.percent.toFixed(2)}%`;
 
         /*
-            桌機版：表格樣式
-            欄位：
-            1. 持股明細：代號 / 名稱 / 股數
-            2. 市值 / 占比
-            3. 損益 / 報酬率
-            4. 現價 / 成本
+            桌機版：
+            持股明細 / 市值占比 / 損益 / 現價成本
+            現價改成無外框文字輸入
         */
         if (table) {
             const tr = document.createElement("tr");
@@ -2048,7 +2112,7 @@ function renderHoldings() {
                             value="${row.currentPrice || ""}" 
                             placeholder="現價"
                             onchange="updateCurrentPrice('${row.sym}', this.value)" 
-                            class="w-24 px-3 py-2 text-right font-bold"
+                            class="holding-price-input"
                         >
                         <div class="text-xs muted font-bold">
                             成本 ${money(row.avgCost, 2)}
@@ -2060,86 +2124,95 @@ function renderHoldings() {
             table.appendChild(tr);
         }
 
-/*
-    手機版：卡片樣式
-    排版：
-    2330 台積電                 占比 XX.X%
-    XXXX 股                     [現價輸入框]
+        /*
+            手機版：
+            依照你的第二張圖
 
-    市值        損益        成本
-    $XXXX       +$XXXX      $XXXX
-                +XX.X%
-*/
-if (cards) {
-    const div = document.createElement("div");
-    div.className = "mobile-card p-4 space-y-3";
+            2330   10股                         1.6%
+            台積電
 
-    div.innerHTML = `
-        <!-- 上方：股票資訊 / 占比 -->
-        <div class="flex justify-between items-start gap-3">
-            <div class="min-w-0">
-                <div class="flex items-center gap-2 min-w-0">
-                    <span class="font-black text-lg text-slate-100 shrink-0">${row.sym}</span>
-                    ${name ? `<span class="text-xs muted font-bold truncate">${escapeHtml(name)}</span>` : ""}
+            $24,400                         -2.40%
+
+            損益             成本             現價
+            $-600            $2,500          2440
+        */
+        if (cards) {
+            const div = document.createElement("div");
+            div.className = "mobile-card p-4 space-y-4";
+
+            div.innerHTML = `
+                <!-- 第一區：代號 / 股數 / 比例 -->
+                <div class="flex justify-between items-start gap-3">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="font-black text-xl text-slate-100 shrink-0">${row.sym}</span>
+                            <span class="text-sm muted font-black shrink-0">
+                                ${row.qty.toLocaleString("zh-TW")} 股
+                            </span>
+                        </div>
+                        ${name ? `
+                            <div class="text-sm muted font-black mt-1 truncate">
+                                ${escapeHtml(name)}
+                            </div>
+                        ` : ""}
+                    </div>
+
+                    <div class="text-right shrink-0">
+                        <div class="text-blue-300 font-black text-lg">
+                            ${ratioText}
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="text-right shrink-0">
-                <div class="text-xs muted font-black">占比</div>
-                <div class="text-blue-300 font-black">${ratioText}</div>
-            </div>
-        </div>
+                <!-- 第二區：市值 / 報酬率 -->
+                <div class="flex justify-between items-end gap-3">
+                    <div class="mobile-holding-main-value font-black text-slate-100">
+                        ${marketValueText}
+                    </div>
 
-        <!-- 第二行：股數 / 現價輸入框 -->
-        <div class="flex justify-between items-center gap-3">
-            <div class="text-xs muted font-bold">
-                ${row.qty.toLocaleString("zh-TW")} 股
-            </div>
-
-            <input 
-                type="number" 
-                step="any" 
-                inputmode="decimal" 
-                value="${row.currentPrice || ""}" 
-                placeholder="現價"
-                onchange="updateCurrentPrice('${row.sym}', this.value)" 
-                class="w-28 px-3 py-2 text-right font-bold"
-            >
-        </div>
-
-        <!-- 下方三欄：市值 / 損益 / 成本 -->
-        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700">
-            <div>
-                <div class="text-[10px] muted font-black">市值</div>
-                <div class="text-sm font-black text-slate-100 mt-1">
-                    ${marketValueText}
+                    <div class="${pnlClass} text-right font-black text-lg">
+                        ${returnText}
+                    </div>
                 </div>
-            </div>
 
-            <div>
-                <div class="text-[10px] muted font-black">損益</div>
-                <div class="${pnlClass} text-sm font-black mt-1">
-                    ${pnlText}
+                <div class="border-t border-slate-700"></div>
+
+                <!-- 第三區：損益 / 成本 / 現價 -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="min-w-0">
+                        <div class="mobile-holding-label">損益</div>
+                        <div class="${pnlClass} mobile-holding-sub-value font-black mt-2">
+                            ${pnlText}
+                        </div>
+                    </div>
+
+                    <div class="min-w-0">
+                        <div class="mobile-holding-label">成本</div>
+                        <div class="mobile-holding-sub-value font-black text-slate-100 mt-2">
+                            ${money(row.avgCost, 2)}
+                        </div>
+                    </div>
+
+                    <div class="min-w-0 text-right">
+                        <div class="mobile-holding-label">現價</div>
+                        <input 
+                            type="number" 
+                            step="any" 
+                            inputmode="decimal" 
+                            value="${row.currentPrice || ""}" 
+                            placeholder="現價"
+                            onchange="updateCurrentPrice('${row.sym}', this.value)" 
+                            class="holding-price-input mt-2"
+                        >
+                    </div>
                 </div>
-                <div class="${pnlClass} text-[11px] font-black mt-0.5">
-                    ${returnText}
-                </div>
-            </div>
+            `;
 
-            <div>
-                <div class="text-[10px] muted font-black">成本</div>
-                <div class="text-sm font-black text-slate-100 mt-1">
-                    ${money(row.avgCost, 2)}
-                </div>
-            </div>
-        </div>
-    `;
-
-    cards.appendChild(div);
-}
-
+            cards.appendChild(div);
+        }
     });
 }
+
 
 
         function updateCurrentPrice(symbol, value) {
