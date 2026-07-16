@@ -3327,39 +3327,64 @@ ${(row.percent < -15 || row.percent > 50) ? `
             let updatedCount = 0;
             const failedSymbols = [];
 
-            async function applyDailyClose(symbols) {
-                for (const sym of [...new Set(symbols)]) {
-                    try {
-                        const daily = await fetchDailyCloseFromNetlify(sym);
-                        const latest = daily.latest;
+async function applyDailyClose(symbols) {
+    for (const sym of [...new Set(symbols)]) {
+        try {
+            const daily = await fetchDailyCloseFromNetlify(sym);
+            const latest = daily.latest;
 
-                        if (latest && Number(latest.close) > 0) {
-                            const price = Number(latest.close);
-                            currentPrices[sym] = price;
+            if (latest && Number(latest.close) > 0) {
+                const price = Number(latest.close);
+                currentPrices[sym] = price;
 
-                            historicalPrices[latest.date] = historicalPrices[latest.date] || {};
-                            historicalPrices[latest.date][sym] = price;
-                            historicalPrices[today][sym] = price;
+                historicalPrices[latest.date] = historicalPrices[latest.date] || {};
+                historicalPrices[latest.date][sym] = price;
+                historicalPrices[today][sym] = price;
 
-                            priceMeta[sym] = {
-                                source: "FinMind",
-                                type: "close",
-                                label: "每日收盤",
-                                date: latest.date,
-                                time: "",
-                                marketStatus: marketStatus.label
-                            };
+                /*
+                    補股票中文名稱：
+                    支援多種可能欄位，避免 Netlify Function 回傳格式不同。
+                    例如：
+                    daily.name
+                    daily.stockName
+                    daily.stock_name
+                    latest.name
+                    latest.stockName
+                    latest.stock_name
+                */
+                const resolvedName =
+                    daily.name ||
+                    daily.stockName ||
+                    daily.stock_name ||
+                    latest.name ||
+                    latest.stockName ||
+                    latest.stock_name ||
+                    "";
 
-                            updatedCount++;
-                        } else {
-                            failedSymbols.push(sym);
-                        }
-                    } catch (err) {
-                        console.warn(`${sym} 收盤價取得失敗`, err);
-                        failedSymbols.push(sym);
-                    }
+                if (resolvedName) {
+                    stockNames[sym] = resolvedName;
                 }
+
+                priceMeta[sym] = {
+                    source: "FinMind",
+                    type: "close",
+                    label: "每日收盤",
+                    date: latest.date,
+                    time: "",
+                    marketStatus: marketStatus.label
+                };
+
+                updatedCount++;
+            } else {
+                failedSymbols.push(sym);
             }
+        } catch (err) {
+            console.warn(`${sym} 收盤價取得失敗`, err);
+            failedSymbols.push(sym);
+        }
+    }
+}
+
 
             async function applyRealtimeFirst(symbols) {
                 const missing = [];
