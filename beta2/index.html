@@ -521,6 +521,37 @@ body.light-mode .profit {
 body.light-mode .loss {
     color: #0f766e !important;
 }
+/* === Mobile holdings grouped card === */
+@media (max-width: 768px) {
+    #holdingsCardContainer {
+        gap: 0 !important;
+    }
+
+    #holdingsCardContainer .mobile-holdings-group {
+        padding: 18px !important;
+        border-radius: 26px !important;
+    }
+
+    .mobile-holding-row {
+        position: relative;
+    }
+
+    .mobile-holding-row.border-b {
+        border-color: rgba(71, 85, 105, 0.75) !important;
+    }
+
+    body.light-mode .mobile-holding-row.border-b {
+        border-color: rgba(148, 163, 184, 0.45) !important;
+    }
+
+    .mobile-holding-row:first-child {
+        padding-top: 2px !important;
+    }
+
+    .mobile-holding-row:last-child {
+        padding-bottom: 2px !important;
+    }
+}
 
     </style>
 </head>
@@ -2332,9 +2363,6 @@ function renderHoldings() {
     const table = document.getElementById("holdingsTable");
     const cards = document.getElementById("holdingsCardContainer");
 
-
-
-
     if (table) table.innerHTML = "";
     if (cards) cards.innerHTML = "";
 
@@ -2359,7 +2387,13 @@ function renderHoldings() {
         return;
     }
 
-    p.holdingRows.forEach(row => {
+    /*
+        手機版：
+        建立一個共同大框，所有股票放在同一張卡片內
+    */
+    let mobileRowsHtml = "";
+
+    p.holdingRows.forEach((row, index) => {
         const ratio = p.totalAsset > 0 ? row.marketVal / p.totalAsset * 100 : 0;
         const pnlClass = row.unrealized > 0 ? "profit" : row.unrealized < 0 ? "loss" : "text-slate-300";
         const pnlSign = row.unrealized > 0 ? "+" : "";
@@ -2370,11 +2404,10 @@ function renderHoldings() {
         const ratioText = `${ratio.toFixed(1)}%`;
         const pnlText = `${pnlSign}${money(row.unrealized)}`;
         const returnText = `${returnSign}${row.percent.toFixed(2)}%`;
+        const rowBorderClass = index === p.holdingRows.length - 1 ? "" : "border-b border-slate-700/80";
 
         /*
-            桌機版：
-            持股明細 / 市值占比 / 損益 / 現價成本
-            現價改成無外框文字輸入
+            桌機版維持原本表格
         */
         if (table) {
             const tr = document.createElement("tr");
@@ -2433,22 +2466,11 @@ function renderHoldings() {
         }
 
         /*
-            手機版：
-            依照你的第二張圖
-
-            2330   10股                         1.6%
-            台積電
-
-            $24,400                         -2.40%
-
-            損益             成本             現價
-            $-600            $2,500          2440
+            手機版每一檔股票的 HTML
+            注意：這裡不再建立 mobile-card，只建立 row
         */
-        if (cards) {
-            const div = document.createElement("div");
-            div.className = "mobile-card p-4 space-y-4";
-
-            div.innerHTML = `
+        mobileRowsHtml += `
+            <div class="mobile-holding-row ${rowBorderClass} py-4 first:pt-1 last:pb-1">
                 <!-- 第一區：代號 / 股數 / 比例 -->
                 <div class="flex justify-between items-start gap-3">
                     <div class="min-w-0">
@@ -2473,7 +2495,7 @@ function renderHoldings() {
                 </div>
 
                 <!-- 第二區：市值 / 報酬率 -->
-                <div class="flex justify-between items-end gap-3">
+                <div class="flex justify-between items-end gap-3 mt-4">
                     <div class="mobile-holding-main-value font-black text-slate-100">
                         ${marketValueText}
                     </div>
@@ -2483,20 +2505,20 @@ function renderHoldings() {
                     </div>
                 </div>
 
-                <div class="border-t border-slate-700"></div>
+                <div class="border-t border-slate-700 mt-4"></div>
 
                 <!-- 第三區：損益 / 成本 / 現價 -->
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-3 gap-3 mt-3">
                     <div class="min-w-0">
                         <div class="mobile-holding-label">損益</div>
-                        <div class="${pnlClass} mobile-holding-sub-value font-black mt-2">
+                        <div class="${pnlClass} mobile-holding-sub-value font-black mt-2 break-words">
                             ${pnlText}
                         </div>
                     </div>
 
                     <div class="min-w-0">
                         <div class="mobile-holding-label">成本</div>
-                        <div class="mobile-holding-sub-value font-black text-slate-100 mt-2">
+                        <div class="mobile-holding-sub-value font-black text-slate-100 mt-2 break-words">
                             ${money(row.avgCost, 2)}
                         </div>
                     </div>
@@ -2514,12 +2536,22 @@ function renderHoldings() {
                         >
                     </div>
                 </div>
-            `;
-
-            cards.appendChild(div);
-        }
+            </div>
+        `;
     });
+
+    /*
+        手機版共同外框，只 append 一次
+    */
+    if (cards) {
+        cards.innerHTML = `
+            <div class="mobile-card mobile-holdings-group p-4">
+                ${mobileRowsHtml}
+            </div>
+        `;
+    }
 }
+
 
 
 
