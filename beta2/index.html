@@ -3405,18 +3405,7 @@ if (resolvedName) {
                 historicalPrices[latest.date][sym] = price;
                 historicalPrices[today][sym] = price;
 
-                const resolvedName =
-                    daily.name ||
-                    daily.stockName ||
-                    daily.stock_name ||
-                    latest.name ||
-                    latest.stockName ||
-                    latest.stock_name ||
-                    "";
-
-                if (resolvedName) {
-                    stockNames[sym] = resolvedName;
-                }
+              
 
                 priceMeta[sym] = {
                     source: "FinMind",
