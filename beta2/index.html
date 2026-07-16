@@ -1843,40 +1843,132 @@ function showToast(message, type = "info") {
             }];
         }
 
-        async function syncLocalDataToCloud() {
-            if (!currentUser) {
-                alert("請先登入帳號");
-                return;
-            }
+async function syncLocalDataToCloud() {
+    if (!currentUser) {
+        alert("請先登入帳號");
+        return;
+    }
 
-            const localTxs = JSON.parse(localStorage.getItem("stock_v6_tx")) || [];
+    let localTxs = [];
 
-            if (localTxs.length === 0) {
-                alert("目前沒有本地交易資料可同步");
-                return;
-            }
+    try {
+        localTxs = JSON.parse(localStorage.getItem("stock_v6_tx")) || [];
+    } catch (err) {
+        alert("讀取本地交易資料失敗");
+        return;
+    }
 
-            if (!confirm(`偵測到 ${localTxs.length} 筆本地交易資料，是否同步到雲端？`)) return;
+    if (!Array.isArray(localTxs) || localTxs.length === 0) {
+        alert("目前沒有本地交易資料可同步");
+        return;
+    }
 
-            for (const tx of localTxs) {
-                await addTransactionToSupabase({
-                    type: tx.type,
-                    symbol: tx.symbol,
-                    price: tx.price,
-                    quantity: tx.quantity,
-                    date: tx.date,
-                    brokerId: tx.brokerId || brokers[0]?.id || null,
-                    fee: tx.fee || 0,
-                    tax: tx.tax || 0,
-                    assetType: tx.assetType || "STOCK",
-                    tradeMode: tx.tradeMode || "NORMAL"
-                });
-            }
+    /*
+        先讀取雲端既有交易，建立交易指紋 Set。
+        目的：避免同一筆本地資料重複同步到雲端。
+    */
+    const { data: cloudTxData, error: cloudTxError } = await supabaseClient
+        .from("transactions")
+        .select("date,type,symbol,price,quantity,fee,tax,asset_type,trade_mode")
+        .eq("user_id", currentUser.id);
 
-            await loadAllDataFromSupabase();
-            render();
-            alert("本地交易資料已同步到雲端。");
+    if (cloudTxError) {
+        alert("讀取雲端交易資料失敗：" + cloudTxError.message);
+        return;
+    }
+
+    const cloudFingerprintSet = new Set(
+        (cloudTxData || []).map(row => getTxFingerprint({
+            date: row.date,
+            type: row.type,
+            symbol: row.symbol,
+            price: row.price,
+            quantity: row.quantity,
+            fee: row.fee,
+            tax: row.tax,
+            assetType: row.asset_type || "STOCK",
+            tradeMode: row.trade_mode || "NORMAL"
+        }))
+    );
+
+    /*
+        本地資料內部也可能有重複，所以同步前也做一次去重。
+    */
+    const localSeenSet = new Set();
+    const txsToSync = [];
+    let duplicateInLocalCount = 0;
+    let duplicateInCloudCount = 0;
+
+    localTxs.forEach(tx => {
+        const fingerprint = getTxFingerprint(tx);
+
+        if (localSeenSet.has(fingerprint)) {
+            duplicateInLocalCount++;
+            return;
         }
+
+        localSeenSet.add(fingerprint);
+
+        if (cloudFingerprintSet.has(fingerprint)) {
+            duplicateInCloudCount++;
+            return;
+        }
+
+        txsToSync.push(tx);
+    });
+
+    if (txsToSync.length === 0) {
+        alert(
+            `沒有需要同步的新交易。\n\n` +
+            `本地總筆數：${localTxs.length}\n` +
+            `本地重複：${duplicateInLocalCount}\n` +
+            `雲端已存在：${duplicateInCloudCount}`
+        );
+        return;
+    }
+
+    const confirmMessage =
+        `偵測到本地交易 ${localTxs.length} 筆。\n\n` +
+        `將同步新交易：${txsToSync.length} 筆\n` +
+        `略過本地重複：${duplicateInLocalCount} 筆\n` +
+        `略過雲端已存在：${duplicateInCloudCount} 筆\n\n` +
+        `是否繼續同步？`;
+
+    if (!confirm(confirmMessage)) return;
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const tx of txsToSync) {
+        const saved = await addTransactionToSupabase({
+            type: tx.type,
+            symbol: tx.symbol,
+            price: tx.price,
+            quantity: tx.quantity,
+            date: tx.date,
+            brokerId: tx.brokerId || brokers[0]?.id || null,
+            fee: tx.fee || 0,
+            tax: tx.tax || 0,
+            assetType: tx.assetType || "STOCK",
+            tradeMode: tx.tradeMode || "NORMAL"
+        });
+
+        if (saved) successCount++;
+        else failCount++;
+    }
+
+    await loadAllDataFromSupabase();
+    render();
+
+    alert(
+        `同步完成。\n\n` +
+        `成功新增：${successCount} 筆\n` +
+        `新增失敗：${failCount} 筆\n` +
+        `略過本地重複：${duplicateInLocalCount} 筆\n` +
+        `略過雲端已存在：${duplicateInCloudCount} 筆`
+    );
+}
+
 
         /* =========================
            券商
@@ -2183,6 +2275,35 @@ function showToast(message, type = "info") {
             const holdings = buildHoldingsBeforeDate(date, excludeTxId);
             return Number(holdings[sym]?.qty) || 0;
         }
+function normalizeTxForFingerprint(tx) {
+    return {
+        date: String(tx.date || "").substring(0, 10),
+        type: String(tx.type || "").toUpperCase().trim(),
+        symbol: String(tx.symbol || "").toUpperCase().trim(),
+        price: Number(tx.price) || 0,
+        quantity: Number(tx.quantity) || 0,
+        fee: Number(tx.fee) || 0,
+        tax: Number(tx.tax) || 0,
+        assetType: String(tx.assetType || tx.asset_type || "STOCK").toUpperCase().trim(),
+        tradeMode: String(tx.tradeMode || tx.trade_mode || "NORMAL").toUpperCase().trim()
+    };
+}
+
+function getTxFingerprint(tx) {
+    const n = normalizeTxForFingerprint(tx);
+
+    return [
+        n.date,
+        n.type,
+        n.symbol,
+        n.price.toFixed(4),
+        n.quantity.toFixed(4),
+        n.fee.toFixed(2),
+        n.tax.toFixed(2),
+        n.assetType,
+        n.tradeMode
+    ].join("|");
+}
 
         /* =========================
            交易 CRUD
