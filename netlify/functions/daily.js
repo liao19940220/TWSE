@@ -10,35 +10,38 @@ exports.handler = async function(event) {
       });
     }
 
-    const params = new URLSearchParams({
+    const token = process.env.FINMIND_TOKEN;
+
+    /*
+      1. 查每日股價
+    */
+    const priceParams = new URLSearchParams({
       dataset: "TaiwanStockPrice",
       data_id: symbol,
       start_date: startDate
     });
 
-    const token = process.env.FINMIND_TOKEN;
-
     if (token) {
-      params.set("token", token);
+      priceParams.set("token", token);
     }
 
-    const url = `https://api.finmindtrade.com/api/v4/data?${params.toString()}`;
+    const priceUrl = `https://api.finmindtrade.com/api/v4/data?${priceParams.toString()}`;
 
-    const res = await fetch(url, {
+    const priceRes = await fetch(priceUrl, {
       headers: {
         "Accept": "application/json"
       }
     });
 
-    if (!res.ok) {
-      return jsonResponse(res.status, {
+    if (!priceRes.ok) {
+      return jsonResponse(priceRes.status, {
         ok: false,
-        message: `FinMind API 錯誤：HTTP ${res.status}`
+        message: `FinMind API 錯誤：HTTP ${priceRes.status}`
       });
     }
 
-    const json = await res.json();
-    const rows = Array.isArray(json.data) ? json.data : [];
+    const priceJson = await priceRes.json();
+    const rows = Array.isArray(priceJson.data) ? priceJson.data : [];
 
     const data = rows.map(row => ({
       date: row.date,
@@ -54,12 +57,44 @@ exports.handler = async function(event) {
 
     const latest = data.length > 0 ? data[data.length - 1] : null;
 
+    /*
+      2. 查股票中文名稱
+      FinMind TaiwanStockInfo 通常可取得：
+      stock_id, stock_name, type, industry_category
+    */
+    let name = "";
+    let stockInfo = null;
+
+    try {
+      stockInfo = await fetchStockInfo(symbol, token);
+
+      if (stockInfo) {
+        name =
+          stockInfo.stock_name ||
+          stockInfo.name ||
+          "";
+      }
+    } catch (nameError) {
+      console.warn(`取得 ${symbol} 股票名稱失敗：`, nameError.message);
+    }
+
     return jsonResponse(200, {
       ok: true,
       source: "FinMind",
       symbol,
+      name,
+      stockName: name,
+      stock_name: name,
+      stockInfo,
       startDate,
-      latest,
+      latest: latest
+        ? {
+            ...latest,
+            name,
+            stockName: name,
+            stock_name: name
+          }
+        : null,
       data
     });
 
@@ -70,6 +105,33 @@ exports.handler = async function(event) {
     });
   }
 };
+
+async function fetchStockInfo(symbol, token) {
+  const infoParams = new URLSearchParams({
+    dataset: "TaiwanStockInfo"
+  });
+
+  if (token) {
+    infoParams.set("token", token);
+  }
+
+  const infoUrl = `https://api.finmindtrade.com/api/v4/data?${infoParams.toString()}`;
+
+  const infoRes = await fetch(infoUrl, {
+    headers: {
+      "Accept": "application/json"
+    }
+  });
+
+  if (!infoRes.ok) {
+    throw new Error(`FinMind TaiwanStockInfo API 錯誤：HTTP ${infoRes.status}`);
+  }
+
+  const infoJson = await infoRes.json();
+  const rows = Array.isArray(infoJson.data) ? infoJson.data : [];
+
+  return rows.find(row => String(row.stock_id).toUpperCase() === String(symbol).toUpperCase()) || null;
+}
 
 function getDefaultStartDate() {
   const d = new Date();
