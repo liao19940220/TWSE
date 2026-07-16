@@ -501,35 +501,26 @@ body.light-mode .loss {
 }
 /* === Mobile holdings grouped card === */
 @media (max-width: 768px) {
-    #holdingsCardContainer {
-        gap: 0 !important;
-    }
-
     #holdingsCardContainer .mobile-holdings-group {
-        padding: 18px !important;
-        border-radius: 26px !important;
+        padding: 16px 18px 22px 18px !important;
+        border-radius: 28px !important;
+        overflow: hidden;
     }
 
     .mobile-holding-row {
-        position: relative;
-    }
-
-    .mobile-holding-row.border-b {
-        border-color: rgba(71, 85, 105, 0.75) !important;
-    }
-
-    body.light-mode .mobile-holding-row.border-b {
-        border-color: rgba(148, 163, 184, 0.45) !important;
+        padding-top: 18px !important;
+        padding-bottom: 20px !important;
     }
 
     .mobile-holding-row:first-child {
-        padding-top: 2px !important;
+        padding-top: 4px !important;
     }
 
     .mobile-holding-row:last-child {
-        padding-bottom: 2px !important;
+        padding-bottom: 4px !important;
     }
 }
+
 /* === Inline mini alerts === */
 .mini-alert {
     display: inline-flex;
@@ -727,11 +718,11 @@ body.light-mode .mini-alert-rose {
 /* === Mobile holdings UI polish === */
 @media (max-width: 768px) {
     /* 整張持股大卡片 */
-    #holdingsCardContainer .mobile-holdings-group {
-        padding: 16px 18px 92px 18px !important;
-        border-radius: 28px !important;
-        overflow: hidden;
-    }
+#holdingsCardContainer .mobile-holdings-group {
+    padding: 16px 18px 22px 18px !important;
+    border-radius: 28px !important;
+    overflow: hidden;
+}
 
     /* 每一檔股票 */
     .mobile-holding-row {
@@ -743,10 +734,9 @@ body.light-mode .mini-alert-rose {
         padding-top: 4px !important;
     }
 
-    .mobile-holding-row:last-child {
-        padding-bottom: 26px !important;
-    }
-
+.mobile-holding-row:last-child {
+    padding-bottom: 4px !important;
+}
     .mobile-holding-row.border-b {
         border-color: rgba(100, 116, 139, 0.45) !important;
     }
