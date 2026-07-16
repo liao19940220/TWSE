@@ -2019,11 +2019,93 @@
             const drawdownPct = peak > 0 ? Math.max(0, (peak - (currentAsset || 0)) / peak * 100) : 0;
             return { peakAsset: peak, drawdownPct };
         }
+function renderPortfolioAlerts() {
+    const box = document.getElementById("portfolioAlertList");
+    if (!box) return;
 
+    const p = calculatePortfolio();
+    const alerts = [];
+
+    const cashRatio = p.totalAsset > 0 ? (p.cash / p.totalAsset) * 100 : 0;
+
+    // 現金比例 > 50%
+    if (cashRatio > 50) {
+        alerts.push({
+            type: "cash",
+            colorClass: "border-blue-400/40 bg-blue-500/10 text-blue-200",
+            icon: "💡",
+            title: "資金運用提醒",
+            text: `目前現金比例 ${cashRatio.toFixed(1)}%，高於 50%，可評估是否分批投入或調整資金配置。`
+        });
+    }
+
+    p.holdingRows.forEach(row => {
+        const holdingRatio = p.totalAsset > 0 ? (row.marketVal / p.totalAsset) * 100 : 0;
+        const stockLabel = `${row.sym}${stockNames[row.sym] ? " " + stockNames[row.sym] : ""}`;
+
+        // 單一持股 > 30%
+        if (holdingRatio > 30) {
+            alerts.push({
+                type: "concentration",
+                colorClass: "border-amber-400/40 bg-amber-500/10 text-amber-100",
+                icon: "⚠️",
+                title: "集中度警告",
+                text: `${stockLabel} 佔總資產 ${holdingRatio.toFixed(1)}%，高於 30%。`
+            });
+        }
+
+        // 個股虧損 > 15%
+        if (row.percent < -15) {
+            alerts.push({
+                type: "stopLoss",
+                colorClass: "border-teal-300/40 bg-teal-500/10 text-teal-100",
+                icon: "🛑",
+                title: "停損提醒",
+                text: `${stockLabel} 目前虧損 ${row.percent.toFixed(1)}%，已超過 15%。`
+            });
+        }
+
+        // 個股獲利 > 50%
+        if (row.percent > 50) {
+            alerts.push({
+                type: "takeProfit",
+                colorClass: "border-rose-300/40 bg-rose-500/10 text-rose-100",
+                icon: "🎯",
+                title: "獲利了結提醒",
+                text: `${stockLabel} 目前獲利 ${row.percent.toFixed(1)}%，已超過 50%。`
+            });
+        }
+    });
+
+    if (alerts.length === 0) {
+        box.innerHTML = `
+            <p class="text-xs muted font-bold">
+                目前沒有觸發警示。
+            </p>
+        `;
+        return;
+    }
+
+    box.innerHTML = alerts.map(alert => `
+        <div class="rounded-2xl border px-3 py-2.5 ${alert.colorClass}">
+            <div class="flex items-start gap-2">
+                <span class="shrink-0">${alert.icon}</span>
+                <div>
+                    <p class="text-xs md:text-sm font-black">${alert.title}</p>
+                    <p class="text-[11px] md:text-xs font-bold mt-0.5 leading-relaxed">${alert.text}</p>
+                </div>
+            </div>
+        </div>
+    `).join("");
+}
 function render() {
     renderSummary();
     renderHoldings();
-    renderPortfolioAlerts();
+
+    if (typeof renderPortfolioAlerts === "function") {
+        renderPortfolioAlerts();
+    }
+
     renderHistory();
 
     if (activeTab === "chart") {
@@ -2033,6 +2115,7 @@ function render() {
 
     applyPrivacyMode();
 }
+
 
 
         function setPrivacyText(el, text) {
@@ -2082,88 +2165,12 @@ function render() {
         }
 
 function renderHoldings() {
-    function renderPortfolioAlerts() {
-    const box = document.getElementById("portfolioAlertList");
-    if (!box) return;
-
-    const p = calculatePortfolio();
-    const alerts = [];
-
-    const cashRatio = p.totalAsset > 0 ? (p.cash / p.totalAsset) * 100 : 0;
-
-    // 現金比例 > 50%
-    if (cashRatio > 50) {
-        alerts.push({
-            type: "cash",
-            colorClass: "border-blue-400/40 bg-blue-500/10 text-blue-200",
-            icon: "💡",
-            title: "資金運用提醒",
-            text: `目前現金比例 ${cashRatio.toFixed(1)}%，高於 50%，可評估是否分批投入或調整資金配置。`
-        });
-    }
-
-    p.holdingRows.forEach(row => {
-        const holdingRatio = p.totalAsset > 0 ? (row.marketVal / p.totalAsset) * 100 : 0;
-
-        // 單一持股 > 30%
-        if (holdingRatio > 30) {
-            alerts.push({
-                type: "concentration",
-                colorClass: "border-amber-400/40 bg-amber-500/10 text-amber-100",
-                icon: "⚠️",
-                title: "集中度警告",
-                text: `${row.sym}${stockNames[row.sym] ? " " + stockNames[row.sym] : ""} 佔總資產 ${holdingRatio.toFixed(1)}%，高於 30%。`
-            });
-        }
-
-        // 個股虧損 > 15%
-        if (row.percent < -15) {
-            alerts.push({
-                type: "stopLoss",
-                colorClass: "border-teal-300/40 bg-teal-500/10 text-teal-100",
-                icon: "🛑",
-                title: "停損提醒",
-                text: `${row.sym}${stockNames[row.sym] ? " " + stockNames[row.sym] : ""} 目前虧損 ${row.percent.toFixed(1)}%，已超過 15%。`
-            });
-        }
-
-        // 個股獲利 > 50%
-        if (row.percent > 50) {
-            alerts.push({
-                type: "takeProfit",
-                colorClass: "border-rose-300/40 bg-rose-500/10 text-rose-100",
-                icon: "🎯",
-                title: "獲利了結提醒",
-                text: `${row.sym}${stockNames[row.sym] ? " " + stockNames[row.sym] : ""} 目前獲利 ${row.percent.toFixed(1)}%，已超過 50%。`
-            });
-        }
-    });
-
-    if (alerts.length === 0) {
-        box.innerHTML = `
-            <p class="text-xs muted font-bold">
-                目前沒有觸發警示。
-            </p>
-        `;
-        return;
-    }
-
-    box.innerHTML = alerts.map(alert => `
-        <div class="rounded-2xl border px-3 py-2.5 ${alert.colorClass}">
-            <div class="flex items-start gap-2">
-                <span class="shrink-0">${alert.icon}</span>
-                <div>
-                    <p class="text-xs md:text-sm font-black">${alert.title}</p>
-                    <p class="text-[11px] md:text-xs font-bold mt-0.5 leading-relaxed">${alert.text}</p>
-                </div>
-            </div>
-        </div>
-    `).join("");
-}
-
     const p = calculatePortfolio();
     const table = document.getElementById("holdingsTable");
     const cards = document.getElementById("holdingsCardContainer");
+
+
+
 
     if (table) table.innerHTML = "";
     if (cards) cards.innerHTML = "";
