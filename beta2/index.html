@@ -2659,12 +2659,6 @@ ${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利 > 50%`) : ""}
     </div>
 </div>
 
-${holdingRatio > 30 ? `
-    <div class="mobile-ratio-alert-row">
-        ${getMiniAlertHtml("concentration", `佔比 > 30%`)}
-    </div>
-` : ""}
-
 <!-- 第二區：市值 / 報酬率 -->
 <div class="flex justify-between items-start gap-3 mt-4">
     <div class="mobile-holding-main-value font-black text-slate-100">
