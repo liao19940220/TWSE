@@ -37,6 +37,25 @@
             --amber: #fbbf24;
             --purple: #a78bfa;
         }
+/* === Light Theme Variables === */
+body.light-mode {
+    --bg-main: #f1f5f9;
+    --bg-panel: rgba(255, 255, 255, 0.92);
+    --bg-panel-2: rgba(255, 255, 255, 0.82);
+    --bg-soft: rgba(226, 232, 240, 0.72);
+
+    --border-main: rgba(148, 163, 184, 0.55);
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --text-faint: #94a3b8;
+
+    --blue: #2563eb;
+    --blue-2: #1d4ed8;
+    --red: #e11d48;
+    --green: #0f766e;
+    --amber: #d97706;
+    --purple: #7c3aed;
+}
 
         * {
             box-sizing: border-box;
@@ -380,6 +399,128 @@
         border-radius: 18px !important;
     }
 }
+/* === Theme mode support === */
+body {
+    transition: background 0.25s ease, color 0.25s ease;
+}
+
+body.light-mode {
+    color: var(--text-main);
+    background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 30rem),
+        radial-gradient(circle at top left, rgba(20, 184, 166, 0.10), transparent 26rem),
+        linear-gradient(180deg, #f8fafc 0%, #f1f5f9 48%, #e2e8f0 100%);
+}
+
+/* 面板在淺色模式 */
+body.light-mode .glass-panel {
+    background: rgba(255, 255, 255, 0.88);
+    border-color: rgba(148, 163, 184, 0.5);
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+}
+
+body.light-mode .soft-panel {
+    background: rgba(255, 255, 255, 0.78);
+    border-color: rgba(148, 163, 184, 0.45);
+}
+
+body.light-mode .mobile-card {
+    background: rgba(255, 255, 255, 0.86);
+    border-color: rgba(148, 163, 184, 0.5);
+}
+
+body.light-mode .muted {
+    color: #64748b;
+}
+
+body.light-mode .faint {
+    color: #94a3b8;
+}
+
+/* 淺色模式文字 */
+body.light-mode .text-slate-100,
+body.light-mode .text-slate-200,
+body.light-mode .text-slate-300 {
+    color: #0f172a !important;
+}
+
+body.light-mode thead th {
+    color: #64748b;
+}
+
+body.light-mode tbody tr {
+    border-color: rgba(148, 163, 184, 0.35);
+}
+
+/* 淺色模式輸入框 */
+body.light-mode input,
+body.light-mode select {
+    background: rgba(248, 250, 252, 0.9) !important;
+    color: #0f172a !important;
+    border-color: rgba(148, 163, 184, 0.6) !important;
+}
+
+body.light-mode input::placeholder {
+    color: #94a3b8;
+}
+
+body.light-mode input:focus,
+body.light-mode select:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
+}
+
+/* 現價無框輸入在淺色模式 */
+body.light-mode .holding-price-input {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: #0f172a !important;
+}
+
+/* 淺色模式底部導覽 */
+body.light-mode .tab-btn-inactive {
+    color: #64748b;
+}
+
+body.light-mode .status-pill {
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(148, 163, 184, 0.5);
+}
+
+/* 淺色模式提示區 */
+body.light-mode #portfolioAlertBox {
+    background: rgba(255, 255, 255, 0.78) !important;
+}
+
+/* 淺色模式計算說明 */
+body.light-mode .bg-slate-950\/60,
+body.light-mode .bg-slate-950\/30,
+body.light-mode .bg-slate-800,
+body.light-mode .bg-slate-700 {
+    background-color: rgba(226, 232, 240, 0.7) !important;
+}
+
+/* 淺色模式分隔線 */
+body.light-mode .border-slate-700,
+body.light-mode .border-slate-800\/80 {
+    border-color: rgba(148, 163, 184, 0.42) !important;
+}
+
+/* 淺色模式 hover */
+body.light-mode .hover\:bg-slate-700:hover,
+body.light-mode .hover\:bg-slate-600:hover {
+    background-color: rgba(203, 213, 225, 0.7) !important;
+}
+
+/* 淺色模式損益顏色維持清楚 */
+body.light-mode .profit {
+    color: #e11d48 !important;
+}
+
+body.light-mode .loss {
+    color: #0f766e !important;
+}
 
     </style>
 </head>
@@ -400,10 +541,27 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <button id="privacyToggleBtn" onclick="togglePrivacyMode()" class="w-10 h-10 rounded-2xl soft-panel flex items-center justify-center hover:bg-slate-700 transition" title="切換金額顯示">
-                    <span id="privacyEyeIcon">🔒</span>
-                </button>
-            </div>
+    <!-- 深色 / 淺色模式切換 -->
+    <button 
+        id="themeToggleBtn" 
+        onclick="toggleThemeMode()" 
+        class="w-10 h-10 rounded-2xl soft-panel flex items-center justify-center hover:bg-slate-700 transition" 
+        title="切換深色 / 淺色模式"
+    >
+        <span id="themeModeIcon">🌙</span>
+    </button>
+
+    <!-- 金額隱私模式切換 -->
+    <button 
+        id="privacyToggleBtn" 
+        onclick="togglePrivacyMode()" 
+        class="w-10 h-10 rounded-2xl soft-panel flex items-center justify-center hover:bg-slate-700 transition" 
+        title="切換金額顯示"
+    >
+        <span id="privacyEyeIcon">🔒</span>
+    </button>
+</div>
+
         </header>
 
         <!-- Navigation -->
@@ -861,7 +1019,10 @@
         let historicalPrices = {};
         let priceMeta = {};
         let privacyModeHidden = true;
+        let themeMode = localStorage.getItem("stock_theme_mode") || "dark";
+
         let activeTab = "main";
+        
         let assetChartInstance = null;
         let allocationChartInstance = null;
         let currentChartScale = "daily";
@@ -2114,7 +2275,9 @@ function render() {
     }
 
     applyPrivacyMode();
+    applyThemeMode();
 }
+
 
 
 
@@ -2931,6 +3094,31 @@ function renderHoldings() {
                 }
             }, 800);
         }
+function applyThemeMode() {
+    const icon = document.getElementById("themeModeIcon");
+    const btn = document.getElementById("themeToggleBtn");
+
+    if (themeMode === "light") {
+        document.body.classList.add("light-mode");
+        if (icon) icon.innerText = "☀️";
+        if (btn) btn.title = "目前為淺色模式，點擊切換深色模式";
+    } else {
+        document.body.classList.remove("light-mode");
+        if (icon) icon.innerText = "🌙";
+        if (btn) btn.title = "目前為深色模式，點擊切換淺色模式";
+    }
+}
+
+function toggleThemeMode() {
+    themeMode = themeMode === "light" ? "dark" : "light";
+    localStorage.setItem("stock_theme_mode", themeMode);
+    applyThemeMode();
+
+    if (activeTab === "chart") {
+        renderChart();
+        renderAllocationCharts();
+    }
+}
 
         /* =========================
            隱私模式
@@ -3243,8 +3431,10 @@ function renderHoldings() {
         window.openEditTxModal = openEditTxModal;
         window.deleteTxFromModal = deleteTxFromModal;
 
-        window.toggleFormFields = toggleFormFields;
-        window.autoFillTradeCosts = autoFillTradeCosts;
+window.toggleThemeMode = toggleThemeMode;
+window.toggleFormFields = toggleFormFields;
+window.autoFillTradeCosts = autoFillTradeCosts;
+
 
         window.updateCurrentPrice = updateCurrentPrice;
         window.fetchTwsePrices = fetchTwsePrices;
@@ -3258,9 +3448,11 @@ function renderHoldings() {
         window.alertExcelRules = alertExcelRules;
         window.clearAllData = clearAllData;
 
-        initDateDefaults();
-        toggleFormFields();
-        initAppAuth();
+applyThemeMode();
+initDateDefaults();
+toggleFormFields();
+initAppAuth();
+
     </script>
 </body>
 </html>
