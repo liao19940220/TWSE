@@ -376,29 +376,7 @@ body.light-mode {
         font-weight: 900 !important;
     }
 }
-  /* === Portfolio alert box === */
-#portfolioAlertBox {
-    background: rgba(15, 23, 42, 0.72) !important;
-}
-
-#portfolioAlertList > div {
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
-}
-
-@media (max-width: 768px) {
-    #portfolioAlertBox {
-        padding: 14px !important;
-        border-radius: 24px !important;
-    }
-
-    #portfolioAlertBox h3 {
-        font-size: 13px !important;
-    }
-
-    #portfolioAlertList > div {
-        border-radius: 18px !important;
-    }
-}
+ 
 /* === Theme mode support === */
 body {
     transition: background 0.25s ease, color 0.25s ease;
@@ -552,6 +530,90 @@ body.light-mode .loss {
         padding-bottom: 2px !important;
     }
 }
+/* === Inline mini alerts === */
+.mini-alert {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 5px 7px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    line-height: 1.35;
+    font-weight: 900;
+    border: 1px solid transparent;
+    max-width: 100%;
+    text-align: left;
+}
+
+.mini-alert span:first-child {
+    flex-shrink: 0;
+}
+
+.mini-alert-blue {
+    color: #bfdbfe;
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(96, 165, 250, 0.35);
+}
+
+.mini-alert-amber {
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(251, 191, 36, 0.35);
+}
+
+.mini-alert-teal {
+    color: #99f6e4;
+    background: rgba(20, 184, 166, 0.12);
+    border-color: rgba(45, 212, 191, 0.35);
+}
+
+.mini-alert-rose {
+    color: #fecdd3;
+    background: rgba(244, 63, 94, 0.12);
+    border-color: rgba(251, 113, 133, 0.35);
+}
+
+.mobile-ratio-box,
+.mobile-return-box {
+    max-width: 46%;
+}
+
+.mobile-alert-under {
+    margin-top: 4px;
+}
+
+body.light-mode .mini-alert-blue {
+    color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.08);
+    border-color: rgba(37, 99, 235, 0.22);
+}
+
+body.light-mode .mini-alert-amber {
+    color: #92400e;
+    background: rgba(245, 158, 11, 0.10);
+    border-color: rgba(217, 119, 6, 0.25);
+}
+
+body.light-mode .mini-alert-teal {
+    color: #0f766e;
+    background: rgba(20, 184, 166, 0.10);
+    border-color: rgba(15, 118, 110, 0.22);
+}
+
+body.light-mode .mini-alert-rose {
+    color: #be123c;
+    background: rgba(244, 63, 94, 0.09);
+    border-color: rgba(225, 29, 72, 0.22);
+}
+
+@media (max-width: 768px) {
+    .mini-alert {
+        font-size: 10px;
+        padding: 5px 6px;
+        border-radius: 10px;
+    }
+}
 
     </style>
 </head>
@@ -646,11 +708,13 @@ body.light-mode .loss {
     </div>
 
     <!-- 右下：可用現金 -->
-    <div class="soft-panel rounded-3xl p-4">
-        <p class="text-[11px] muted font-black">可用現金</p>
-        <p id="currentCash" class="privacy-amount text-xl md:text-2xl font-black mt-1">$ 0</p>
-        <p id="cashRatioText" class="text-[11px] font-black mt-1 text-purple-300">佔比 0.0%</p>
-    </div>
+<div class="soft-panel rounded-3xl p-4">
+    <p class="text-[11px] muted font-black">可用現金</p>
+    <p id="currentCash" class="privacy-amount text-xl md:text-2xl font-black mt-1">$ 0</p>
+    <p id="cashRatioText" class="text-[11px] font-black mt-1 text-purple-300">佔比 0.0%</p>
+    <div id="cashAlertInline"></div>
+</div>
+
 </div>
 
                 </div>
@@ -699,49 +763,47 @@ body.light-mode .loss {
                 </div>
 
                 <div id="holdingsCardContainer" class="md:hidden space-y-3"></div>
-<!-- 庫存配置警示 -->
-<div id="portfolioAlertBox" class="soft-panel rounded-3xl p-4 space-y-3">
-    <div class="flex items-center justify-between gap-3">
-        <div>
-            <h3 class="text-sm md:text-base font-black text-slate-100">⚠️ 庫存配置警示說明</h3>
-            <p class="text-[11px] muted font-bold mt-1">系統會依照目前持股比重與損益狀況自動提示。</p>
-        </div>
-    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] md:text-xs font-bold muted">
-        <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
-            <span>單一持股 &gt; 30%：集中度警告</span>
-        </div>
 
-        <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-teal-300 shrink-0"></span>
-            <span>個股虧損 &gt; 15%：停損提醒</span>
-        </div>
+<div class="soft-panel rounded-3xl p-4 text-[11px] md:text-xs muted font-bold leading-relaxed">
+    <p class="text-slate-200 font-black mb-2">計算說明</p>
 
-        <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-rose-300 shrink-0"></span>
-            <span>個股獲利 &gt; 50%：獲利了結</span>
-        </div>
+    <ul class="list-disc pl-5 space-y-1">
+        <li>買進總成本 = 買進價格 × 股數 + 手續費。</li>
+        <li>賣出淨收入 = 賣出價格 × 股數 - 手續費 - 交易稅。</li>
+    </ul>
 
-        <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-blue-300 shrink-0"></span>
-            <span>現金比例 &gt; 50%：資金運用</span>
-        </div>
-    </div>
+    <div class="mt-5 pt-4 border-t border-slate-700/70">
+        <p class="text-slate-200 font-black mb-2">⚠️ 庫存配置警示說明</p>
 
-    <div id="portfolioAlertList" class="space-y-2 pt-2 border-t border-slate-700/80">
-        <p class="text-xs muted font-bold">目前沒有觸發警示。</p>
+        <p class="mb-3">
+            系統會依照目前持股比重、損益狀況與現金比例自動提示，警示會直接顯示在相對應的數字下方。
+        </p>
+
+        <div class="space-y-2">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+                <span>單一持股 &gt; 30%：集中度警告</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-teal-300 shrink-0"></span>
+                <span>個股虧損 &gt; 15%：停損提醒</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-rose-300 shrink-0"></span>
+                <span>個股獲利 &gt; 50%：獲利了結提醒</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-blue-300 shrink-0"></span>
+                <span>現金比例 &gt; 50%：資金運用提醒</span>
+            </div>
+        </div>
     </div>
 </div>
 
-                <div class="soft-panel rounded-3xl p-4 text-[11px] md:text-xs muted font-bold leading-relaxed">
-                    <p class="text-slate-200 font-black mb-2">計算說明</p>
-                    <ul class="list-disc pl-5 space-y-1">
-                        <li>買進總成本 = 買進價格 × 股數 + 手續費。</li>
-                        <li>賣出淨收入 = 賣出價格 × 股數 - 手續費 - 交易稅。</li>
-                    </ul>
-                </div>
             </div>
         </section>
 
@@ -2211,93 +2273,78 @@ body.light-mode .loss {
             const drawdownPct = peak > 0 ? Math.max(0, (peak - (currentAsset || 0)) / peak * 100) : 0;
             return { peakAsset: peak, drawdownPct };
         }
-function renderPortfolioAlerts() {
-    const box = document.getElementById("portfolioAlertList");
-    if (!box) return;
-
-    const p = calculatePortfolio();
-    const alerts = [];
-
-    const cashRatio = p.totalAsset > 0 ? (p.cash / p.totalAsset) * 100 : 0;
-
-    // 現金比例 > 50%
-    if (cashRatio > 50) {
-        alerts.push({
-            type: "cash",
-            colorClass: "border-blue-400/40 bg-blue-500/10 text-blue-200",
+function getMiniAlertHtml(type, text) {
+    const styleMap = {
+        concentration: {
+            icon: "⚠️",
+            className: "mini-alert mini-alert-amber"
+        },
+        stopLoss: {
+            icon: "🛑",
+            className: "mini-alert mini-alert-teal"
+        },
+        takeProfit: {
+            icon: "🎯",
+            className: "mini-alert mini-alert-rose"
+        },
+        cash: {
             icon: "💡",
-            title: "資金運用提醒",
-            text: `目前現金比例 ${cashRatio.toFixed(1)}%，高於 50%，可評估是否分批投入或調整資金配置。`
-        });
-    }
-
-    p.holdingRows.forEach(row => {
-        const holdingRatio = p.totalAsset > 0 ? (row.marketVal / p.totalAsset) * 100 : 0;
-        const stockLabel = `${row.sym}${stockNames[row.sym] ? " " + stockNames[row.sym] : ""}`;
-
-        // 單一持股 > 30%
-        if (holdingRatio > 30) {
-            alerts.push({
-                type: "concentration",
-                colorClass: "border-amber-400/40 bg-amber-500/10 text-amber-100",
-                icon: "⚠️",
-                title: "集中度警告",
-                text: `${stockLabel} 佔總資產 ${holdingRatio.toFixed(1)}%，高於 30%。`
-            });
+            className: "mini-alert mini-alert-blue"
         }
+    };
 
-        // 個股虧損 > 15%
-        if (row.percent < -15) {
-            alerts.push({
-                type: "stopLoss",
-                colorClass: "border-teal-300/40 bg-teal-500/10 text-teal-100",
-                icon: "🛑",
-                title: "停損提醒",
-                text: `${stockLabel} 目前虧損 ${row.percent.toFixed(1)}%，已超過 15%。`
-            });
-        }
+    const config = styleMap[type];
+    if (!config) return "";
 
-        // 個股獲利 > 50%
-        if (row.percent > 50) {
-            alerts.push({
-                type: "takeProfit",
-                colorClass: "border-rose-300/40 bg-rose-500/10 text-rose-100",
-                icon: "🎯",
-                title: "獲利了結提醒",
-                text: `${stockLabel} 目前獲利 ${row.percent.toFixed(1)}%，已超過 50%。`
-            });
-        }
-    });
-
-    if (alerts.length === 0) {
-        box.innerHTML = `
-            <p class="text-xs muted font-bold">
-                目前沒有觸發警示。
-            </p>
-        `;
-        return;
-    }
-
-    box.innerHTML = alerts.map(alert => `
-        <div class="rounded-2xl border px-3 py-2.5 ${alert.colorClass}">
-            <div class="flex items-start gap-2">
-                <span class="shrink-0">${alert.icon}</span>
-                <div>
-                    <p class="text-xs md:text-sm font-black">${alert.title}</p>
-                    <p class="text-[11px] md:text-xs font-bold mt-0.5 leading-relaxed">${alert.text}</p>
-                </div>
-            </div>
+    return `
+        <div class="${config.className}">
+            <span>${config.icon}</span>
+            <span>${text}</span>
         </div>
-    `).join("");
+    `;
 }
+
+function getCashAlertHtml(portfolio) {
+    const cashRatio = portfolio.totalAsset > 0 ? portfolio.cash / portfolio.totalAsset * 100 : 0;
+
+    if (cashRatio <= 50) return "";
+
+    return getMiniAlertHtml(
+        "cash",
+        `現金比例 ${cashRatio.toFixed(1)}%，高於 50%`
+    );
+}
+
+function getHoldingAlertHtml(row, holdingRatio) {
+    let html = "";
+
+    if (holdingRatio > 30) {
+        html += getMiniAlertHtml(
+            "concentration",
+            `佔比 ${holdingRatio.toFixed(1)}%，高於 30%`
+        );
+    }
+
+    if (row.percent < -15) {
+        html += getMiniAlertHtml(
+            "stopLoss",
+            `虧損 ${Math.abs(row.percent).toFixed(1)}%，超過 15%`
+        );
+    }
+
+    if (row.percent > 50) {
+        html += getMiniAlertHtml(
+            "takeProfit",
+            `獲利 ${row.percent.toFixed(1)}%，超過 50%`
+        );
+    }
+
+    return html;
+}
+
 function render() {
     renderSummary();
     renderHoldings();
-
-    if (typeof renderPortfolioAlerts === "function") {
-        renderPortfolioAlerts();
-    }
-
     renderHistory();
 
     if (activeTab === "chart") {
@@ -2346,7 +2393,13 @@ function render() {
             const cashRatio = p.totalAsset > 0 ? p.cash / p.totalAsset * 100 : 0;
 
             document.getElementById("stockRatioText").innerText = `佔比 ${stockRatio.toFixed(1)}%`;
-            document.getElementById("cashRatioText").innerText = `佔比 ${cashRatio.toFixed(1)}%`;
+document.getElementById("cashRatioText").innerText = `佔比 ${cashRatio.toFixed(1)}%`;
+
+const cashAlertInline = document.getElementById("cashAlertInline");
+if (cashAlertInline) {
+    cashAlertInline.innerHTML = getCashAlertHtml(p);
+}
+
 
             const peakStats = calculatePeakAssetStats(p.totalAsset);
             setPrivacyText(document.getElementById("peakAssetVal"), money(peakStats.peakAsset));
@@ -2393,9 +2446,11 @@ function renderHoldings() {
     */
     let mobileRowsHtml = "";
 
-    p.holdingRows.forEach((row, index) => {
-        const ratio = p.totalAsset > 0 ? row.marketVal / p.totalAsset * 100 : 0;
-        const pnlClass = row.unrealized > 0 ? "profit" : row.unrealized < 0 ? "loss" : "text-slate-300";
+p.holdingRows.forEach((row, index) => {
+    const ratio = p.totalAsset > 0 ? row.marketVal / p.totalAsset * 100 : 0;
+    const holdingRatio = ratio;
+    const pnlClass = row.unrealized > 0 ? "profit" : row.unrealized < 0 ? "loss" : "text-slate-300";
+
         const pnlSign = row.unrealized > 0 ? "+" : "";
         const returnSign = row.percent > 0 ? "+" : "";
         const name = stockNames[row.sym] || "";
@@ -2430,18 +2485,23 @@ function renderHoldings() {
                     <div class="font-black text-slate-100">
                         ${marketValueText}
                     </div>
-                    <div class="text-xs text-blue-300 font-black mt-1">
-                        ${ratioText}
-                    </div>
+                   <div class="text-xs text-blue-300 font-black mt-1">
+    ${ratioText}
+</div>
+${holdingRatio > 30 ? getMiniAlertHtml("concentration", `佔比高於 30%`) : ""}
+
                 </td>
 
                 <td class="py-4 px-3 align-middle text-right">
                     <div class="${pnlClass} font-black text-base">
                         ${pnlText}
                     </div>
-                    <div class="${pnlClass} text-xs font-black mt-1">
-                        ${returnText}
-                    </div>
+<div class="${pnlClass} text-xs font-black mt-1">
+    ${returnText}
+</div>
+${row.percent < -15 ? getMiniAlertHtml("stopLoss", `虧損超過 15%`) : ""}
+${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利超過 50%`) : ""}
+
                 </td>
 
                 <td class="py-4 pl-3 align-middle text-right">
@@ -2487,11 +2547,16 @@ function renderHoldings() {
                         ` : ""}
                     </div>
 
-                    <div class="text-right shrink-0">
-                        <div class="text-blue-300 font-black text-lg">
-                            ${ratioText}
-                        </div>
-                    </div>
+<div class="text-right shrink-0 mobile-ratio-box">
+    <div class="text-blue-300 font-black text-lg">
+        ${ratioText}
+    </div>
+
+    <div class="mobile-alert-under">
+        ${holdingRatio > 30 ? getMiniAlertHtml("concentration", `佔比高於 30%`) : ""}
+    </div>
+</div>
+
                 </div>
 
                 <!-- 第二區：市值 / 報酬率 -->
@@ -2500,9 +2565,17 @@ function renderHoldings() {
                         ${marketValueText}
                     </div>
 
-                    <div class="${pnlClass} text-right font-black text-lg">
-                        ${returnText}
-                    </div>
+<div class="text-right mobile-return-box">
+    <div class="${pnlClass} font-black text-lg">
+        ${returnText}
+    </div>
+
+    <div class="mobile-alert-under">
+        ${row.percent < -15 ? getMiniAlertHtml("stopLoss", `虧損超過 15%`) : ""}
+        ${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利超過 50%`) : ""}
+    </div>
+</div>
+
                 </div>
               
                 <!-- 第三區：損益 / 成本 / 現價 -->
