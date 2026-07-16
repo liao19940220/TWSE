@@ -1429,6 +1429,52 @@ function signedMoney(value) {
     return (v >= 0 ? "+" : "-") + money(Math.abs(v));
 }
 
+function money(value, digits = 0) {
+    return "$" + (Number(value) || 0).toLocaleString("zh-TW", {
+        maximumFractionDigits: digits
+    });
+}
+
+function signedMoney(value) {
+    const v = Number(value) || 0;
+    return (v >= 0 ? "+" : "-") + money(Math.abs(v));
+}
+
+/* ✅ 新增：非阻斷式提示訊息 Toast */
+function showToast(message, type = "info") {
+    let container = document.getElementById("toastContainer");
+
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "toastContainer";
+        container.className = "fixed left-1/2 bottom-24 z-[9999] flex flex-col gap-2 items-center pointer-events-none";
+        container.style.transform = "translateX(-50%)";
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement("div");
+
+    const colorClass =
+        type === "error"
+            ? "bg-rose-600 text-white"
+            : type === "success"
+                ? "bg-emerald-600 text-white"
+                : type === "warning"
+                    ? "bg-amber-500 text-slate-950"
+                    : "bg-slate-800 text-white";
+
+    toast.className = `${colorClass} px-4 py-3 rounded-2xl shadow-2xl text-sm font-black max-w-[88vw] text-center animate-fade-in pointer-events-auto`;
+    toast.innerText = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(8px)";
+        toast.style.transition = "all 0.2s ease";
+        setTimeout(() => toast.remove(), 220);
+    }, 2800);
+}
 
 
         function toSlashDate(dateStr) {
@@ -2069,6 +2115,74 @@ function signedMoney(value) {
                 document.getElementById("netAmountPreview").innerText = `淨額：${money(0)}`;
             }
         }
+        /* =========================
+           交易資料正確性檢查
+        ========================= */
+
+        function buildHoldingsBeforeDate(targetDate, excludeTxId = null) {
+            const holdings = {};
+
+            const sortedTxs = [...transactions]
+                .filter(tx => tx.id !== excludeTxId)
+                .filter(tx => tx.date <= targetDate)
+                .sort((a, b) => {
+                    const dateCompare = (a.date || "").localeCompare(b.date || "");
+                    if (dateCompare !== 0) return dateCompare;
+                    return String(a.id || "").localeCompare(String(b.id || ""));
+                });
+
+            sortedTxs.forEach(tx => {
+                if (!["BUY", "SELL"].includes(tx.type)) return;
+
+                const sym = String(tx.symbol || "").toUpperCase();
+                const qty = Number(tx.quantity) || 0;
+                const price = Number(tx.price) || 0;
+                const fee = Number(tx.fee) || 0;
+                const tax = Number(tx.tax) || 0;
+
+                if (!sym || qty <= 0) return;
+
+                if (!holdings[sym]) {
+                    holdings[sym] = {
+                        qty: 0,
+                        totalCost: 0,
+                        avgCost: 0
+                    };
+                }
+
+                const hold = holdings[sym];
+
+                if (tx.type === "BUY") {
+                    const totalCost = price * qty + fee;
+                    hold.qty += qty;
+                    hold.totalCost += totalCost;
+                    hold.avgCost = hold.qty > 0 ? hold.totalCost / hold.qty : 0;
+                }
+
+                if (tx.type === "SELL") {
+                    const sellQty = Math.min(qty, hold.qty);
+
+                    if (sellQty <= 0) return;
+
+                    hold.qty -= sellQty;
+                    hold.totalCost = hold.qty * hold.avgCost;
+
+                    if (hold.qty <= 0) {
+                        hold.qty = 0;
+                        hold.totalCost = 0;
+                        hold.avgCost = 0;
+                    }
+                }
+            });
+
+            return holdings;
+        }
+
+        function getOwnedQuantityBeforeTx(symbol, date, excludeTxId = null) {
+            const sym = String(symbol || "").toUpperCase();
+            const holdings = buildHoldingsBeforeDate(date, excludeTxId);
+            return Number(holdings[sym]?.qty) || 0;
+        }
 
         /* =========================
            交易 CRUD
@@ -2348,6 +2462,28 @@ function signedMoney(value) {
                 taxVal = Number(document.getElementById("tax").value) || 0;
             }
 
+            /*
+                資料正確性防呆：
+                賣出股票時，不能超過該日期以前已持有股數。
+                編輯舊交易時，會排除目前正在編輯的這筆交易，避免自己影響自己。
+            */
+            if (type === "SELL") {
+                const ownedQty = getOwnedQuantityBeforeTx(finalSymbol, dateInput, editingId || null);
+
+                if (ownedQty <= 0) {
+                    showToast(`無法賣出 ${finalSymbol}，截至 ${toSlashDate(dateInput)} 尚無持股。`, "error");
+                    return;
+                }
+
+                if (qtyVal > ownedQty) {
+                    showToast(
+                        `持股不足：${finalSymbol} 截至 ${toSlashDate(dateInput)} 僅持有 ${ownedQty.toLocaleString("zh-TW")} 股，不能賣出 ${qtyVal.toLocaleString("zh-TW")} 股。`,
+                        "error"
+                    );
+                    return;
+                }
+            }
+
             const tx = {
                 id: editingId || undefined,
                 type,
@@ -2361,6 +2497,7 @@ function signedMoney(value) {
                 assetType,
                 tradeMode
             };
+
 
             if (editingId) {
                 await updateTransaction(tx);
@@ -2403,21 +2540,51 @@ function signedMoney(value) {
                     holdings[tx.symbol].qty += quantity;
                     holdings[tx.symbol].totalCost += totalCost;
                     holdings[tx.symbol].avgCost = holdings[tx.symbol].qty > 0 ? holdings[tx.symbol].totalCost / holdings[tx.symbol].qty : 0;
-                } else if (tx.type === "SELL") {
-                    const totalRevenue = price * quantity - fee - tax;
-                    cash += totalRevenue;
-
+                               } else if (tx.type === "SELL") {
                     const hold = holdings[tx.symbol];
 
-                    if (hold && hold.qty > 0) {
-                        const sellQty = Math.min(quantity, hold.qty);
-                        const realized = totalRevenue - sellQty * hold.avgCost;
-                        totalRealizedPnl += realized;
+                    /*
+                        安全修正：
+                        如果沒有持股，或賣出超過持股，不能把整筆賣出收入直接灌進現金。
+                        這可以避免舊資料錯誤造成現金被憑空增加。
+                    */
+                    if (!hold || hold.qty <= 0) {
+                        console.warn("忽略無持股賣出交易：", tx);
+                        return;
+                    }
 
-                        hold.qty -= sellQty;
-                        hold.totalCost = hold.qty * hold.avgCost;
+                    const sellQty = Math.min(quantity, hold.qty);
+
+                    if (sellQty <= 0) {
+                        console.warn("忽略無效賣出股數：", tx);
+                        return;
+                    }
+
+                    if (quantity > hold.qty) {
+                        console.warn(`賣出股數超過持股，僅以可賣股數 ${sellQty} 股計算：`, tx);
+                    }
+
+                    const grossRevenue = price * sellQty;
+                    const feeRatio = quantity > 0 ? sellQty / quantity : 1;
+                    const adjustedFee = fee * feeRatio;
+                    const adjustedTax = tax * feeRatio;
+                    const totalRevenue = grossRevenue - adjustedFee - adjustedTax;
+
+                    cash += totalRevenue;
+
+                    const realized = totalRevenue - sellQty * hold.avgCost;
+                    totalRealizedPnl += realized;
+
+                    hold.qty -= sellQty;
+                    hold.totalCost = hold.qty * hold.avgCost;
+
+                    if (hold.qty <= 0) {
+                        hold.qty = 0;
+                        hold.totalCost = 0;
+                        hold.avgCost = 0;
                     }
                 }
+
             });
 
             let totalUnrealizedPnl = 0;
@@ -2489,15 +2656,35 @@ function signedMoney(value) {
                     holdings[tx.symbol].qty += quantity;
                     holdings[tx.symbol].totalCost += totalCost;
                     holdings[tx.symbol].avgCost = holdings[tx.symbol].qty > 0 ? holdings[tx.symbol].totalCost / holdings[tx.symbol].qty : 0;
-                } else if (tx.type === "SELL") {
-                    const totalRevenue = price * quantity - fee - tax;
-                    cash += totalRevenue;
+                               } else if (tx.type === "SELL") {
                     const hold = holdings[tx.symbol];
-                    if (hold && hold.qty > 0) {
-                        hold.qty -= Math.min(quantity, hold.qty);
-                        hold.totalCost = hold.qty * hold.avgCost;
+
+                    if (!hold || hold.qty <= 0) {
+                        console.warn("歷史資產計算忽略無持股賣出交易：", tx);
+                        return;
+                    }
+
+                    const sellQty = Math.min(quantity, hold.qty);
+
+                    if (sellQty <= 0) return;
+
+                    const feeRatio = quantity > 0 ? sellQty / quantity : 1;
+                    const adjustedFee = fee * feeRatio;
+                    const adjustedTax = tax * feeRatio;
+                    const totalRevenue = price * sellQty - adjustedFee - adjustedTax;
+
+                    cash += totalRevenue;
+
+                    hold.qty -= sellQty;
+                    hold.totalCost = hold.qty * hold.avgCost;
+
+                    if (hold.qty <= 0) {
+                        hold.qty = 0;
+                        hold.totalCost = 0;
+                        hold.avgCost = 0;
                     }
                 }
+
             });
 
             Object.keys(holdings).forEach(sym => {
