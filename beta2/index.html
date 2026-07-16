@@ -875,6 +875,276 @@ body.light-mode .mini-alert-rose {
         border-radius: 22px !important;
     }
 }
+/* ================================
+   Light Mode Visibility Fix
+   淺色模式可讀性修正
+================================ */
+
+/* 淺色模式基本文字顏色 */
+body:not(.dark),
+body:not(.dark) * {
+  color-scheme: light;
+}
+
+/* 一般主要文字 */
+body:not(.dark) h1,
+body:not(.dark) h2,
+body:not(.dark) h3,
+body:not(.dark) h4,
+body:not(.dark) .title,
+body:not(.dark) .section-title,
+body:not(.dark) .card-title,
+body:not(.dark) .font-bold,
+body:not(.dark) .font-semibold {
+  color: #0f172a !important;
+}
+
+/* 次要文字，但不能太淡 */
+body:not(.dark) .text-muted,
+body:not(.dark) .text-secondary,
+body:not(.dark) .subtitle,
+body:not(.dark) .description,
+body:not(.dark) small,
+body:not(.dark) .small-text,
+body:not(.dark) .muted {
+  color: #475569 !important;
+}
+
+/* 表格標題，例如 日期、類型、標的、單價/股數 */
+body:not(.dark) table th,
+body:not(.dark) thead th,
+body:not(.dark) .table-header,
+body:not(.dark) .history-table th {
+  color: #334155 !important;
+  font-weight: 800 !important;
+}
+
+/* 表格內容 */
+body:not(.dark) table td,
+body:not(.dark) tbody td,
+body:not(.dark) .history-table td {
+  color: #0f172a !important;
+}
+
+/* 歷史紀錄裡的說明文字，例如公司名稱、手續費、交易稅 */
+body:not(.dark) table td small,
+body:not(.dark) table td .sub,
+body:not(.dark) table td .desc,
+body:not(.dark) table td .muted,
+body:not(.dark) .fee-text,
+body:not(.dark) .tax-text {
+  color: #475569 !important;
+  font-weight: 600;
+}
+
+/* 歷史紀錄的類型 badge：買入 */
+body:not(.dark) .badge-buy,
+body:not(.dark) .type-buy,
+body:not(.dark) .tag-buy {
+  color: #e11d48 !important;
+  background: #ffe4e6 !important;
+  border-color: #fda4af !important;
+  font-weight: 800 !important;
+}
+
+/* 歷史紀錄的類型 badge：賣出 */
+body:not(.dark) .badge-sell,
+body:not(.dark) .type-sell,
+body:not(.dark) .tag-sell {
+  color: #047857 !important;
+  background: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+  font-weight: 800 !important;
+}
+
+/* 歷史紀錄的類型 badge：入金 / 出金 */
+body:not(.dark) .badge-cash,
+body:not(.dark) .type-cash,
+body:not(.dark) .tag-cash,
+body:not(.dark) .type-deposit,
+body:not(.dark) .type-withdraw {
+  color: #b45309 !important;
+  background: #fef3c7 !important;
+  border-color: #fcd34d !important;
+  font-weight: 800 !important;
+}
+
+/* 設定頁面 / 備份頁面文字 */
+body:not(.dark) .settings,
+body:not(.dark) .settings *,
+body:not(.dark) .backup,
+body:not(.dark) .backup *,
+body:not(.dark) .danger-zone,
+body:not(.dark) .danger-zone * {
+  color: #0f172a;
+}
+
+/* 設定頁面內的說明小字 */
+body:not(.dark) .settings small,
+body:not(.dark) .settings .description,
+body:not(.dark) .backup small,
+body:not(.dark) .backup .description,
+body:not(.dark) .danger-zone small,
+body:not(.dark) .danger-zone .description {
+  color: #475569 !important;
+  font-weight: 600;
+}
+
+/* 危險區域標題與說明修正 */
+body:not(.dark) .danger-zone h1,
+body:not(.dark) .danger-zone h2,
+body:not(.dark) .danger-zone h3,
+body:not(.dark) .danger-zone .title {
+  color: #be123c !important;
+}
+
+body:not(.dark) .danger-zone p,
+body:not(.dark) .danger-zone span,
+body:not(.dark) .danger-zone small {
+  color: #881337 !important;
+}
+
+/* 庫存頁面文字 */
+body:not(.dark) .holdings,
+body:not(.dark) .holdings *,
+body:not(.dark) .portfolio,
+body:not(.dark) .portfolio *,
+body:not(.dark) .stock-list,
+body:not(.dark) .stock-list * {
+  color: #0f172a;
+}
+
+/* 庫存頁面公司名稱、成本、股數、說明文字 */
+body:not(.dark) .holdings small,
+body:not(.dark) .holdings .desc,
+body:not(.dark) .holdings .sub,
+body:not(.dark) .holdings .muted,
+body:not(.dark) .portfolio small,
+body:not(.dark) .portfolio .desc,
+body:not(.dark) .portfolio .sub,
+body:not(.dark) .portfolio .muted,
+body:not(.dark) .stock-list small,
+body:not(.dark) .stock-list .desc,
+body:not(.dark) .stock-list .sub,
+body:not(.dark) .stock-list .muted {
+  color: #475569 !important;
+  font-weight: 700;
+}
+
+/* 計算說明、庫存配置警示說明 */
+body:not(.dark) .note,
+body:not(.dark) .notice,
+body:not(.dark) .explanation,
+body:not(.dark) .help-box,
+body:not(.dark) .info-box {
+  color: #334155 !important;
+}
+
+body:not(.dark) .note *,
+body:not(.dark) .notice *,
+body:not(.dark) .explanation *,
+body:not(.dark) .help-box *,
+body:not(.dark) .info-box * {
+  color: #334155 !important;
+}
+
+/* 正報酬、負報酬顏色維持明顯 */
+body:not(.dark) .profit,
+body:not(.dark) .positive,
+body:not(.dark) .gain {
+  color: #e11d48 !important;
+  font-weight: 900 !important;
+}
+
+body:not(.dark) .loss,
+body:not(.dark) .negative {
+  color: #047857 !important;
+  font-weight: 900 !important;
+}
+
+/* 現金 / 股息 / 輔助數字 */
+body:not(.dark) .cash-text {
+  color: #2563eb !important;
+  font-weight: 800;
+}
+
+body:not(.dark) .dividend-text {
+  color: #14b8a6 !important;
+  font-weight: 800;
+}
+
+/* 圓餅圖 / donut chart 黑框修正 */
+body:not(.dark) svg path,
+body:not(.dark) .pie-chart path,
+body:not(.dark) .donut-chart path {
+  stroke: #ffffff !important;
+  stroke-width: 2 !important;
+}
+
+/* 如果圓餅圖外框還是太黑，強制移除黑色線條 */
+body:not(.dark) svg path[stroke="#000"],
+body:not(.dark) svg path[stroke="black"],
+body:not(.dark) svg path[stroke="#000000"] {
+  stroke: #ffffff !important;
+}
+
+/* 圓餅圖圖例文字 */
+body:not(.dark) .chart-legend,
+body:not(.dark) .chart-legend *,
+body:not(.dark) .legend,
+body:not(.dark) .legend *,
+body:not(.dark) .pie-legend,
+body:not(.dark) .pie-legend * {
+  color: #334155 !important;
+  font-weight: 800 !important;
+}
+
+/* 圖表區塊標題 */
+body:not(.dark) .chart-title,
+body:not(.dark) .chart-card h2,
+body:not(.dark) .chart-card h3 {
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+
+/* 配置比例文字 */
+body:not(.dark) .allocation,
+body:not(.dark) .allocation *,
+body:not(.dark) .allocation-list,
+body:not(.dark) .allocation-list * {
+  color: #0f172a;
+}
+
+/* 配置比例的股票名稱 */
+body:not(.dark) .allocation .name,
+body:not(.dark) .allocation-list .name,
+body:not(.dark) .allocation-label {
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+
+/* 配置比例百分比 */
+body:not(.dark) .allocation .percent,
+body:not(.dark) .allocation-list .percent,
+body:not(.dark) .allocation-percent {
+  color: #0f172a !important;
+  font-weight: 900 !important;
+}
+
+/* 淺色模式卡片邊框更柔和 */
+body:not(.dark) .card,
+body:not(.dark) .panel,
+body:not(.dark) .box {
+  border-color: #cbd5e1 !important;
+}
+
+/* 禁用按鈕文字不要純白看不到 */
+body:not(.dark) button:disabled,
+body:not(.dark) .disabled {
+  color: #64748b !important;
+  background: #e2e8f0 !important;
+  opacity: 1 !important;
+}
 
     </style>
 </head>
