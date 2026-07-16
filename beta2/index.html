@@ -614,6 +614,31 @@ body.light-mode .mini-alert-rose {
         border-radius: 10px;
     }
 }
+/* === Prevent money text wrapping === */
+.privacy-amount,
+.mobile-holding-main-value,
+.mobile-holding-sub-value,
+.holding-price-input {
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+}
+/* === Summary small card money responsive === */
+.summary-small-money {
+    display: block;
+    white-space: nowrap !important;
+    word-break: keep-all !important;
+    overflow: hidden;
+    text-overflow: clip;
+    letter-spacing: -0.03em;
+}
+
+/* 手機三欄小卡：數字較長時用較小字 */
+@media (max-width: 768px) {
+    .summary-small-money {
+        font-size: clamp(13px, 4.2vw, 18px) !important;
+        line-height: 1.15 !important;
+    }
+}
 
     </style>
 </head>
@@ -722,15 +747,18 @@ body.light-mode .mini-alert-rose {
                 <div class="relative z-10 grid grid-cols-3 gap-3 mt-4">
                     <div class="soft-panel rounded-3xl p-4">
                         <p class="text-[11px] muted font-black">未實現損益</p>
-                        <p id="totalUnrealizedPnl" class="privacy-amount text-base md:text-xl font-black mt-1">$ 0</p>
+                        <p id="totalUnrealizedPnl" class="summary-small-money privacy-amount text-base md:text-xl font-black mt-1">$0</p>
+
                     </div>
                     <div class="soft-panel rounded-3xl p-4">
                         <p class="text-[11px] muted font-black">已實現損益</p>
-                        <p id="totalRealizedPnl" class="privacy-amount text-base md:text-xl font-black mt-1">$ 0</p>
+                        <p id="totalRealizedPnl" class="summary-small-money privacy-amount text-base md:text-xl font-black mt-1">$0</p>
+
                     </div>
                     <div class="soft-panel rounded-3xl p-4">
                         <p class="text-[11px] muted font-black">累積股息</p>
-                        <p id="totalDividends" class="privacy-amount text-base md:text-xl font-black mt-1 text-teal-300">$ 0</p>
+                        <p id="totalDividends" class="summary-small-money privacy-amount text-base md:text-xl font-black mt-1 text-teal-300">$0</p>
+
                     </div>
                 </div>
             </div>
@@ -1153,11 +1181,11 @@ body.light-mode .mini-alert-rose {
             }[c]));
         }
 
-        function money(value, digits = 0) {
-            return "$ " + (Number(value) || 0).toLocaleString("zh-TW", {
-                maximumFractionDigits: digits
-            });
-        }
+function money(value, digits = 0) {
+    return "$" + (Number(value) || 0).toLocaleString("zh-TW", {
+        maximumFractionDigits: digits
+    });
+}
 
         function signedMoney(value) {
             const v = Number(value) || 0;
@@ -2311,7 +2339,7 @@ function getCashAlertHtml(portfolio) {
 
     return getMiniAlertHtml(
         "cash",
-        `現金比例 ${cashRatio.toFixed(1)}%，高於 50%`
+        `現金比例高於 50%`
     );
 }
 
@@ -2321,21 +2349,21 @@ function getHoldingAlertHtml(row, holdingRatio) {
     if (holdingRatio > 30) {
         html += getMiniAlertHtml(
             "concentration",
-            `佔比 ${holdingRatio.toFixed(1)}%，高於 30%`
+            `佔比 ${holdingRatio.toFixed(1)}%，> 30%`
         );
     }
 
     if (row.percent < -15) {
         html += getMiniAlertHtml(
             "stopLoss",
-            `虧損 ${Math.abs(row.percent).toFixed(1)}%，超過 15%`
+            `虧損 ${Math.abs(row.percent).toFixed(1)}%，> 15%`
         );
     }
 
     if (row.percent > 50) {
         html += getMiniAlertHtml(
             "takeProfit",
-            `獲利 ${row.percent.toFixed(1)}%，超過 50%`
+            `獲利 ${row.percent.toFixed(1)}%，> 50%`
         );
     }
 
@@ -2488,7 +2516,7 @@ p.holdingRows.forEach((row, index) => {
                    <div class="text-xs text-blue-300 font-black mt-1">
     ${ratioText}
 </div>
-${holdingRatio > 30 ? getMiniAlertHtml("concentration", `佔比高於 30%`) : ""}
+${holdingRatio > 30 ? getMiniAlertHtml("concentration", `佔比> 30%`) : ""}
 
                 </td>
 
@@ -2499,8 +2527,8 @@ ${holdingRatio > 30 ? getMiniAlertHtml("concentration", `佔比高於 30%`) : ""
 <div class="${pnlClass} text-xs font-black mt-1">
     ${returnText}
 </div>
-${row.percent < -15 ? getMiniAlertHtml("stopLoss", `虧損超過 15%`) : ""}
-${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利超過 50%`) : ""}
+${row.percent < -15 ? getMiniAlertHtml("stopLoss", `虧損> 15%`) : ""}
+${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利> 50%`) : ""}
 
                 </td>
 
@@ -2553,7 +2581,7 @@ ${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利超過 50%`) : ""}
     </div>
 
     <div class="mobile-alert-under">
-        ${holdingRatio > 30 ? getMiniAlertHtml("concentration", `佔比高於 30%`) : ""}
+        ${holdingRatio > 30 ? getMiniAlertHtml("concentration", `佔比> 30%`) : ""}
     </div>
 </div>
 
@@ -2571,8 +2599,8 @@ ${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利超過 50%`) : ""}
     </div>
 
     <div class="mobile-alert-under">
-        ${row.percent < -15 ? getMiniAlertHtml("stopLoss", `虧損超過 15%`) : ""}
-        ${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利超過 50%`) : ""}
+        ${row.percent < -15 ? getMiniAlertHtml("stopLoss", `虧損> 15%`) : ""}
+        ${row.percent > 50 ? getMiniAlertHtml("takeProfit", `獲利> 50%`) : ""}
     </div>
 </div>
 
