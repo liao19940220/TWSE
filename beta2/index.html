@@ -2895,7 +2895,7 @@ function getTxFingerprint(tx) {
                         這可以避免舊資料錯誤造成現金被憑空增加。
                     */
                     if (!hold || hold.qty <= 0) {
-                        console.warn("忽略無持股賣出交易：", tx);
+                       // console.warn("忽略無持股賣出交易：", tx);
                         return;
                     }
 
