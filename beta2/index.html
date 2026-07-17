@@ -909,13 +909,6 @@ body.light-mode .mini-alert-rose {
         min-width: 96px !important;
     }
 
-    .benchmark-control {
-        display: grid !important;
-        grid-template-columns: auto 1fr auto;
-        align-items: center;
-        gap: 10px !important;
-        padding: 12px !important;
-    }
 
     .benchmark-control label {
         grid-column: 1 / -1;
@@ -964,6 +957,104 @@ body.light-mode .mini-alert-rose {
 @media (max-width: 768px) {
     .asset-chart-box {
         height: 320px !important;
+    }
+}
+/* === Benchmark control polish === */
+
+
+.benchmark-toggle input {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    border-radius: 5px !important;
+    accent-color: #3b82f6;
+}
+
+
+
+/* 淺色模式 */
+body.light-mode .benchmark-control {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(241, 245, 249, 0.86));
+    border-color: rgba(148, 163, 184, 0.5);
+}
+
+body.light-mode .benchmark-percent-wrap {
+    background: rgba(248, 250, 252, 0.88);
+    border-color: rgba(148, 163, 184, 0.45);
+}
+
+/* 手機版 */
+@media (max-width: 768px) {
+
+    
+ 
+}
+/* === Benchmark simple one-line control === */
+.benchmark-control-simple {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.58);
+    border: 1px solid rgba(71, 85, 105, 0.68);
+}
+
+.benchmark-simple-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 900;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.benchmark-simple-label input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    border-radius: 5px !important;
+    accent-color: #3b82f6;
+}
+
+.benchmark-simple-input {
+    width: 64px !important;
+    min-width: 64px !important;
+    height: 34px;
+    padding: 0 8px !important;
+    text-align: center !important;
+    font-size: 15px !important;
+    font-weight: 900 !important;
+    border-radius: 13px !important;
+}
+
+/* 淺色模式 */
+body.light-mode .benchmark-control-simple {
+    background: rgba(248, 250, 252, 0.82);
+    border-color: rgba(148, 163, 184, 0.5);
+}
+
+/* 手機版 */
+@media (max-width: 768px) {
+    .benchmark-control-simple {
+        padding: 10px 12px;
+        border-radius: 18px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .benchmark-simple-label {
+        font-size: 12px;
+        gap: 7px;
+    }
+
+    .benchmark-simple-input {
+        width: 62px !important;
+        min-width: 62px !important;
+        height: 34px;
+        font-size: 15px !important;
     }
 }
 
@@ -1184,22 +1275,16 @@ body.light-mode .mini-alert-rose {
 <div class="soft-panel rounded-3xl p-4 space-y-4">
 
     <!-- 對照比例基準線 -->
-   <div class="benchmark-control flex flex-wrap items-center gap-2 rounded-2xl bg-slate-950/30 border border-slate-700/60 px-3 py-3">
+<div class="benchmark-control-simple">
+    <label class="benchmark-simple-label">
+        <input
+            id="benchmarkLineToggle"
+            type="checkbox"
+            checked
+            onchange="renderChart()"
+        >
 
-        <label class="inline-flex items-center gap-2 text-xs md:text-sm font-black muted cursor-pointer">
-            <input
-                id="benchmarkLineToggle"
-                type="checkbox"
-                checked
-                onchange="renderChart()"
-                class="w-4 h-4"
-            >
-            顯示對照比例基準線
-        </label>
-
-        <span class="text-xs md:text-sm muted font-bold">
-            區間最大資產 ×
-        </span>
+        <span>最大資產 ×</span>
 
         <input
             id="benchmarkLinePercent"
@@ -1210,11 +1295,14 @@ body.light-mode .mini-alert-rose {
             value="85"
             onchange="renderChart()"
             oninput="renderChart()"
-            class="w-20 px-3 py-2 text-xs font-black text-center"
+            class="benchmark-simple-input"
         >
 
-        <span class="text-xs md:text-sm muted font-bold">%</span>
-    </div>
+        <span>%</span>
+    </label>
+</div>
+
+
 
 <div class="asset-chart-box relative w-full h-[300px] md:h-[420px]">
     <canvas id="assetChart"></canvas>
@@ -3871,7 +3959,8 @@ const benchmarkData = labels.map(() => benchmarkValue);
     ...(showBenchmarkLine && benchmarkValue > 0 ? [{
        label: window.innerWidth <= 768
     ? `對照組 ${benchmarkPercent}%`
-    : `對照組 (${benchmarkPercent}% of 區間最高額: ${money(benchmarkValue)})`,
+    : `對照組：最大資產 × ${benchmarkPercent}% (${money(benchmarkValue)})`,
+
 
         data: benchmarkData,
         borderColor: "#ef4444",
