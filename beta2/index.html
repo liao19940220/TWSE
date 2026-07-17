@@ -3308,7 +3308,7 @@ function getTxFingerprint(tx) {
                     沒有持股就忽略，避免歷史錯誤資料讓現金被憑空增加。
                 */
                 if (!hold || hold.qty <= 0) {
-                    console.warn("快速時間軸忽略無持股賣出交易：", tx);
+                   // console.warn("快速時間軸忽略無持股賣出交易：", tx);
                     return;
                 }
 
