@@ -2835,7 +2835,13 @@ function showToast(message, type = "info") {
 
             if (status) status.innerText = "註冊中...";
 
-            const { error } = await supabaseClient.auth.signUp({ email, password });
+           const { error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+        emailRedirectTo: window.location.origin
+    }
+});
 
             if (error) {
                 if (status) status.innerText = "";
