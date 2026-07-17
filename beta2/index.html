@@ -1330,46 +1330,221 @@ body.light-mode .history-date-plain {
 .history-date-plain:focus {
     color: var(--blue) !important;
 }
+   /* === App top header layout === */
+.app-top-header {
+    width: 100%;
+    min-height: 86px;
+    padding: 18px 18px;
+    border-radius: 28px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid var(--border-main);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.app-header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.app-logo-plain {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: auto !important;
+    height: auto !important;
+    min-width: 0 !important;
+
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+
+    font-size: 15px;
+    line-height: 1;
+    transform: translateY(-1px);
+}
+
+.app-header-title-block {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.app-header-title {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 20px;
+    line-height: 1.15;
+    font-weight: 950;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-header-subtitle {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 右上角月亮按鈕 */
+.app-theme-btn {
+    flex: 0 0 auto;
+    width: 50px;
+    height: 50px;
+    border-radius: 20px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(51, 65, 85, 0.78);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    color: var(--text-main);
+    font-size: 18px;
+    font-weight: 900;
+    box-shadow: none;
+    cursor: pointer;
+
+    transition: transform 0.16s ease, background 0.16s ease;
+}
+
+.app-theme-btn:active {
+    transform: scale(0.96);
+}
+
+/* 淨資產標題與鎖頭 */
+.net-asset-title-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.privacy-mini-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 14px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(30, 41, 59, 0.82);
+    border: 1px solid rgba(71, 85, 105, 0.78);
+    color: var(--amber);
+    font-size: 13px;
+    font-weight: 900;
+    box-shadow: none;
+    cursor: pointer;
+
+    transition: transform 0.16s ease, background 0.16s ease;
+}
+
+.privacy-mini-btn:active {
+    transform: scale(0.95);
+}
+
+/* 淺色模式 */
+body.light-mode .app-top-header {
+    background: rgba(255, 255, 255, 0.88);
+    border-color: rgba(148, 163, 184, 0.5);
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+}
+
+body.light-mode .app-theme-btn {
+    background: rgba(241, 245, 249, 0.92);
+    border-color: rgba(148, 163, 184, 0.32);
+}
+
+body.light-mode .privacy-mini-btn {
+    background: rgba(241, 245, 249, 0.88);
+    border-color: rgba(148, 163, 184, 0.42);
+}
+
+/* 手機版 */
+@media (max-width: 768px) {
+    .app-top-header {
+        min-height: 88px;
+        padding: 18px 18px;
+        border-radius: 28px;
+    }
+
+    .app-header-title-row {
+        gap: 9px;
+    }
+
+    .app-logo-plain {
+        font-size: 14px;
+    }
+
+    .app-header-title {
+        font-size: 20px;
+    }
+
+    .app-header-subtitle {
+        display: none;
+    }
+
+    .app-theme-btn {
+        width: 50px;
+        height: 50px;
+        border-radius: 20px;
+        font-size: 18px;
+    }
+
+    .privacy-mini-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 14px;
+        font-size: 13px;
+    }
+}
+
     </style>
 </head>
 
 <body>
     <div id="appPanel" class="app-shell mx-auto px-3 pt-4 md:pt-8 space-y-4 md:space-y-6">
 
-        <!-- Header -->
-        <header class="glass-panel rounded-[28px] px-4 py-4 md:px-6 md:py-5 flex items-center justify-between">
-            <div class="flex items-center gap-3 min-w-0">
-<div class="app-logo-plain">💰</div>
 
-                <div class="min-w-0">
-                    <h1 class="text-lg md:text-2xl font-black tracking-tight truncate">股票資產管理</h1>
-                    <p id="loginUserText" class="text-[11px] md:text-xs muted font-bold mt-0.5 truncate">本地模式</p>
-                </div>
-            </div>
+<!-- Header -->
+<header class="app-top-header">
+    <div class="app-header-title-row">
+        <span class="app-logo-plain">💰</span>
 
-            <div class="flex items-center gap-2">
-    <!-- 深色 / 淺色模式切換 -->
+        <div class="app-header-title-block">
+            <h1 class="app-header-title">股票資產管理</h1>
+            <p id="loginUserText" class="app-header-subtitle">本地模式</p>
+        </div>
+    </div>
+
     <button 
         id="themeToggleBtn" 
         onclick="toggleThemeMode()" 
-        class="w-10 h-10 rounded-2xl soft-panel flex items-center justify-center hover:bg-slate-700 transition" 
+        class="app-theme-btn" 
         title="切換深色 / 淺色模式"
     >
         <span id="themeModeIcon">🌙</span>
     </button>
+</header>
 
-    <!-- 金額隱私模式切換 -->
-    <button 
-        id="privacyToggleBtn" 
-        onclick="togglePrivacyMode()" 
-        class="w-10 h-10 rounded-2xl soft-panel flex items-center justify-center hover:bg-slate-700 transition" 
-        title="切換金額顯示"
-    >
-        <span id="privacyEyeIcon">🔒</span>
-    </button>
-</div>
-
-        </header>
 
         <!-- Navigation -->
         <div id="bottomNavWrap" class="flex justify-center">
@@ -1391,8 +1566,14 @@ body.light-mode .history-date-plain {
 
                 <div class="relative z-10 grid grid-cols-1 md:grid-cols-12 gap-4">
                     <div class="md:col-span-7">
-                        <p class="text-xs muted font-black tracking-widest uppercase">淨資產</p>
-                        <h2 id="netAssetVal" class="privacy-amount text-4xl md:text-6xl font-black tracking-tight mt-2">$ 0</h2>
+                       <div class="net-asset-title-row">
+    <p class="text-xs muted font-black tracking-widest uppercase">淨資產</p>
+
+    
+</div>
+
+<h2 id="netAssetVal" class="privacy-amount text-4xl md:text-6xl font-black tracking-tight mt-2">$ 0</h2>
+
                         <div class="flex items-center gap-2 mt-3">
                             <span id="storageModeBadge" class="status-pill rounded-full px-3 py-1 text-[11px] font-black text-blue-300">本地儲存</span>
                             <span id="apiStatus" class="text-[11px] muted font-bold">尚未更新價格</span>
