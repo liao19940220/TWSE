@@ -1637,12 +1637,16 @@ body.light-mode .privacy-mini-btn {
         word-break: keep-all !important;
     }
 
-    .asset-status-line {
-        margin-top: 14px;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: wrap;
-    }
+   .asset-status-line {
+    margin-top: 14px;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+}
+
 
     .asset-api-status {
     white-space: nowrap !important;
@@ -1660,6 +1664,270 @@ body.light-mode .privacy-mini-btn {
         border-radius: 13px;
         font-size: 12px;
     }
+}
+/* === Excel import rules modal === */
+.excel-rules-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+}
+
+.excel-rules-modal.hidden {
+    display: none;
+}
+
+.excel-rules-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+.excel-rules-card {
+    position: relative;
+    width: min(564px, 100%);
+    max-height: min(86vh, 720px);
+    overflow: hidden;
+    border-radius: 18px;
+    background: #f8fafc;
+    color: #172033;
+    box-shadow: 0 30px 90px rgba(15, 23, 42, 0.28);
+    animation: excelRulesPop 0.18s ease-out;
+}
+
+@keyframes excelRulesPop {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.excel-rules-header {
+    height: 68px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+}
+
+.excel-rules-title {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.2;
+    font-weight: 950;
+    color: #0f172a;
+}
+
+.excel-rules-close {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 28px;
+    line-height: 1;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.excel-rules-close:hover {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.excel-rules-body {
+    padding: 16px 20px 18px;
+    background: #f8fafc;
+    overflow-y: auto;
+    max-height: calc(86vh - 140px);
+}
+
+.excel-rules-note {
+    margin: 0 0 14px;
+    color: #334155;
+    font-size: 13px;
+    line-height: 1.55;
+    font-weight: 850;
+}
+
+.excel-rules-table-wrap {
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #ffffff;
+}
+
+.excel-rules-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 13px;
+}
+
+.excel-rules-table th {
+    padding: 9px 10px;
+    text-align: left;
+    background: #f1f5f9;
+    color: #64748b;
+    font-weight: 950;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.excel-rules-table td {
+    padding: 9px 10px;
+    color: #334155;
+    font-weight: 700;
+    vertical-align: middle;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.excel-rules-table tr:last-child td {
+    border-bottom: 0;
+}
+
+.excel-rules-table th:nth-child(1),
+.excel-rules-table td:nth-child(1) {
+    width: 21%;
+    color: #1e293b;
+    font-weight: 950;
+}
+
+.excel-rules-table th:nth-child(2),
+.excel-rules-table td:nth-child(2) {
+    width: 31%;
+}
+
+.excel-rules-table th:nth-child(3),
+.excel-rules-table td:nth-child(3) {
+    width: 48%;
+}
+
+.excel-rule-list {
+    margin: 0;
+    padding-left: 14px;
+    line-height: 1.35;
+}
+
+.rule-blue {
+    color: #2563eb;
+    font-weight: 950;
+}
+
+.rule-red {
+    color: #ef4444;
+    font-weight: 950;
+}
+
+.excel-rules-footer {
+    height: 64px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    background: #f8fafc;
+    border-top: 1px solid rgba(226, 232, 240, 0.85);
+}
+
+.excel-rules-confirm {
+    min-width: 96px;
+    height: 36px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 8px;
+    background: #2563eb;
+    color: white;
+    font-size: 14px;
+    font-weight: 950;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.28);
+}
+
+.excel-rules-confirm:hover {
+    background: #1d4ed8;
+}
+
+/* 手機版 */
+@media (max-width: 640px) {
+    .excel-rules-modal {
+        padding: 12px;
+        align-items: center;
+    }
+
+    .excel-rules-card {
+        border-radius: 18px;
+        width: 100%;
+        max-height: 88vh;
+    }
+
+    .excel-rules-header {
+        height: 62px;
+        padding: 0 16px;
+    }
+
+    .excel-rules-title {
+        font-size: 15px;
+    }
+
+    .excel-rules-body {
+        padding: 14px;
+        max-height: calc(88vh - 126px);
+    }
+
+    .excel-rules-note {
+        font-size: 12px;
+    }
+
+    .excel-rules-table {
+        font-size: 12px;
+    }
+
+    .excel-rules-table th,
+    .excel-rules-table td {
+        padding: 8px 7px;
+    }
+
+    .excel-rules-footer {
+        height: 60px;
+        padding: 10px 14px;
+    }
+
+    .excel-rules-confirm {
+        width: 100%;
+        height: 38px;
+    }
+}
+/* === Force asset status one line final override === */
+.asset-status-line {
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+}
+
+.asset-status-line > * {
+    flex: 0 0 auto !important;
+}
+
+.asset-api-status {
+    white-space: nowrap !important;
+    max-width: none !important;
+}
+
+#storageModeBadge {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
 }
 
     </style>
@@ -2122,6 +2390,87 @@ body.light-mode .privacy-mini-btn {
             </div>
         </section>
     </div>
+<!-- Excel 匯入規則 Modal -->
+<div id="excelImportRulesModal" class="excel-rules-modal hidden">
+    <div class="excel-rules-backdrop" onclick="closeExcelImportRulesModal()"></div>
+
+    <div class="excel-rules-card">
+        <div class="excel-rules-header">
+            <h3 class="excel-rules-title">📊 Excel 編輯與匯入規則說明</h3>
+            <button type="button" class="excel-rules-close" onclick="closeExcelImportRulesModal()">×</button>
+        </div>
+
+        <div class="excel-rules-body">
+            <p class="excel-rules-note">
+                💡 當您匯出 Excel 備份後，可直接手動增加或編輯紀錄再匯入，請遵守以下工作表規則：
+            </p>
+
+            <div class="excel-rules-table-wrap">
+                <table class="excel-rules-table">
+                    <thead>
+                        <tr>
+                            <th>欄位名稱</th>
+                            <th>格式範例</th>
+                            <th>說明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>ID</td>
+                            <td><span class="rule-blue">留空</span></td>
+                            <td>手動填寫時請「留空」。</td>
+                        </tr>
+                        <tr>
+                            <td>日期</td>
+                            <td>2026-07-10</td>
+                            <td>固定格式為 <strong>YYYY-MM-DD</strong>。</td>
+                        </tr>
+                        <tr>
+                            <td>類型</td>
+                            <td><span class="rule-red">BUY/SELL/DIVIDEND</span></td>
+                            <td>
+                                <ul class="excel-rule-list">
+                                    <li><strong>BUY</strong>（買入）/ <strong>SELL</strong>（賣出）</li>
+                                    <li><strong>DEPOSIT</strong>（入金）/ <strong>WITHDRAW</strong>（出金）</li>
+                                    <li><strong>DIVIDEND</strong>（收到配息）</li>
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>股票代號</td>
+                            <td>2330 / CASH</td>
+                            <td>出金 / 入金請填寫 <strong>CASH</strong>。</td>
+                        </tr>
+                        <tr>
+                            <td>單價_金額</td>
+                            <td>851.12</td>
+                            <td>入金、出金、配息填寫實際發生的 <span class="rule-red">總金額</span>。</td>
+                        </tr>
+                        <tr>
+                            <td>數量</td>
+                            <td>1000</td>
+                            <td>入金、出金、配息請填寫 <strong>1</strong>。</td>
+                        </tr>
+                        <tr>
+                            <td>商品類型</td>
+                            <td>STOCK / ETF</td>
+                            <td>股票請填 <strong>STOCK</strong>，ETF 請填 <strong>ETF</strong>。</td>
+                        </tr>
+                        <tr>
+                            <td>交易模式</td>
+                            <td>NORMAL / DAY_TRADE</td>
+                            <td>一般交易填 <strong>NORMAL</strong>，當沖填 <strong>DAY_TRADE</strong>。</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="excel-rules-footer">
+            <button type="button" class="excel-rules-confirm" onclick="closeExcelImportRulesModal()">我知道了</button>
+        </div>
+    </div>
+</div>
 
     <!-- FAB -->
     <button id="fabAddTxBtn" onclick="openActionModal()" aria-label="新增交易"
@@ -5231,16 +5580,25 @@ function toggleThemeMode() {
         }
 
         function alertExcelRules() {
-            alert([
-                "Excel 匯入規則：",
-                "1. 必須有「交易紀錄」工作表。",
-                "2. 日期格式：YYYY-MM-DD。",
-                "3. 類型：BUY / SELL / DEPOSIT / WITHDRAW / DIVIDEND。",
-                "4. 出入金股票代號可填 CASH。",
-                "5. 商品類型：STOCK / ETF。",
-                "6. 交易模式：NORMAL / DAY_TRADE。"
-            ].join("\\n"));
-        }
+    openExcelImportRulesModal();
+}
+
+function openExcelImportRulesModal() {
+    const modal = document.getElementById("excelImportRulesModal");
+    if (!modal) return;
+
+    modal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+}
+
+function closeExcelImportRulesModal() {
+    const modal = document.getElementById("excelImportRulesModal");
+    if (!modal) return;
+
+    modal.classList.add("hidden");
+    document.body.style.overflow = "";
+}
+
 
         /* =========================
            清除
@@ -5330,9 +5688,12 @@ window.renderChart = renderChart;
 
 
         window.exportData = exportData;
-        window.importData = importData;
-        window.alertExcelRules = alertExcelRules;
-        window.clearAllData = clearAllData;
+window.importData = importData;
+window.alertExcelRules = alertExcelRules;
+window.openExcelImportRulesModal = openExcelImportRulesModal;
+window.closeExcelImportRulesModal = closeExcelImportRulesModal;
+window.clearAllData = clearAllData;
+
 
 applyThemeMode();
 initDateDefaults();
