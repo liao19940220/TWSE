@@ -1091,11 +1091,44 @@ body.light-mode .mini-alert-rose {
                 </div>
             </div>
 
-            <div class="soft-panel rounded-3xl p-4">
-                <div class="relative w-full h-[260px] md:h-[420px]">
-                    <canvas id="assetChart"></canvas>
-                </div>
-            </div>
+<div class="soft-panel rounded-3xl p-4 space-y-4">
+
+    <!-- 對照比例基準線 -->
+    <div class="flex flex-wrap items-center gap-2 rounded-2xl bg-slate-950/30 border border-slate-700/60 px-3 py-3">
+        <label class="inline-flex items-center gap-2 text-xs md:text-sm font-black muted cursor-pointer">
+            <input
+                id="benchmarkLineToggle"
+                type="checkbox"
+                checked
+                onchange="renderChart()"
+                class="w-4 h-4"
+            >
+            顯示對照比例基準線
+        </label>
+
+        <span class="text-xs md:text-sm muted font-bold">
+            區間最大資產 ×
+        </span>
+
+        <input
+            id="benchmarkLinePercent"
+            type="number"
+            min="1"
+            max="100"
+            step="1"
+            value="85"
+            onchange="renderChart()"
+            oninput="renderChart()"
+            class="w-20 px-3 py-2 text-xs font-black text-center"
+        >
+
+        <span class="text-xs md:text-sm muted font-bold">%</span>
+    </div>
+
+    <div class="relative w-full h-[260px] md:h-[420px]">
+        <canvas id="assetChart"></canvas>
+    </div>
+</div>
 
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
                 <div class="soft-panel rounded-3xl p-4 md:col-span-5">
@@ -1116,15 +1149,24 @@ body.light-mode .mini-alert-rose {
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div>
                     <h2 class="text-lg md:text-xl font-black">歷史交易紀錄</h2>
-                    <p class="text-xs muted font-bold mt-1">可搜尋標的、調整日期範圍，並編輯 / 刪除紀錄。</p>
+                    <p class="text-xs muted font-bold mt-1">
+    預設顯示 5 天。可自行切換或自訂日期篩選。
+</p>
+
                 </div>
 
-                <div class="flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar">
-                    <input id="historySearch" oninput="renderHistory()" placeholder="搜尋" class="w-20 px-3 py-2 text-xs font-bold">
-                    <input id="historyStartDate" onchange="renderHistory()" placeholder="YYYY/MM/DD" class="w-28 px-3 py-2 text-xs font-bold">
-                    <span class="muted">~</span>
-                    <input id="historyEndDate" onchange="renderHistory()" placeholder="YYYY/MM/DD" class="w-28 px-3 py-2 text-xs font-bold">
-                </div>
+<div class="flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar">
+    <button onclick="changeHistoryScale('daily', this)" id="btn-history-scale-daily" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-active">日</button>
+    <button onclick="changeHistoryScale('weekly', this)" id="btn-history-scale-weekly" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive">周</button>
+    <button onclick="changeHistoryScale('monthly', this)" id="btn-history-scale-monthly" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive">月</button>
+    <button onclick="changeHistoryScale('yearly', this)" id="btn-history-scale-yearly" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive">年</button>
+
+    <input id="historySearch" oninput="renderHistory()" placeholder="搜尋..." class="w-24 px-3 py-2 text-xs font-bold">
+    <input id="historyStartDate" onchange="renderHistory()" placeholder="YYYY/MM/DD" class="w-28 px-3 py-2 text-xs font-bold">
+    <span class="muted">~</span>
+    <input id="historyEndDate" onchange="renderHistory()" placeholder="YYYY/MM/DD" class="w-28 px-3 py-2 text-xs font-bold">
+</div>
+
             </div>
 
             <div id="txHistoryTableDesktop" class="overflow-x-auto">
@@ -1382,8 +1424,10 @@ body.light-mode .mini-alert-rose {
         let activeTab = "main";
         
         let assetChartInstance = null;
-        let allocationChartInstance = null;
-        let currentChartScale = "daily";
+let allocationChartInstance = null;
+let currentChartScale = "daily";
+let currentHistoryScale = "daily";
+
 
         const todayStr = getTaiwanTodayString();
 
@@ -3518,6 +3562,45 @@ ${(row.percent < -15 || row.percent > 50) ? `
 
             return { typeText, badgeClass, changeValue };
         }
+function initDefaultHistoryRange(scale = currentHistoryScale) {
+    const today = new Date();
+    let start = new Date();
+
+    if (scale === "daily") {
+        // 預設顯示 5 天
+        start.setDate(today.getDate() - 5);
+    } else if (scale === "weekly") {
+        start.setDate(today.getDate() - 28);
+    } else if (scale === "monthly") {
+        start.setMonth(today.getMonth() - 1);
+    } else if (scale === "yearly") {
+        start.setFullYear(today.getFullYear() - 1);
+    }
+
+    const histStart = document.getElementById("historyStartDate");
+    const histEnd = document.getElementById("historyEndDate");
+
+    if (histStart) histStart.value = toSlashDate(start.toISOString().split("T")[0]);
+    if (histEnd) histEnd.value = toSlashDate(todayStr);
+}
+
+function changeHistoryScale(scale, btn) {
+    currentHistoryScale = scale;
+
+    ["daily", "weekly", "monthly", "yearly"].forEach(s => {
+        const el = document.getElementById(`btn-history-scale-${s}`);
+        if (el) {
+            el.className = "px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive";
+        }
+    });
+
+    if (btn) {
+        btn.className = "px-3 py-1.5 rounded-full text-xs font-black tab-btn-active";
+    }
+
+    initDefaultHistoryRange(scale);
+    renderHistory();
+}
 
         /* =========================
            Chart
@@ -3646,13 +3729,30 @@ ${(row.percent < -15 || row.percent > 50) ? `
             else if (currentChartScale === "monthly") dateTimeline = generateMonthlyDates(startDateObj, endDateObj);
             else if (currentChartScale === "yearly") dateTimeline = generateYearlyDates(startDateObj, endDateObj);
 
-                                   const plotData = calculateAssetTimelineFast(dateTimeline);
-            const labels = plotData.map(d => d.date);
-            const totalAssetData = plotData.map(d => d.totalAsset);
+const plotData = calculateAssetTimelineFast(dateTimeline);
+const labels = plotData.map(d => d.date);
+const totalAssetData = plotData.map(d => d.totalAsset);
 
-            if (!labels.length) {
-                return;
-            }
+if (!labels.length) {
+    return;
+}
+
+/* 對照比例基準線：區間最大資產 × 指定百分比 */
+const benchmarkToggle = document.getElementById("benchmarkLineToggle");
+const benchmarkPercentInput = document.getElementById("benchmarkLinePercent");
+
+const showBenchmarkLine = benchmarkToggle ? benchmarkToggle.checked : false;
+const benchmarkPercent = Math.min(
+    100,
+    Math.max(1, Number(benchmarkPercentInput?.value) || 85)
+);
+
+const maxAssetInRange = totalAssetData.length
+    ? Math.max(...totalAssetData.map(v => Number(v) || 0))
+    : 0;
+
+const benchmarkValue = maxAssetInRange * benchmarkPercent / 100;
+const benchmarkData = labels.map(() => benchmarkValue);
 
 
 
@@ -3664,16 +3764,30 @@ ${(row.percent < -15 || row.percent > 50) ? `
                 type: "line",
                 data: {
                     labels,
-                    datasets: [{
-                        label: "總資產",
-                        data: totalAssetData,
-                        borderColor: "#3b82f6",
-                        backgroundColor: "rgba(59, 130, 246, 0.12)",
-                        fill: true,
-                        borderWidth: 2,
-                        tension: 0.18,
-                        pointRadius: dateTimeline.length > 50 ? 0 : 2
-                    }]
+                   datasets: [
+    {
+        label: "總資產",
+        data: totalAssetData,
+        borderColor: "#3b82f6",
+        backgroundColor: "rgba(59, 130, 246, 0.12)",
+        fill: true,
+        borderWidth: 2,
+        tension: 0.18,
+        pointRadius: dateTimeline.length > 50 ? 0 : 2
+    },
+    ...(showBenchmarkLine && benchmarkValue > 0 ? [{
+        label: `對照組 (${benchmarkPercent}% of 區間最高額: ${money(benchmarkValue)})`,
+        data: benchmarkData,
+        borderColor: "#ef4444",
+        backgroundColor: "rgba(239, 68, 68, 0)",
+        borderWidth: 2,
+        borderDash: [6, 6],
+        pointRadius: 0,
+        fill: false,
+        tension: 0
+    }] : [])
+]
+
                 },
                 options: {
                     responsive: true,
@@ -4347,16 +4461,9 @@ function toggleThemeMode() {
                 dateEl.max = todayStr;
             }
 
-            const histStart = document.getElementById("historyStartDate");
-            const histEnd = document.getElementById("historyEndDate");
+           initDefaultHistoryRange(currentHistoryScale);
+initDefaultChartRange(currentChartScale);
 
-            const start = new Date();
-            start.setDate(start.getDate() - 5);
-
-            if (histStart) histStart.value = toSlashDate(start.toISOString().split("T")[0]);
-            if (histEnd) histEnd.value = toSlashDate(todayStr);
-
-            initDefaultChartRange(currentChartScale);
         }
 
         window.signUp = signUp;
@@ -4380,9 +4487,11 @@ window.autoFillTradeCosts = autoFillTradeCosts;
         window.updateCurrentPrice = updateCurrentPrice;
         window.fetchTwsePrices = fetchTwsePrices;
 
-        window.switchTab = switchTab;
-        window.changeChartScale = changeChartScale;
-        window.renderChart = renderChart;
+window.switchTab = switchTab;
+window.changeChartScale = changeChartScale;
+window.changeHistoryScale = changeHistoryScale;
+window.renderChart = renderChart;
+
 
         window.exportData = exportData;
         window.importData = importData;
