@@ -1552,16 +1552,32 @@ body.light-mode .privacy-mini-btn {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap !important;
     max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
+.asset-status-line::-webkit-scrollbar {
+    display: none;
+}
+
+.asset-status-line > * {
+    flex: 0 0 auto;
+}
+
 
 .asset-api-status {
     color: var(--text-muted);
     font-size: 11px;
     line-height: 1.4;
     font-weight: 900;
+    white-space: nowrap !important;
+    max-width: none !important;
 }
+
 
 /* 小鎖頭按鈕 */
 .privacy-mini-btn {
@@ -1629,10 +1645,13 @@ body.light-mode .privacy-mini-btn {
     }
 
     .asset-api-status {
-        max-width: 230px;
-        font-size: 11px;
-        line-height: 1.45;
-    }
+    white-space: nowrap !important;
+    max-width: none !important;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+
 
     .privacy-mini-btn {
         width: 32px;
