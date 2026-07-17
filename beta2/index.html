@@ -876,6 +876,76 @@ body.light-mode .mini-alert-rose {
     }
 }
 
+/* === Mobile filter rows fix === */
+@media (max-width: 768px) {
+    .filter-scroll-row {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .filter-scroll-row > * {
+        flex: 0 0 auto;
+    }
+
+    .filter-scroll-row input {
+        width: 118px !important;
+        min-width: 118px !important;
+        font-size: 13px !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .filter-scroll-row button {
+        min-width: 38px;
+        flex-shrink: 0;
+    }
+
+    .history-filter-row input#historySearch {
+        width: 96px !important;
+        min-width: 96px !important;
+    }
+
+    .benchmark-control {
+        display: grid !important;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 10px !important;
+        padding: 12px !important;
+    }
+
+    .benchmark-control label {
+        grid-column: 1 / -1;
+        font-size: 12px !important;
+        line-height: 1.3;
+    }
+
+    .benchmark-control span {
+        font-size: 12px !important;
+        white-space: nowrap;
+    }
+
+    .benchmark-control input[type="number"] {
+        width: 92px !important;
+        min-width: 92px !important;
+        text-align: center !important;
+        font-size: 16px !important;
+    }
+
+    .benchmark-control input[type="checkbox"] {
+        width: 16px !important;
+        min-width: 16px !important;
+        height: 16px !important;
+        border-radius: 4px !important;
+    }
+
+    #tab-chart .soft-panel .relative {
+        height: 300px !important;
+    }
+}
 
     </style>
 </head>
@@ -1080,7 +1150,7 @@ body.light-mode .mini-alert-rose {
                     <p class="text-xs muted font-bold mt-1">根據交易紀錄呈現精準資產變化。</p>
                 </div>
 
-                <div class="flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar">
+                <div class="filter-scroll-row flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar">
                     <button onclick="changeChartScale('daily', this)" id="btn-scale-daily" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-active">日</button>
                     <button onclick="changeChartScale('weekly', this)" id="btn-scale-weekly" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive">周</button>
                     <button onclick="changeChartScale('monthly', this)" id="btn-scale-monthly" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive">月</button>
@@ -1094,7 +1164,8 @@ body.light-mode .mini-alert-rose {
 <div class="soft-panel rounded-3xl p-4 space-y-4">
 
     <!-- 對照比例基準線 -->
-    <div class="flex flex-wrap items-center gap-2 rounded-2xl bg-slate-950/30 border border-slate-700/60 px-3 py-3">
+   <div class="benchmark-control flex flex-wrap items-center gap-2 rounded-2xl bg-slate-950/30 border border-slate-700/60 px-3 py-3">
+
         <label class="inline-flex items-center gap-2 text-xs md:text-sm font-black muted cursor-pointer">
             <input
                 id="benchmarkLineToggle"
@@ -1155,7 +1226,8 @@ body.light-mode .mini-alert-rose {
 
                 </div>
 
-<div class="flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar">
+<div class="filter-scroll-row history-filter-row flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar">
+
     <button onclick="changeHistoryScale('daily', this)" id="btn-history-scale-daily" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-active">日</button>
     <button onclick="changeHistoryScale('weekly', this)" id="btn-history-scale-weekly" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive">周</button>
     <button onclick="changeHistoryScale('monthly', this)" id="btn-history-scale-monthly" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive">月</button>
@@ -3776,7 +3848,10 @@ const benchmarkData = labels.map(() => benchmarkValue);
         pointRadius: dateTimeline.length > 50 ? 0 : 2
     },
     ...(showBenchmarkLine && benchmarkValue > 0 ? [{
-        label: `對照組 (${benchmarkPercent}% of 區間最高額: ${money(benchmarkValue)})`,
+       label: window.innerWidth <= 768
+    ? `對照組 ${benchmarkPercent}%`
+    : `對照組 (${benchmarkPercent}% of 區間最高額: ${money(benchmarkValue)})`,
+
         data: benchmarkData,
         borderColor: "#ef4444",
         backgroundColor: "rgba(239, 68, 68, 0)",
@@ -3809,9 +3884,16 @@ const benchmarkData = labels.map(() => benchmarkValue);
                             }
                         },
                         x: {
-                            grid: { display: false },
-                            ticks: { color: "#94a3b8", maxRotation: 0 }
-                        }
+    grid: { display: false },
+    ticks: {
+        color: "#94a3b8",
+        maxRotation: window.innerWidth <= 768 ? 45 : 0,
+        minRotation: window.innerWidth <= 768 ? 45 : 0,
+        autoSkip: true,
+        maxTicksLimit: window.innerWidth <= 768 ? 4 : 8
+    }
+}
+
                     }
                 }
             });
@@ -3863,11 +3945,19 @@ const benchmarkData = labels.map(() => benchmarkValue);
                     cutout: "72%",
                     plugins: {
                         legend: {
-                            labels: {
-                                color: "#cbd5e1",
-                                font: { size: 11, weight: "bold" }
-                            }
-                        }
+    position: window.innerWidth <= 768 ? "top" : "top",
+    align: "center",
+    labels: {
+        color: "#cbd5e1",
+        font: {
+            size: window.innerWidth <= 768 ? 10 : 11,
+            weight: "bold"
+        },
+        boxWidth: window.innerWidth <= 768 ? 28 : 40,
+        padding: window.innerWidth <= 768 ? 8 : 12
+    }
+}
+
                     }
                 }
             });
