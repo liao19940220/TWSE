@@ -991,25 +991,8 @@ body.light-mode .benchmark-percent-wrap {
  
 }
 /* === Benchmark simple one-line control === */
-.benchmark-control-simple {
-    display: flex;
-    align-items: center;
-    padding: 12px 14px;
-    border-radius: 18px;
-    background: rgba(15, 23, 42, 0.58);
-    border: 1px solid rgba(71, 85, 105, 0.68);
-}
 
-.benchmark-simple-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--text-muted);
-    font-size: 13px;
-    font-weight: 900;
-    white-space: nowrap;
-    cursor: pointer;
-}
+
 
 .benchmark-simple-label input[type="checkbox"] {
     width: 16px !important;
@@ -1019,16 +1002,7 @@ body.light-mode .benchmark-percent-wrap {
     accent-color: #3b82f6;
 }
 
-.benchmark-simple-input {
-    width: 64px !important;
-    min-width: 64px !important;
-    height: 34px;
-    padding: 0 8px !important;
-    text-align: center !important;
-    font-size: 15px !important;
-    font-weight: 900 !important;
-    border-radius: 13px !important;
-}
+
 
 /* 淺色模式 */
 body.light-mode .benchmark-control-simple {
@@ -1038,23 +1012,188 @@ body.light-mode .benchmark-control-simple {
 
 /* 手機版 */
 @media (max-width: 768px) {
-    .benchmark-control-simple {
-        padding: 10px 12px;
-        border-radius: 18px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+    
+
+   
+   
+}
+/* === Chart top controls: scale left, benchmark right, plain dates === */
+.chart-top-controls {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chart-first-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.chart-scale-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.chart-scale-btn {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+    transition: all 0.18s ease;
+}
+
+.chart-benchmark-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 900;
+    white-space: nowrap;
+    cursor: pointer;
+    min-width: 0;
+}
+
+.chart-benchmark-inline input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    border-radius: 4px !important;
+    accent-color: #3b82f6;
+}
+
+.benchmark-inline-input {
+    width: 32px !important;
+    min-width: 32px !important;
+    height: auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: var(--text-main) !important;
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+.benchmark-inline-input::-webkit-outer-spin-button,
+.benchmark-inline-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.benchmark-inline-input:focus {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.chart-date-inline-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.chart-date-plain {
+    width: 92px !important;
+    min-width: 92px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    color: var(--text-main) !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+}
+
+.chart-date-plain:focus {
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+body.light-mode .benchmark-inline-input,
+body.light-mode .chart-date-plain {
+    color: #0f172a !important;
+}
+
+/* 手機版 */
+@media (max-width: 768px) {
+    .chart-top-controls {
+        gap: 9px;
     }
 
-    .benchmark-simple-label {
+    .chart-first-row {
+        gap: 8px;
+        align-items: center;
+    }
+
+    .chart-scale-inline {
+        gap: 4px;
+    }
+
+    .chart-scale-btn {
+        min-width: 30px;
+        height: 30px;
+        padding: 0 8px;
         font-size: 12px;
-        gap: 7px;
     }
 
-    .benchmark-simple-input {
-        width: 62px !important;
-        min-width: 62px !important;
-        height: 34px;
-        font-size: 15px !important;
+    .chart-benchmark-inline {
+        gap: 4px;
+        font-size: 12px;
+        flex-shrink: 1;
+    }
+
+    .chart-benchmark-inline input[type="checkbox"] {
+        width: 15px !important;
+        height: 15px !important;
+        min-width: 15px !important;
+    }
+
+    .benchmark-inline-input {
+        width: 30px !important;
+        min-width: 30px !important;
+        font-size: 16px !important;
+    }
+
+    .chart-date-inline-row {
+        width: 100%;
+        justify-content: flex-start;
+        font-size: 13px;
+        gap: 5px;
+    }
+
+    .chart-date-plain {
+        width: 86px !important;
+        min-width: 86px !important;
+        font-size: 13px !important;
+        text-align: left !important;
+    }
+
+    #chartEndDate.chart-date-plain {
+        text-align: left !important;
     }
 }
 
@@ -1261,47 +1400,64 @@ body.light-mode .benchmark-control-simple {
                     <p class="text-xs muted font-bold mt-1">根據交易紀錄呈現精準資產變化。</p>
                 </div>
 
-                <div class="filter-scroll-row flex flex-nowrap items-center gap-2 overflow-x-auto no-scrollbar">
-                    <button onclick="changeChartScale('daily', this)" id="btn-scale-daily" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-active">日</button>
-                    <button onclick="changeChartScale('weekly', this)" id="btn-scale-weekly" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive">周</button>
-                    <button onclick="changeChartScale('monthly', this)" id="btn-scale-monthly" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive">月</button>
-                    <button onclick="changeChartScale('yearly', this)" id="btn-scale-yearly" class="px-3 py-1.5 rounded-full text-xs font-black tab-btn-inactive">年</button>
-                    <input type="text" id="chartStartDate" placeholder="YYYY/MM/DD" onchange="renderChart()" class="w-28 px-3 py-2 text-xs font-bold">
-                    <span class="muted">~</span>
-                    <input type="text" id="chartEndDate" placeholder="YYYY/MM/DD" onchange="renderChart()" class="w-28 px-3 py-2 text-xs font-bold">
-                </div>
-            </div>
+                <div class="chart-top-controls">
 
-<div class="soft-panel rounded-3xl p-4 space-y-4">
+    <div class="chart-first-row">
+        <!-- 左側：尺度切換 -->
+        <div class="chart-scale-inline">
+            <button onclick="changeChartScale('daily', this)" id="btn-scale-daily" class="chart-scale-btn tab-btn-active">日</button>
+            <button onclick="changeChartScale('weekly', this)" id="btn-scale-weekly" class="chart-scale-btn tab-btn-inactive">周</button>
+            <button onclick="changeChartScale('monthly', this)" id="btn-scale-monthly" class="chart-scale-btn tab-btn-inactive">月</button>
+            <button onclick="changeChartScale('yearly', this)" id="btn-scale-yearly" class="chart-scale-btn tab-btn-inactive">年</button>
+        </div>
 
-    <!-- 對照比例基準線 -->
-<div class="benchmark-control-simple">
-    <label class="benchmark-simple-label">
+        <!-- 右側：基準線 -->
+        <label class="chart-benchmark-inline">
+            <input
+                id="benchmarkLineToggle"
+                type="checkbox"
+                checked
+                onchange="renderChart()"
+            >
+            <span>最大資產 ×</span>
+            <input
+                id="benchmarkLinePercent"
+                type="number"
+                min="1"
+                max="100"
+                step="1"
+                value="85"
+                onchange="renderChart()"
+                oninput="renderChart()"
+                class="benchmark-inline-input"
+            >
+            <span>%</span>
+        </label>
+    </div>
+
+    <div class="chart-date-inline-row">
         <input
-            id="benchmarkLineToggle"
-            type="checkbox"
-            checked
+            type="text"
+            id="chartStartDate"
+            placeholder="YYYY/MM/DD"
             onchange="renderChart()"
+            class="chart-date-plain"
         >
-
-        <span>最大資產 ×</span>
-
+        <span>~</span>
         <input
-            id="benchmarkLinePercent"
-            type="number"
-            min="1"
-            max="100"
-            step="1"
-            value="85"
+            type="text"
+            id="chartEndDate"
+            placeholder="YYYY/MM/DD"
             onchange="renderChart()"
-            oninput="renderChart()"
-            class="benchmark-simple-input"
+            class="chart-date-plain"
         >
+    </div>
 
-        <span>%</span>
-    </label>
 </div>
 
+            </div>
+
+<div class="soft-panel rounded-3xl p-4">
 
 
 <div class="asset-chart-box relative w-full h-[300px] md:h-[420px]">
