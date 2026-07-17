@@ -946,6 +946,26 @@ body.light-mode .mini-alert-rose {
         height: 300px !important;
     }
 }
+/* === Mobile history layout fix === */
+@media (max-width: 768px) {
+    #tab-history {
+        overflow: hidden;
+    }
+
+    #tab-history > .flex:first-child {
+        min-width: 0;
+    }
+
+    #txHistoryCards .mobile-card {
+        overflow: hidden;
+    }
+}
+/* === Mobile asset chart height fix === */
+@media (max-width: 768px) {
+    .asset-chart-box {
+        height: 320px !important;
+    }
+}
 
     </style>
 </head>
@@ -1196,9 +1216,10 @@ body.light-mode .mini-alert-rose {
         <span class="text-xs md:text-sm muted font-bold">%</span>
     </div>
 
-    <div class="relative w-full h-[260px] md:h-[420px]">
-        <canvas id="assetChart"></canvas>
-    </div>
+<div class="asset-chart-box relative w-full h-[300px] md:h-[420px]">
+    <canvas id="assetChart"></canvas>
+</div>
+
 </div>
 
             <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -4592,6 +4613,19 @@ applyThemeMode();
 initDateDefaults();
 toggleFormFields();
 initAppAuth();
+/* 視窗尺寸改變時，重新繪製圖表，避免手機旋轉或寬度改變後版面異常 */
+let chartResizeTimer = null;
+
+window.addEventListener("resize", () => {
+    clearTimeout(chartResizeTimer);
+
+    chartResizeTimer = setTimeout(() => {
+        if (activeTab === "chart") {
+            renderChart();
+            renderAllocationCharts();
+        }
+    }, 180);
+});
 
     </script>
 </body>
