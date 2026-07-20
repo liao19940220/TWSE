@@ -5374,44 +5374,62 @@ if (resolvedName) {
     }
 }
 
+function normalizeSymbol(sym) {
+    return String(sym || "")
+        .trim()
+        .toUpperCase()
+        .replace(".TW", "")
+        .replace(".TWO", "");
+}
 
-            async function applyRealtimeFirst(symbols) {
-                const missing = [];
+async function applyRealtimeFirst(symbols) {
+    const missing = [];
 
-                try {
-                    const quotes = await fetchRealtimeQuotesFromNetlify(symbols);
+    try {
+        const normalizedSymbols = symbols.map(normalizeSymbol);
+        const realtimeMap = await fetchRealtimeQuotesFromNetlify(normalizedSymbols);
 
-                    symbols.forEach(sym => {
-                        const q = quotes[sym];
+        console.log("即時報價回傳：", realtimeMap);
 
-                        if (q && Number(q.price) > 0) {
-                            const price = Number(q.price);
-                            currentPrices[sym] = price;
-                            historicalPrices[today][sym] = price;
+        symbols.forEach(sym => {
+            const key = normalizeSymbol(sym);
+            const q = realtimeMap[sym] || realtimeMap[key];
+            const price = Number(q?.price || q?.z || q?.close || q?.currentPrice);
 
-                            if (q.name) stockNames[sym] = q.name;
+            console.log("即時報價解析：", sym, q, price);
 
-                            priceMeta[sym] = {
-                                source: "TWSE MIS",
-                                type: "realtime",
-                                label: "盤中即時",
-                                date: q.date || today,
-                                time: q.time || "",
-                                marketStatus: marketStatus.label
-                            };
+            if (q && Number.isFinite(price) && price > 0) {
+                currentPrices[sym] = price;
+                currentPrices[key] = price;
 
-                            updatedCount++;
-                        } else {
-                            missing.push(sym);
-                        }
-                    });
-                } catch (err) {
-                    console.warn("即時報價失敗", err);
-                    missing.push(...symbols);
+                priceMeta[sym] = {
+                    source: "realtime",
+                    label: "盤中即時",
+                    time: q.time || "",
+                    date: q.date || "",
+                    updatedAt: new Date().toISOString()
+                };
+
+                priceMeta[key] = priceMeta[sym];
+
+                if (q.name) {
+                    stockNames[sym] = q.name;
+                    stockNames[key] = q.name;
                 }
-
-                if (missing.length) await applyDailyClose(missing);
+            } else {
+                missing.push(sym);
             }
+        });
+    } catch (err) {
+        console.warn("即時報價失敗", err);
+        missing.push(...symbols);
+    }
+
+    if (missing.length) {
+        await applyDailyClose(missing.map(normalizeSymbol));
+    }
+}
+
 
             if (marketStatus.preferredSource === "realtime") {
                 if (statusEl) statusEl.innerText = "盤中交易：使用即時價更新...";
