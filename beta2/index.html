@@ -4078,17 +4078,34 @@ function getTxFingerprint(tx) {
 
                     cash += totalRevenue;
 
-                    const realized = totalRevenue - sellQty * hold.avgCost;
-                    totalRealizedPnl += realized;
+const oldQty = hold.qty;
+const oldTotalCost = hold.totalCost;
+const oldAvgCost = hold.avgCost;
 
-                    hold.qty -= sellQty;
-                    hold.totalCost = hold.qty * hold.avgCost;
+const soldCost = sellQty * oldAvgCost;
+const realized = totalRevenue - soldCost;
+totalRealizedPnl += realized;
 
-                    if (hold.qty <= 0) {
-                        hold.qty = 0;
-                        hold.totalCost = 0;
-                        hold.avgCost = 0;
-                    }
+hold.qty -= sellQty;
+
+/*
+    真實剩餘投入資金：
+    原本總投入成本 - 本次賣出實際收回淨收入
+
+    賣出淨收入 = 賣出金額 - 賣出手續費 - 交易稅
+    所以賣出手續費與交易稅會被確實算進來。
+*/
+hold.totalCost = oldTotalCost - totalRevenue;
+
+if (hold.qty <= 0) {
+    hold.qty = 0;
+    hold.totalCost = 0;
+    hold.avgCost = 0;
+} else {
+    hold.totalCost = Math.max(0, hold.totalCost);
+    hold.avgCost = hold.totalCost / hold.qty;
+}
+
                 }
 
             });
@@ -4179,16 +4196,22 @@ function getTxFingerprint(tx) {
                     const adjustedTax = tax * feeRatio;
                     const totalRevenue = price * sellQty - adjustedFee - adjustedTax;
 
-                    cash += totalRevenue;
+                   cash += totalRevenue;
 
-                    hold.qty -= sellQty;
-                    hold.totalCost = hold.qty * hold.avgCost;
+const oldTotalCost = hold.totalCost;
 
-                    if (hold.qty <= 0) {
-                        hold.qty = 0;
-                        hold.totalCost = 0;
-                        hold.avgCost = 0;
-                    }
+hold.qty -= sellQty;
+hold.totalCost = oldTotalCost - totalRevenue;
+
+if (hold.qty <= 0) {
+    hold.qty = 0;
+    hold.totalCost = 0;
+    hold.avgCost = 0;
+} else {
+    hold.totalCost = Math.max(0, hold.totalCost);
+    hold.avgCost = hold.totalCost / hold.qty;
+}
+
                 }
 
             });
@@ -4324,16 +4347,22 @@ function getTxFingerprint(tx) {
                 const adjustedTax = tax * feeRatio;
                 const revenue = price * sellQty - adjustedFee - adjustedTax;
 
-                state.cash += revenue;
+state.cash += revenue;
 
-                hold.qty -= sellQty;
-                hold.totalCost = hold.qty * hold.avgCost;
+const oldTotalCost = hold.totalCost;
 
-                if (hold.qty <= 0) {
-                    hold.qty = 0;
-                    hold.totalCost = 0;
-                    hold.avgCost = 0;
-                }
+hold.qty -= sellQty;
+hold.totalCost = oldTotalCost - revenue;
+
+if (hold.qty <= 0) {
+    hold.qty = 0;
+    hold.totalCost = 0;
+    hold.avgCost = 0;
+} else {
+    hold.totalCost = Math.max(0, hold.totalCost);
+    hold.avgCost = hold.totalCost / hold.qty;
+}
+
             }
         }
 
