@@ -2631,7 +2631,15 @@ let currentHistoryScale = "daily";
         }
 
 function money(value, digits = 0) {
-    return "$" + (Number(value) || 0).toLocaleString("zh-TW", {
+    let v = Number(value) || 0;
+
+    // digits = 0 時，不四捨五入，直接無條件捨去小數
+    if (digits === 0) {
+        v = v >= 0 ? Math.floor(v) : Math.ceil(v);
+    }
+
+    return "$" + v.toLocaleString("zh-TW", {
+        minimumFractionDigits: digits,
         maximumFractionDigits: digits
     });
 }
@@ -2641,11 +2649,13 @@ function signedMoney(value) {
     return (v >= 0 ? "+" : "-") + money(Math.abs(v));
 }
 
-function money(value, digits = 0) {
-    return "$" + (Number(value) || 0).toLocaleString("zh-TW", {
-        maximumFractionDigits: digits
-    });
+
+function signedMoney(value) {
+    const v = Number(value) || 0;
+    return (v >= 0 ? "+" : "-") + money(Math.abs(v));
 }
+
+
 
 function signedMoney(value) {
     const v = Number(value) || 0;
