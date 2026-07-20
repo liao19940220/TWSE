@@ -3504,19 +3504,33 @@ async function importTransactionsToCloud(importedTx) {
             return Math.max(Math.round(rawFee), minFee);
         }
 
-        function calculateTransactionTax(amount, type, assetType, tradeMode) {
-            if (type !== "SELL") return 0;
+function calculateTransactionTax(amount, type, assetType, tradeMode) {
+    if (type !== "SELL") return 0;
 
-            let taxRate = 0;
+    const tradeAmount = Number(amount) || 0;
+    if (tradeAmount <= 0) return 0;
 
-            if (assetType === "ETF") {
-                taxRate = 0.001;
-            } else {
-                taxRate = tradeMode === "DAY_TRADE" ? 0.0015 : 0.003;
-            }
+    let taxRate = 0;
 
-            return Math.floor(amount * taxRate);
-        }
+    if (assetType === "ETF") {
+        // ETF 證券交易稅 0.1%
+        taxRate = 0.001;
+    } else {
+        // 股票一般交易 0.3%，當沖 0.15%
+        taxRate = tradeMode === "DAY_TRADE" ? 0.0015 : 0.003;
+    }
+
+    const rawTax = tradeAmount * taxRate;
+
+    // 若稅額大於 0 但不到 1 元，最低收 1 元
+    if (rawTax > 0 && rawTax < 1) {
+        return 1;
+    }
+
+    // 其餘一律無條件捨去
+    return Math.floor(rawTax);
+}
+
 
         function calculateTradeCosts({ type, price, quantity, assetType, tradeMode, broker }) {
             const amount = Number(price) * Number(quantity);
