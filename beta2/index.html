@@ -3186,6 +3186,149 @@ async function syncLocalDataToCloud() {
         `略過雲端已存在：${duplicateInCloudCount} 筆`
     );
 }
+async function importTransactionsToCloud(importedTx) {
+    if (!currentUser) return false;
+
+    if (!Array.isArray(importedTx) || importedTx.length === 0) {
+        alert("沒有可匯入的交易資料");
+        return false;
+    }
+
+    const validTx = importedTx.filter(tx => {
+        if (!tx.date || !tx.type || !tx.symbol) return false;
+        if (!["BUY", "SELL", "DEPOSIT", "WITHDRAW", "DIVIDEND"].includes(tx.type)) return false;
+        if (!Number.isFinite(Number(tx.price)) || Number(tx.price) <= 0) return false;
+
+        if (["BUY", "SELL"].includes(tx.type)) {
+            if (!Number.isFinite(Number(tx.quantity)) || Number(tx.quantity) <= 0) return false;
+        }
+
+        return true;
+    });
+
+    if (validTx.length === 0) {
+        alert("Excel 內沒有符合格式的交易資料");
+        return false;
+    }
+
+    const { data: cloudTxData, error: cloudTxError } = await supabaseClient
+        .from("transactions")
+        .select("date,type,symbol,price,quantity,fee,tax,asset_type,trade_mode")
+        .eq("user_id", currentUser.id);
+
+    if (cloudTxError) {
+        alert("讀取雲端既有交易失敗：" + cloudTxError.message);
+        return false;
+    }
+
+    const cloudFingerprintSet = new Set(
+        (cloudTxData || []).map(row => getTxFingerprint({
+            date: row.date,
+            type: row.type,
+            symbol: row.symbol,
+            price: row.price,
+            quantity: row.quantity,
+            fee: row.fee,
+            tax: row.tax,
+            assetType: row.asset_type || "STOCK",
+            tradeMode: row.trade_mode || "NORMAL"
+        }))
+    );
+
+    const localSeenSet = new Set();
+    const txsToInsert = [];
+    let duplicateInExcelCount = 0;
+    let duplicateInCloudCount = 0;
+    let invalidCount = importedTx.length - validTx.length;
+
+    validTx.forEach(tx => {
+        const normalizedTx = {
+            date: tx.date,
+            type: tx.type,
+            symbol: tx.symbol,
+            price: Number(tx.price) || 0,
+            quantity: Number(tx.quantity) || 1,
+            fee: Number(tx.fee) || 0,
+            tax: Number(tx.tax) || 0,
+            assetType: tx.assetType || "STOCK",
+            tradeMode: tx.tradeMode || "NORMAL"
+        };
+
+        const fingerprint = getTxFingerprint(normalizedTx);
+
+        if (localSeenSet.has(fingerprint)) {
+            duplicateInExcelCount++;
+            return;
+        }
+
+        localSeenSet.add(fingerprint);
+
+        if (cloudFingerprintSet.has(fingerprint)) {
+            duplicateInCloudCount++;
+            return;
+        }
+
+        txsToInsert.push(normalizedTx);
+    });
+
+    if (txsToInsert.length === 0) {
+        alert(
+            `沒有需要匯入雲端的新交易。\n\n` +
+            `Excel 總筆數：${importedTx.length}\n` +
+            `格式無效：${invalidCount}\n` +
+            `Excel 內重複：${duplicateInExcelCount}\n` +
+            `雲端已存在：${duplicateInCloudCount}`
+        );
+        return false;
+    }
+
+    const confirmMessage =
+        `即將匯入 Excel 交易到雲端。\n\n` +
+        `Excel 總筆數：${importedTx.length}\n` +
+        `將新增：${txsToInsert.length} 筆\n` +
+        `格式無效：${invalidCount} 筆\n` +
+        `Excel 內重複：${duplicateInExcelCount} 筆\n` +
+        `雲端已存在：${duplicateInCloudCount} 筆\n\n` +
+        `是否繼續？`;
+
+    if (!confirm(confirmMessage)) return false;
+
+    const rows = txsToInsert.map(tx => ({
+        user_id: currentUser.id,
+        date: tx.date,
+        type: tx.type,
+        symbol: tx.symbol,
+        price: Number(tx.price) || 0,
+        quantity: Number(tx.quantity) || 1,
+        fee: Number(tx.fee) || 0,
+        tax: Number(tx.tax) || 0,
+        broker_id: brokers[0]?.id || null,
+        asset_type: tx.assetType || "STOCK",
+        trade_mode: tx.tradeMode || "NORMAL"
+    }));
+
+    const { error } = await supabaseClient
+        .from("transactions")
+        .insert(rows);
+
+    if (error) {
+        alert("匯入雲端失敗：" + error.message);
+        return false;
+    }
+
+    await loadAllDataFromSupabase();
+    render();
+
+    alert(
+        `Excel 已成功匯入雲端。\n\n` +
+        `成功新增：${txsToInsert.length} 筆\n` +
+        `格式無效：${invalidCount} 筆\n` +
+        `Excel 內重複：${duplicateInExcelCount} 筆\n` +
+        `雲端已存在：${duplicateInCloudCount} 筆`
+    );
+
+    return true;
+}
 
 
         /* =========================
@@ -5488,7 +5631,7 @@ function toggleThemeMode() {
 
             const reader = new FileReader();
 
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: "array", cellDates: true });
@@ -5531,7 +5674,10 @@ function toggleThemeMode() {
                         tradeMode: String(row["交易模式"] || row["tradeMode"] || "NORMAL").toUpperCase().trim()
                     }));
 
-                    transactions = importedTx.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+                    if (!isCloudMode()) {
+    transactions = importedTx.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+}
+
 
                     const wsPrice = workbook.Sheets["目前市價"];
                     currentPrices = {};
@@ -5570,15 +5716,20 @@ function toggleThemeMode() {
                         });
                     }
 
-                    if (isCloudMode()) {
-                        alert("匯入已載入畫面。若要寫入雲端，建議使用「本地同步到雲端」流程，避免重複資料。");
-                    } else {
-                        saveLocalData();
-                    }
+if (isCloudMode()) {
+    const ok = await importTransactionsToCloud(importedTx);
+    if (!ok) {
+        event.target.value = "";
+        return;
+    }
+} else {
+    saveLocalData();
+    render();
+    alert("匯入成功");
+}
 
-                    render();
-                    alert("匯入成功");
-                    event.target.value = "";
+event.target.value = "";
+
                 } catch (err) {
                     alert("匯入失敗：" + err.message);
                 }
