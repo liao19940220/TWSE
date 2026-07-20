@@ -4015,7 +4015,7 @@ function getTxFingerprint(tx) {
                     cash += price;
                     totalDividends += price;
                 } else if (tx.type === "BUY") {
-                    const totalCost = price * quantity + fee;
+                    const totalCost = Math.floor(price * quantity) + fee;
                     cash -= totalCost;
 
                     if (!holdings[tx.symbol]) holdings[tx.symbol] = { qty: 0, totalCost: 0, avgCost: 0 };
@@ -4132,7 +4132,7 @@ function getTxFingerprint(tx) {
                 } else if (tx.type === "DIVIDEND") {
                     cash += price;
                 } else if (tx.type === "BUY") {
-                    const totalCost = price * quantity + fee;
+                    const totalCost = Math.floor(price * quantity) + fee;
                     cash -= totalCost;
                     if (!holdings[tx.symbol]) holdings[tx.symbol] = { qty: 0, totalCost: 0, avgCost: 0 };
                     holdings[tx.symbol].qty += quantity;
@@ -4260,7 +4260,7 @@ function getTxFingerprint(tx) {
             if (tx.type === "BUY") {
                 if (!sym || quantity <= 0) return;
 
-                const totalCost = price * quantity + fee;
+                const totalCost = Math.floor(price * quantity) + fee;
                 state.cash -= totalCost;
 
                 if (!state.holdings[sym]) {
