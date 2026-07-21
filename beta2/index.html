@@ -5527,7 +5527,8 @@ function isRealtimeQuoteFresh(q) {
 async function applyRealtimeFirst(symbols, context = {}) {
     const normalizedSymbols = [...new Set(symbols.map(normalizeSymbol).filter(Boolean))];
 
-    const marketStatus = context.marketStatus || getTwMarketStatus();
+    const marketStatus = context.marketStatus || getTaiwanMarketStatus()
+;
     const statusEl = context.statusEl || null;
     const failedSymbols = context.failedSymbols || [];
     const counter = context.counter || { updatedCount: 0 };
@@ -5652,7 +5653,8 @@ async function applyRealtimeFirst(symbols, context = {}) {
 async function updatePricesByBestSource(activeSymbols, statusEl) {
     const normalizedSymbols = [...new Set(activeSymbols.map(normalizeSymbol).filter(Boolean))];
 
-    const marketStatus = getTwMarketStatus();
+const marketStatus = getTaiwanMarketStatus();
+
     const failedSymbols = [];
     const counter = { updatedCount: 0 };
 
