@@ -5646,20 +5646,19 @@ async function applyRealtimeFirst(symbols) {
 
 
 
-            if (marketStatus.preferredSource === "realtime") {
-                if (statusEl) statusEl.innerText = "盤中交易：使用即時價更新...";
-                await applyRealtimeFirst(activeSymbols);
-            } else if (marketStatus.preferredSource === "realtime_first") {
-                if (statusEl) statusEl.innerText = "收盤後資料整理中：即時價優先...";
-                await applyRealtimeFirst(activeSymbols);
-            } else {
-                if (statusEl) statusEl.innerText = "收盤後 / 非交易日：使用收盤價更新...";
-                await applyDailyClose(activeSymbols);
-            }
+if (marketStatus.preferredSource === "realtime") {
+  if (statusEl) statusEl.innerText = "盤中交易：使用即時價更新...";
+  await applyRealtimeFirst(activeSymbols);
+} else if (marketStatus.preferredSource === "realtime_first") {
+  if (statusEl) statusEl.innerText = "收盤後資料整理中：即時價優先...";
+  await applyRealtimeFirst(activeSymbols);
+} else {
+  if (statusEl) statusEl.innerText = "收盤後 / 非交易日：使用收盤價更新...";
+  await applyDailyClose(activeSymbols);
+}
 
-            const updatedNameCount = await updateStockNamesByInfoApi(activeSymbols);
+const updatedNameCount = await updateStockNamesByInfoApi(activeSymbols);
 
-saveLocalData();
 
 return {
     updatedCount,
