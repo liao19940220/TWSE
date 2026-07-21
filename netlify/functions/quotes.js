@@ -141,8 +141,8 @@ function parseTwseMisItem(item) {
   const symbol = normalizeSymbol(item.c);
   if (!symbol) return null;
 
-  const z = parsePrice(item.z);
-  const y = parsePrice(item.y);
+  const z = parsePrice(item.z); // 最近成交價
+  const y = parsePrice(item.y); // 昨收價
   const open = parsePrice(item.o);
   const high = parsePrice(item.h);
   const low = parsePrice(item.l);
@@ -151,9 +151,9 @@ function parseTwseMisItem(item) {
   const bid = parseFirstOrderPrice(item.b);
 
   /*
-    盤中真正成交價是 z。
-    z 為 "-" 時，代表可能尚無成交或資料暫無。
-    此時可以退而求其次用委買 / 委賣估算，但不可用 y 昨收當現價。
+    價格邏輯：
+    只使用成交價 z。
+    若 z 無效，price = null，前端就不應更新。
   */
   let price = null;
   let priceType = "none";
@@ -162,23 +162,6 @@ function parseTwseMisItem(item) {
   if (Number.isFinite(z) && z > 0) {
     price = z;
     priceType = "last";
-    isRealtimePrice = true;
-  } else if (
-    Number.isFinite(ask) &&
-    ask > 0 &&
-    Number.isFinite(bid) &&
-    bid > 0
-  ) {
-    price = (ask + bid) / 2;
-    priceType = "bid_ask_mid";
-    isRealtimePrice = true;
-  } else if (Number.isFinite(ask) && ask > 0) {
-    price = ask;
-    priceType = "ask";
-    isRealtimePrice = true;
-  } else if (Number.isFinite(bid) && bid > 0) {
-    price = bid;
-    priceType = "bid";
     isRealtimePrice = true;
   }
 
@@ -199,16 +182,15 @@ function parseTwseMisItem(item) {
     market: String(item.ex || "").includes("otc") ? "otc" : "tse",
 
     /*
-      給前端相容用。
+      給前端相容用：
+      price/currentPrice 只會是成交價 z。
+      沒有成交價時是 null。
     */
     price,
     currentPrice: price,
     z,
     y,
 
-    /*
-      額外資訊。
-    */
     yesterday: y,
     open,
     high,
@@ -226,6 +208,7 @@ function parseTwseMisItem(item) {
     source: "TWSE MIS"
   };
 }
+
 
 function parsePrice(value) {
   if (value === undefined || value === null) return null;
