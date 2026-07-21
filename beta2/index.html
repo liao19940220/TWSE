@@ -5412,38 +5412,29 @@ async function applyDailyClose(symbols) {
                 if (resolvedName) {
                     stockNames[sym] = resolvedName;
                 }
-
-                historicalPrices[latest.date] = historicalPrices[latest.date] || {};
-                historicalPrices[latest.date][sym] = price;
-
-                /*
-                    注意：
-                    daily close 只在收盤 / 非交易日使用。
-                    這裡仍寫入 today，是為了資產圖表可用。
-                    但 priceMeta 會明確標記為每日收盤。
-                */
-                historicalPrices[today][sym] = price;
-
-                priceMeta[sym] = {
-                    source: "FinMind",
-                    type: "close",
-                    label: "每日收盤",
-                    date: latest.date,
-                    time: "",
-                    marketStatus: marketStatus.label,
-                    updatedAt: new Date().toISOString()
-                };
-
-                updatedCount++;
-            } else {
-                failedSymbols.push(sym);
             }
         } catch (err) {
-            console.warn(`${sym} 收盤價取得失敗`, err);
-            failedSymbols.push(sym);
+            console.warn("每日收盤價更新失敗", sym, err);
         }
     }
 }
+async function updatePricesByBestSource(activeSymbols, statusEl) {
+    const marketStatus = getTaiwanMarketStatus();
+    const today = getTaiwanTodayString();
+
+    historicalPrices[today] = historicalPrices[today] || {};
+    let updatedCount = 0;
+    const failedSymbols = [];
+
+    // 這裡放你的更新股價邏輯
+
+    return {
+        updatedCount,
+        failedSymbols,
+        marketStatus
+    };
+}
+
 
 function normalizeSymbol(sym) {
     return String(sym || "")
