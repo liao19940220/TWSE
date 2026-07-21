@@ -5575,43 +5575,44 @@ async function applyRealtimeFirst(symbols) {
 
             console.log("即時報價解析：", sym, q, price);
 
-if (
-    q &&
-    Number.isFinite(price) &&
-    price > 0
-) {
-    const finalPrice = roundPrice ? roundPrice(price, 2) : price;
+            if (
+                q &&
+                Number.isFinite(price) &&
+                price > 0
+            ) {
+                const finalPrice = typeof roundPrice === "function"
+                    ? roundPrice(price, 2)
+                    : price;
 
-    currentPrices[sym] = finalPrice;
+                currentPrices[sym] = finalPrice;
 
-    historicalPrices[today] = historicalPrices[today] || {};
-    historicalPrices[today][sym] = finalPrice;
+                historicalPrices[today] = historicalPrices[today] || {};
+                historicalPrices[today][sym] = finalPrice;
 
-    priceMeta[sym] = {
-        source: q.source || "TWSE MIS",
-        type: q.priceType === "yesterday" ? "yesterday" : "realtime",
-        label: q.priceType === "yesterday" ? "昨收備援" : "盤中成交",
-        date: q.date || q.d || today,
-        time: q.time || q.t || "",
-        marketStatus: marketStatus.label,
-        updatedAt: new Date().toISOString()
-    };
+                priceMeta[sym] = {
+                    source: q.source || "TWSE MIS",
+                    type: q.priceType === "yesterday" ? "yesterday" : "realtime",
+                    label: q.priceType === "yesterday" ? "昨收備援" : "盤中成交",
+                    date: q.date || q.d || today,
+                    time: q.time || q.t || "",
+                    marketStatus: marketStatus.label,
+                    updatedAt: new Date().toISOString()
+                };
 
-    const resolvedName =
-        q.name ||
-        q.stockName ||
-        q.stock_name ||
-        "";
+                const resolvedName =
+                    q.name ||
+                    q.stockName ||
+                    q.stock_name ||
+                    "";
 
-    if (resolvedName) {
-        stockNames[sym] = resolvedName;
-    }
+                if (resolvedName) {
+                    stockNames[sym] = resolvedName;
+                }
 
-    updatedCount++;
-} else {
-    missing.push(sym);
-}
-
+                updatedCount++;
+            } else {
+                missing.push(sym);
+            }
         });
     } catch (err) {
         console.warn("即時報價失敗", err);
@@ -5619,24 +5620,23 @@ if (
     }
 
     /*
-        關鍵修正：
-        - 盤中交易時間，不 fallback daily close，避免顯示昨天收盤價。
-        - 收盤後資料整理中，可以 fallback daily close。
-        - 非交易時間原本就會走 applyDailyClose，不會進到這裡。
+        注意：
+        這一段一定要在 async function applyRealtimeFirst 裡面。
+        不能放到函式外面，否則 await 會報錯。
     */
-if (missing.length) {
-    if (marketStatus.status === "trading") {
-        failedSymbols.push(...missing);
+    if (missing.length) {
+        if (marketStatus.status === "trading") {
+            failedSymbols.push(...missing);
 
-        if (statusEl) {
-            statusEl.innerText = `盤中交易：${missing.join(", ")} 無成交價或昨收價，已保留原價格`;
+            if (statusEl) {
+                statusEl.innerText = `盤中交易：${missing.join(", ")} 無成交價或昨收價，已保留原價格`;
+            }
+        } else {
+            await applyDailyClose(missing);
         }
-    } else {
-        await applyDailyClose(missing);
     }
 }
 
-}
 
 
 
