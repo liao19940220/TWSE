@@ -5646,18 +5646,61 @@ async function applyRealtimeFirst(symbols) {
 
 
 
-if (marketStatus.preferredSource === "realtime") {
-  if (statusEl) statusEl.innerText = "盤中交易：使用即時價更新...";
-  await applyRealtimeFirst(activeSymbols);
-} else if (marketStatus.preferredSource === "realtime_first") {
-  if (statusEl) statusEl.innerText = "收盤後資料整理中：即時價優先...";
-  await applyRealtimeFirst(activeSymbols);
-} else {
-  if (statusEl) statusEl.innerText = "收盤後 / 非交易日：使用收盤價更新...";
-  await applyDailyClose(activeSymbols);
-}
+async function fetchTwsePrices() {
+  const statusEl = document.getElementById("priceStatus");
 
-const updatedNameCount = await updateStockNamesByInfoApi(activeSymbols);
+  try {
+    const portfolio = calculatePortfolio();
+    const holdings = portfolio.holdings || {};
+    const activeSymbols = Object.keys(holdings)
+      .map(normalizeSymbol)
+      .filter(Boolean);
+
+    if (!activeSymbols.length) {
+      if (statusEl) statusEl.innerText = "目前沒有持股需要更新";
+      return;
+    }
+
+    const marketStatus = getTwMarketStatus();
+
+    let updatedNameCount = 0;
+
+    if (marketStatus.preferredSource === "realtime") {
+      if (statusEl) statusEl.innerText = "盤中交易：使用即時價更新...";
+      await applyRealtimeFirst(activeSymbols);
+    } else if (marketStatus.preferredSource === "realtime_first") {
+      if (statusEl) statusEl.innerText = "收盤後資料整理中：即時價優先...";
+      await applyRealtimeFirst(activeSymbols);
+    } else {
+      if (statusEl) statusEl.innerText = "收盤後 / 非交易日：使用收盤價更新...";
+      await applyDailyClose(activeSymbols);
+    }
+
+    if (typeof updateStockNamesByInfoApi === "function") {
+      updatedNameCount = await updateStockNamesByInfoApi(activeSymbols);
+    }
+
+    if (typeof saveData === "function") {
+      saveData();
+    }
+
+    if (typeof renderAll === "function") {
+      renderAll();
+    }
+
+    if (statusEl) {
+      statusEl.innerText = `價格更新完成，股票名稱更新 ${updatedNameCount || 0} 筆`;
+    }
+  } catch (err) {
+    console.error("更新價格失敗：", err);
+
+    if (statusEl) {
+      statusEl.innerText = `更新失敗：${err.message || err}`;
+    }
+
+    alert(`更新價格失敗：${err.message || err}`);
+  }
+}
 
 
 return {
