@@ -5380,15 +5380,6 @@ async function updateStockNamesByInfoApi(symbols) {
         return 0;
     }
 }
-
-        async function updatePricesByBestSource(activeSymbols, statusEl) {
-            const marketStatus = getTaiwanMarketStatus();
-            const today = getTaiwanTodayString();
-
-            historicalPrices[today] = historicalPrices[today] || {};
-            let updatedCount = 0;
-            const failedSymbols = [];
-
 async function applyDailyClose(symbols) {
     for (const sym of [...new Set(symbols)].map(normalizeSymbol)) {
         try {
@@ -5418,6 +5409,15 @@ async function applyDailyClose(symbols) {
         }
     }
 }
+        async function updatePricesByBestSource(activeSymbols, statusEl) {
+            const marketStatus = getTaiwanMarketStatus();
+            const today = getTaiwanTodayString();
+
+            historicalPrices[today] = historicalPrices[today] || {};
+            let updatedCount = 0;
+            const failedSymbols = [];
+}
+
 async function updatePricesByBestSource(activeSymbols, statusEl) {
     const marketStatus = getTaiwanMarketStatus();
     const today = getTaiwanTodayString();
