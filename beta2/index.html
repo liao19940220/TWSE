@@ -5461,20 +5461,18 @@ function parseRealtimeQuotePrice(q) {
     if (!q) return 0;
 
     /*
-        TWSE MIS 常見欄位：
-        z = 最近成交價
-        a = 五檔委賣價，字串例如 "100.5_101.0_..."
-        b = 五檔委買價
-        y = 昨日收盤價，不可當盤中現價
+        價格優先順序：
+        1. q.price：Netlify function 已經整理好的價格
+        2. q.currentPrice
+        3. q.z：TWSE MIS 最近成交價
+        4. q.y / q.yesterday：昨收備援
     */
-
     const candidateValues = [
-        q.z,
-        q.last,
-        q.lastPrice,
-        q.current,
+        q.price,
         q.currentPrice,
-        q.realtimePrice
+        q.z,
+        q.y,
+        q.yesterday
     ];
 
     for (const val of candidateValues) {
@@ -5483,6 +5481,10 @@ function parseRealtimeQuotePrice(q) {
             return price;
         }
     }
+
+    return 0;
+}
+
 
     /*
         如果 z 是 "-"，有些 API 仍有 best ask / bid。
@@ -5573,40 +5575,43 @@ async function applyRealtimeFirst(symbols) {
 
             console.log("即時報價解析：", sym, q, price);
 
-            if (q && isRealtimeQuoteFresh(q) && Number.isFinite(price) && price > 0) {
-                currentPrices[sym] = price;
+if (
+    q &&
+    Number.isFinite(price) &&
+    price > 0
+) {
+    const finalPrice = roundPrice ? roundPrice(price, 2) : price;
 
-                historicalPrices[today] = historicalPrices[today] || {};
-                historicalPrices[today][sym] = price;
+    currentPrices[sym] = finalPrice;
 
-                priceMeta[sym] = {
-                    source: q.source || "TWSE realtime",
-                    type: "realtime",
-                    label: "盤中即時",
-                    date: q.date || q.d || today,
-                    time: q.time || q.t || "",
-                    marketStatus: marketStatus.label,
-                    updatedAt: new Date().toISOString()
-                };
+    historicalPrices[today] = historicalPrices[today] || {};
+    historicalPrices[today][sym] = finalPrice;
 
-                const resolvedName =
-                    q.name ||
-                    q.stockName ||
-                    q.stock_name ||
-                    "";
+    priceMeta[sym] = {
+        source: q.source || "TWSE MIS",
+        type: q.priceType === "yesterday" ? "yesterday" : "realtime",
+        label: q.priceType === "yesterday" ? "昨收備援" : "盤中成交",
+        date: q.date || q.d || today,
+        time: q.time || q.t || "",
+        marketStatus: marketStatus.label,
+        updatedAt: new Date().toISOString()
+    };
 
-                if (resolvedName) {
-                    stockNames[sym] = resolvedName;
-                }
+    const resolvedName =
+        q.name ||
+        q.stockName ||
+        q.stock_name ||
+        "";
 
-                updatedCount++;
-            } else {
-                /*
-                    盤中時，如果拿不到真正即時價，不直接用昨日收盤價覆蓋。
-                    避免你看到的問題：盤中全部變昨天收盤。
-                */
-                missing.push(sym);
-            }
+    if (resolvedName) {
+        stockNames[sym] = resolvedName;
+    }
+
+    updatedCount++;
+} else {
+    missing.push(sym);
+}
+
         });
     } catch (err) {
         console.warn("即時報價失敗", err);
@@ -5619,17 +5624,18 @@ async function applyRealtimeFirst(symbols) {
         - 收盤後資料整理中，可以 fallback daily close。
         - 非交易時間原本就會走 applyDailyClose，不會進到這裡。
     */
-    if (missing.length) {
-        if (marketStatus.status === "trading") {
-            failedSymbols.push(...missing);
+if (missing.length) {
+    if (marketStatus.status === "trading") {
+        failedSymbols.push(...missing);
 
-            if (statusEl) {
-                statusEl.innerText = `盤中交易：${missing.join(", ")} 尚未取得有效即時價，已保留原價格`;
-            }
-        } else {
-            await applyDailyClose(missing);
+        if (statusEl) {
+            statusEl.innerText = `盤中交易：${missing.join(", ")} 無成交價或昨收價，已保留原價格`;
         }
+    } else {
+        await applyDailyClose(missing);
     }
+}
+
 }
 
 
