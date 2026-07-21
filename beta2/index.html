@@ -5620,9 +5620,15 @@ async function applyRealtimeFirst(symbols) {
     }
 
     /*
-        注意：
-        這一段一定要在 async function applyRealtimeFirst 裡面。
-        不能放到函式外面，否則 await 會報錯。
+        盤中：
+        - quotes 有 z → 用 z
+        - quotes 沒 z 但有 y → quotes.js 已經回傳 yesterday
+        - z/y 都沒有 → 保留原價格
+
+        收盤後 / 非交易日：
+        - 使用 daily close
+
+        這裡不用 await，避免你目前 index.html 裡因位置問題造成 SyntaxError。
     */
     if (missing.length) {
         if (marketStatus.status === "trading") {
@@ -5632,7 +5638,7 @@ async function applyRealtimeFirst(symbols) {
                 statusEl.innerText = `盤中交易：${missing.join(", ")} 無成交價或昨收價，已保留原價格`;
             }
         } else {
-            await applyDailyClose(missing);
+            applyDailyClose(missing);
         }
     }
 }
