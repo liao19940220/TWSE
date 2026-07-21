@@ -5494,9 +5494,9 @@ function parseRealtimeQuotePrice(q) {
     const ask = Number(askRaw);
     const bid = Number(bidRaw);
 
-    if (Number.isFinite(ask) && ask > 0 && Number.isFinite(bid) && bid > 0) {
-        return (ask + bid) / 2;
-    }
+ // if (Number.isFinite(ask) && ask > 0 && Number.isFinite(bid) && bid > 0) {
+   //   return (ask + bid) / 2;
+  //}
 
     if (Number.isFinite(ask) && ask > 0) return ask;
     if (Number.isFinite(bid) && bid > 0) return bid;
