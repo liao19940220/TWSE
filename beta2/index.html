@@ -5700,7 +5700,7 @@ async function fetchTwsePrices() {
 
     alert(`更新價格失敗：${err.message || err}`);
   }
-}
+
 
 
 return {
@@ -5759,6 +5759,7 @@ if (status) {
                     console.warn("自動更新價格失敗", err);
                 }
             }, 800);
+        }
         }
 function applyThemeMode() {
     const icon = document.getElementById("themeModeIcon");
