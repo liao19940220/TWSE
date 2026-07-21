@@ -2,10 +2,12 @@ exports.handler = async function(event) {
   try {
     const symbolsParam = event.queryStringParameters?.symbols || "";
 
-    const symbols = symbolsParam
-      .split(",")
-      .map(s => s.trim())
-      .filter(Boolean);
+    const symbols = [...new Set(
+      symbolsParam
+        .split(",")
+        .map(normalizeSymbol)
+        .filter(Boolean)
+    )];
 
     if (symbols.length === 0) {
       return jsonResponse(400, {
@@ -14,17 +16,7 @@ exports.handler = async function(event) {
       });
     }
 
-    const results = {};
-
-    await Promise.all(
-      symbols.map(async symbol => {
-        const quote = await fetchTwseMisQuote(symbol);
-
-        if (quote) {
-          results[symbol] = quote;
-        }
-      })
-    );
+    const results = await fetchTwseMisQuotes(symbols);
 
     return jsonResponse(200, {
       ok: true,
@@ -36,85 +28,261 @@ exports.handler = async function(event) {
   } catch (error) {
     return jsonResponse(500, {
       ok: false,
-      message: error.message
+      message: error.message || "即時報價取得失敗"
     });
   }
 };
 
-async function fetchTwseMisQuote(symbol) {
-  const markets = ["tse", "otc"];
+function normalizeSymbol(symbol) {
+  return String(symbol || "")
+    .trim()
+    .toUpperCase()
+    .replace(".TW", "")
+    .replace(".TWO", "");
+}
 
-  for (const market of markets) {
-    const exCh = `${market}_${symbol}.tw`;
-    const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${exCh}&json=1&delay=0`;
+async function fetchTwseMisQuotes(symbols) {
+  /*
+    TWSE MIS 通常需要先進首頁取得 cookie / session。
+    沒有先取 cookie 時，serverless 環境容易拿到不穩定結果。
+  */
+  const homeUrl = `https://mis.twse.com.tw/stock/index.jsp?_=${Date.now()}`;
 
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          "Referer": "https://mis.twse.com.tw/stock/index.jsp",
-          "Accept": "application/json,text/plain,*/*"
-        }
-      });
-
-      if (!res.ok) continue;
-
-      const json = await res.json();
-      const item = json?.msgArray?.[0];
-
-      if (!item) continue;
-
-      const latestPrice = parsePrice(item.z);
-      const yesterdayPrice = parsePrice(item.y);
-      const open = parsePrice(item.o);
-      const high = parsePrice(item.h);
-      const low = parsePrice(item.l);
-
-      let change = null;
-      let changePercent = null;
-
-      if (latestPrice && yesterdayPrice) {
-        change = latestPrice - yesterdayPrice;
-        changePercent = yesterdayPrice !== 0 ? change / yesterdayPrice * 100 : null;
-      }
-
-      return {
-        symbol: item.c || symbol,
-        name: item.n || "",
-        market,
-        price: latestPrice,
-        yesterday: yesterdayPrice,
-        open,
-        high,
-        low,
-        volume: parseNumber(item.v),
-        time: item.t || "",
-        date: item.d || "",
-        change,
-        changePercent
-      };
-
-    } catch (error) {
-      console.warn(`TWSE MIS ${market}_${symbol} failed`, error.message);
+  const homeRes = await fetch(homeUrl, {
+    headers: {
+      "User-Agent": getUserAgent(),
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache"
     }
+  });
+
+  const setCookie = homeRes.headers.get("set-cookie") || "";
+  const cookie = setCookie
+    .split(",")
+    .map(part => part.split(";")[0].trim())
+    .filter(Boolean)
+    .join("; ");
+
+  const results = {};
+
+  /*
+    TWSE MIS 的 ex_ch：
+    上市：tse_2330.tw
+    上櫃：otc_8069.tw
+
+    因為使用者只傳代號，這裡上市 / 上櫃都查。
+  */
+  const exChList = [];
+
+  symbols.forEach(symbol => {
+    exChList.push(`tse_${symbol}.tw`);
+    exChList.push(`otc_${symbol}.tw`);
+  });
+
+  /*
+    一次查多檔比 Promise.all 每檔打兩次穩定，也比較不容易被擋。
+  */
+  const apiUrl =
+    `https://mis.twse.com.tw/stock/api/getStockInfo.jsp` +
+    `?ex_ch=${encodeURIComponent(exChList.join("|"))}` +
+    `&json=1` +
+    `&delay=0` +
+    `&_=${Date.now()}`;
+
+  const apiRes = await fetch(apiUrl, {
+    headers: {
+      "User-Agent": getUserAgent(),
+      "Referer": "https://mis.twse.com.tw/stock/index.jsp",
+      "Accept": "application/json,text/plain,*/*",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
+      ...(cookie ? { "Cookie": cookie } : {})
+    }
+  });
+
+  if (!apiRes.ok) {
+    throw new Error(`TWSE MIS HTTP ${apiRes.status}`);
   }
 
-  return null;
+  const json = await apiRes.json();
+  const list = Array.isArray(json?.msgArray) ? json.msgArray : [];
+
+  list.forEach(item => {
+    const symbol = normalizeSymbol(item.c);
+    if (!symbol) return;
+
+    /*
+      如果同一檔同時查到 tse / otc，只保留有有效資料者。
+    */
+    const parsed = parseTwseMisItem(item);
+
+    if (!parsed) return;
+
+    const existing = results[symbol];
+
+    if (!existing) {
+      results[symbol] = parsed;
+      return;
+    }
+
+    /*
+      優先保留有即時成交價的資料。
+    */
+    if (!existing.isRealtimePrice && parsed.isRealtimePrice) {
+      results[symbol] = parsed;
+    }
+  });
+
+  return results;
+}
+
+function parseTwseMisItem(item) {
+  const symbol = normalizeSymbol(item.c);
+  if (!symbol) return null;
+
+  const z = parsePrice(item.z);
+  const y = parsePrice(item.y);
+  const open = parsePrice(item.o);
+  const high = parsePrice(item.h);
+  const low = parsePrice(item.l);
+
+  const ask = parseFirstOrderPrice(item.a);
+  const bid = parseFirstOrderPrice(item.b);
+
+  /*
+    盤中真正成交價是 z。
+    z 為 "-" 時，代表可能尚無成交或資料暫無。
+    此時可以退而求其次用委買 / 委賣估算，但不可用 y 昨收當現價。
+  */
+  let price = null;
+  let priceType = "none";
+  let isRealtimePrice = false;
+
+  if (Number.isFinite(z) && z > 0) {
+    price = z;
+    priceType = "last";
+    isRealtimePrice = true;
+  } else if (
+    Number.isFinite(ask) &&
+    ask > 0 &&
+    Number.isFinite(bid) &&
+    bid > 0
+  ) {
+    price = (ask + bid) / 2;
+    priceType = "bid_ask_mid";
+    isRealtimePrice = true;
+  } else if (Number.isFinite(ask) && ask > 0) {
+    price = ask;
+    priceType = "ask";
+    isRealtimePrice = true;
+  } else if (Number.isFinite(bid) && bid > 0) {
+    price = bid;
+    priceType = "bid";
+    isRealtimePrice = true;
+  }
+
+  let change = null;
+  let changePercent = null;
+
+  if (Number.isFinite(price) && Number.isFinite(y) && y > 0) {
+    change = price - y;
+    changePercent = change / y * 100;
+  }
+
+  const rawDate = String(item.d || "").trim();
+  const normalizedDate = normalizeTwseDate(rawDate);
+
+  return {
+    symbol,
+    name: item.n || "",
+    market: String(item.ex || "").includes("otc") ? "otc" : "tse",
+
+    /*
+      給前端相容用。
+    */
+    price,
+    currentPrice: price,
+    z,
+    y,
+
+    /*
+      額外資訊。
+    */
+    yesterday: y,
+    open,
+    high,
+    low,
+    ask,
+    bid,
+    volume: parseNumber(item.v),
+    time: item.t || "",
+    date: normalizedDate,
+    rawDate,
+    change,
+    changePercent,
+    priceType,
+    isRealtimePrice,
+    source: "TWSE MIS"
+  };
 }
 
 function parsePrice(value) {
   if (value === undefined || value === null) return null;
-  if (value === "-" || value === "") return null;
 
-  const num = Number(String(value).replaceAll(",", ""));
+  const str = String(value).trim();
+
+  if (!str || str === "-" || str.toLowerCase() === "null") return null;
+
+  const num = Number(str.replaceAll(",", ""));
   return Number.isFinite(num) ? num : null;
 }
 
 function parseNumber(value) {
   if (value === undefined || value === null) return null;
 
-  const num = Number(String(value).replaceAll(",", ""));
+  const str = String(value).trim();
+
+  if (!str || str === "-" || str.toLowerCase() === "null") return null;
+
+  const num = Number(str.replaceAll(",", ""));
   return Number.isFinite(num) ? num : null;
+}
+
+function parseFirstOrderPrice(value) {
+  if (value === undefined || value === null) return null;
+
+  const parts = String(value)
+    .split("_")
+    .map(v => parsePrice(v))
+    .filter(v => Number.isFinite(v) && v > 0);
+
+  return parts.length ? parts[0] : null;
+}
+
+function normalizeTwseDate(value) {
+  const str = String(value || "").trim();
+
+  /*
+    TWSE MIS 常見格式：20260721
+  */
+  if (/^\d{8}$/.test(str)) {
+    return `${str.substring(0, 4)}-${str.substring(4, 6)}-${str.substring(6, 8)}`;
+  }
+
+  /*
+    已經是 2026-07-21 或 2026/07/21。
+  */
+  if (/^\d{4}[-/]\d{2}[-/]\d{2}/.test(str)) {
+    return str.replaceAll("/", "-").substring(0, 10);
+  }
+
+  return "";
+}
+
+function getUserAgent() {
+  return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 }
 
 function jsonResponse(statusCode, body) {
@@ -123,7 +291,16 @@ function jsonResponse(statusCode, body) {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Content-Type"
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+
+      /*
+        關鍵：避免 Netlify / CDN / browser 快取。
+      */
+      "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+      "Pragma": "no-cache",
+      "Expires": "0",
+      "Surrogate-Control": "no-store"
     },
     body: JSON.stringify(body)
   };
