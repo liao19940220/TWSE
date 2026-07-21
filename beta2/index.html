@@ -5482,13 +5482,9 @@ function parseRealtimeQuotePrice(q) {
         }
     }
 
-    return 0;
-}
-
-
     /*
         如果 z 是 "-"，有些 API 仍有 best ask / bid。
-        盤中若尚無成交，可退而求其次用買賣中間價。
+        盤中若尚無成交，可退而求其次用買賣價。
     */
     const askRaw = String(q.a || "").split("_").find(v => Number(v) > 0);
     const bidRaw = String(q.b || "").split("_").find(v => Number(v) > 0);
@@ -5496,9 +5492,11 @@ function parseRealtimeQuotePrice(q) {
     const ask = Number(askRaw);
     const bid = Number(bidRaw);
 
- // if (Number.isFinite(ask) && ask > 0 && Number.isFinite(bid) && bid > 0) {
-   //   return (ask + bid) / 2;
-  //}
+    /*
+    if (Number.isFinite(ask) && ask > 0 && Number.isFinite(bid) && bid > 0) {
+        return (ask + bid) / 2;
+    }
+    */
 
     if (Number.isFinite(ask) && ask > 0) return ask;
     if (Number.isFinite(bid) && bid > 0) return bid;
@@ -5531,15 +5529,18 @@ function isRealtimeQuoteFresh(q) {
         }
     }
 
-    /*
-        若有 y / previousClose，但沒有 z / last 類欄位，代表很可能只有昨日收盤。
-    */
     const realtimePrice = parseRealtimeQuotePrice(q);
     return realtimePrice > 0;
 }
 
-async function applyRealtimeFirst(symbols) {
-    const normalizedSymbols = [...new Set(symbols.map(normalizeSymbol))];
+async function applyRealtimeFirst(symbols, context = {}) {
+    const normalizedSymbols = [...new Set(symbols.map(normalizeSymbol).filter(Boolean))];
+
+    const marketStatus = context.marketStatus || getTwMarketStatus();
+    const statusEl = context.statusEl || null;
+    const failedSymbols = context.failedSymbols || [];
+    const counter = context.counter || { updatedCount: 0 };
+
     const missing = [];
 
     try {
@@ -5586,18 +5587,24 @@ async function applyRealtimeFirst(symbols) {
 
                 currentPrices[sym] = finalPrice;
 
+                const today = typeof getTaiwanTodayString === "function"
+                    ? getTaiwanTodayString()
+                    : new Date().toISOString().slice(0, 10);
+
                 historicalPrices[today] = historicalPrices[today] || {};
                 historicalPrices[today][sym] = finalPrice;
 
-                priceMeta[sym] = {
-                    source: q.source || "TWSE MIS",
-                    type: q.priceType === "yesterday" ? "yesterday" : "realtime",
-                    label: q.priceType === "yesterday" ? "昨收備援" : "盤中成交",
-                    date: q.date || q.d || today,
-                    time: q.time || q.t || "",
-                    marketStatus: marketStatus.label,
-                    updatedAt: new Date().toISOString()
-                };
+                if (typeof priceMeta !== "undefined") {
+                    priceMeta[sym] = {
+                        source: q.source || "TWSE MIS",
+                        type: q.priceType === "yesterday" ? "yesterday" : "realtime",
+                        label: q.priceType === "yesterday" ? "昨收備援" : "盤中成交",
+                        date: q.date || q.d || today,
+                        time: q.time || q.t || "",
+                        marketStatus: marketStatus.label,
+                        updatedAt: new Date().toISOString()
+                    };
+                }
 
                 const resolvedName =
                     q.name ||
@@ -5609,7 +5616,7 @@ async function applyRealtimeFirst(symbols) {
                     stockNames[sym] = resolvedName;
                 }
 
-                updatedCount++;
+                counter.updatedCount++;
             } else {
                 missing.push(sym);
             }
@@ -5627,8 +5634,6 @@ async function applyRealtimeFirst(symbols) {
 
         收盤後 / 非交易日：
         - 使用 daily close
-
-        這裡不用 await，避免你目前 index.html 裡因位置問題造成 SyntaxError。
     */
     if (missing.length) {
         if (marketStatus.status === "trading") {
@@ -5638,129 +5643,154 @@ async function applyRealtimeFirst(symbols) {
                 statusEl.innerText = `盤中交易：${missing.join(", ")} 無成交價或昨收價，已保留原價格`;
             }
         } else {
-            applyDailyClose(missing);
+            if (typeof applyDailyClose === "function") {
+                await applyDailyClose(missing);
+                counter.updatedCount += missing.length;
+            } else {
+                failedSymbols.push(...missing);
+            }
         }
     }
+
+    return {
+        updatedCount: counter.updatedCount,
+        failedSymbols
+    };
 }
 
-
-
-
-async function fetchTwsePrices() {
-  const statusEl = document.getElementById("priceStatus");
-
-  try {
-    const portfolio = calculatePortfolio();
-    const holdings = portfolio.holdings || {};
-    const activeSymbols = Object.keys(holdings)
-      .map(normalizeSymbol)
-      .filter(Boolean);
-
-    if (!activeSymbols.length) {
-      if (statusEl) statusEl.innerText = "目前沒有持股需要更新";
-      return;
-    }
+async function updatePricesByBestSource(activeSymbols, statusEl) {
+    const normalizedSymbols = [...new Set(activeSymbols.map(normalizeSymbol).filter(Boolean))];
 
     const marketStatus = getTwMarketStatus();
+    const failedSymbols = [];
+    const counter = { updatedCount: 0 };
+
+    if (!normalizedSymbols.length) {
+        return {
+            updatedCount: 0,
+            updatedNameCount: 0,
+            failedSymbols: [],
+            marketStatus
+        };
+    }
+
+    if (marketStatus.preferredSource === "realtime") {
+        if (statusEl) statusEl.innerText = "盤中交易：使用即時價更新...";
+        await applyRealtimeFirst(normalizedSymbols, {
+            marketStatus,
+            statusEl,
+            failedSymbols,
+            counter
+        });
+    } else if (marketStatus.preferredSource === "realtime_first") {
+        if (statusEl) statusEl.innerText = "收盤後資料整理中：即時價優先...";
+        await applyRealtimeFirst(normalizedSymbols, {
+            marketStatus,
+            statusEl,
+            failedSymbols,
+            counter
+        });
+    } else {
+        if (statusEl) statusEl.innerText = "收盤後 / 非交易日：使用收盤價更新...";
+
+        if (typeof applyDailyClose === "function") {
+            await applyDailyClose(normalizedSymbols);
+            counter.updatedCount += normalizedSymbols.length;
+        } else {
+            failedSymbols.push(...normalizedSymbols);
+        }
+    }
 
     let updatedNameCount = 0;
 
-    if (marketStatus.preferredSource === "realtime") {
-      if (statusEl) statusEl.innerText = "盤中交易：使用即時價更新...";
-      await applyRealtimeFirst(activeSymbols);
-    } else if (marketStatus.preferredSource === "realtime_first") {
-      if (statusEl) statusEl.innerText = "收盤後資料整理中：即時價優先...";
-      await applyRealtimeFirst(activeSymbols);
-    } else {
-      if (statusEl) statusEl.innerText = "收盤後 / 非交易日：使用收盤價更新...";
-      await applyDailyClose(activeSymbols);
-    }
-
     if (typeof updateStockNamesByInfoApi === "function") {
-      updatedNameCount = await updateStockNamesByInfoApi(activeSymbols);
+        updatedNameCount = await updateStockNamesByInfoApi(normalizedSymbols);
     }
 
     if (typeof saveData === "function") {
-      saveData();
+        saveData();
     }
 
-    if (typeof renderAll === "function") {
-      renderAll();
-    }
-
-    if (statusEl) {
-      statusEl.innerText = `價格更新完成，股票名稱更新 ${updatedNameCount || 0} 筆`;
-    }
-  } catch (err) {
-    console.error("更新價格失敗：", err);
-
-    if (statusEl) {
-      statusEl.innerText = `更新失敗：${err.message || err}`;
-    }
-
-    alert(`更新價格失敗：${err.message || err}`);
-  }
-
-
-
-return {
-    updatedCount,
-    updatedNameCount,
-    failedSymbols,
-    marketStatus
-};
-
-        }
-
-        async function fetchTwsePrices() {
-            const btn = document.getElementById("fetchPriceBtn");
-            const status = document.getElementById("apiStatus");
-            const activeSymbols = getActiveSymbols();
-
-            if (!activeSymbols.length) {
-                if (status) status.innerText = "無持股庫存";
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = "更新中...";
-
-            try {
-                const result = await updatePricesByBestSource(activeSymbols, status);
-                render();
-
-              const failText = result.failedSymbols.length ? `，失敗 ${result.failedSymbols.length} 檔` : "";
-const nameText = result.updatedNameCount ? `，名稱 ${result.updatedNameCount} 檔` : "";
-
-if (status) {
-    status.innerText = `${result.marketStatus.label}｜成功 ${result.updatedCount} 檔${nameText}${failText}｜${new Date().toLocaleTimeString("zh-TW")}`;
+    return {
+        updatedCount: counter.updatedCount,
+        updatedNameCount,
+        failedSymbols,
+        marketStatus
+    };
 }
 
-            } catch (err) {
-                console.error(err);
-                if (status) status.innerText = "更新失敗";
-                alert("更新股價失敗：" + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "🔄 更新";
-            }
+async function fetchTwsePrices() {
+    const btn = document.getElementById("fetchPriceBtn");
+    const status = document.getElementById("apiStatus") || document.getElementById("priceStatus");
+
+    let activeSymbols = [];
+
+    if (typeof getActiveSymbols === "function") {
+        activeSymbols = getActiveSymbols();
+    } else if (typeof calculatePortfolio === "function") {
+        const portfolio = calculatePortfolio();
+        const holdings = portfolio.holdings || {};
+        activeSymbols = Object.keys(holdings);
+    }
+
+    activeSymbols = [...new Set(activeSymbols.map(normalizeSymbol).filter(Boolean))];
+
+    if (!activeSymbols.length) {
+        if (status) status.innerText = "無持股庫存";
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "更新中...";
+    }
+
+    try {
+        const result = await updatePricesByBestSource(activeSymbols, status);
+
+        if (typeof render === "function") {
+            render();
+        } else if (typeof renderAll === "function") {
+            renderAll();
         }
 
-        let autoPriceUpdateDone = false;
+        const failText = result.failedSymbols.length ? `，失敗 ${result.failedSymbols.length} 檔` : "";
+        const nameText = result.updatedNameCount ? `，名稱 ${result.updatedNameCount} 檔` : "";
 
-        async function autoUpdatePricesAfterLogin() {
-            if (autoPriceUpdateDone) return;
-            autoPriceUpdateDone = true;
+        if (status) {
+            status.innerText = `${result.marketStatus.label}｜成功 ${result.updatedCount} 檔${nameText}${failText}｜${new Date().toLocaleTimeString("zh-TW")}`;
+        }
+    } catch (err) {
+        console.error("更新股價失敗：", err);
 
-            setTimeout(async () => {
-                try {
-                    await fetchTwsePrices();
-                } catch (err) {
-                    console.warn("自動更新價格失敗", err);
-                }
-            }, 800);
+        if (status) {
+            status.innerText = "更新失敗";
         }
+
+        alert("更新股價失敗：" + (err.message || err));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "🔄 更新";
         }
+    }
+}
+
+let autoPriceUpdateDone = false;
+
+async function autoUpdatePricesAfterLogin() {
+    if (autoPriceUpdateDone) return;
+    autoPriceUpdateDone = true;
+
+    setTimeout(async () => {
+        try {
+            await fetchTwsePrices();
+        } catch (err) {
+            console.warn("自動更新價格失敗", err);
+        }
+    }, 800);
+}
+
 function applyThemeMode() {
     const icon = document.getElementById("themeModeIcon");
     const btn = document.getElementById("themeToggleBtn");
@@ -5775,6 +5805,18 @@ function applyThemeMode() {
         if (btn) btn.title = "目前為深色模式，點擊切換淺色模式";
     }
 }
+
+function toggleThemeMode() {
+    themeMode = themeMode === "light" ? "dark" : "light";
+    localStorage.setItem("stock_theme_mode", themeMode);
+    applyThemeMode();
+
+    if (activeTab === "chart") {
+        renderChart();
+        renderAllocationCharts();
+    }
+}
+
 
 function toggleThemeMode() {
     themeMode = themeMode === "light" ? "dark" : "light";
