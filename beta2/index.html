@@ -5303,13 +5303,23 @@ const benchmarkData = labels.map(() => benchmarkValue);
             return Object.keys(holdings).filter(sym => holdings[sym] > 0);
         }
 
-        async function fetchRealtimeQuotesFromNetlify(symbols) {
-            const query = encodeURIComponent(symbols.join(","));
-            const url = `/.netlify/functions/quotes?symbols=${query}`;
-            const json = await fetchJsonWithTimeout(url, { timeout: 10000 });
-            if (!json.ok) throw new Error(json.message || "即時股價 API 回傳失敗");
-            return json.data || {};
+async function fetchRealtimeQuotesFromNetlify(symbols) {
+    const query = encodeURIComponent(symbols.join(","));
+    const url = `/.netlify/functions/quotes?symbols=${query}&t=${Date.now()}`;
+
+    const json = await fetchJsonWithTimeout(url, {
+        timeout: 10000,
+        cache: "no-store",
+        headers: {
+            "Cache-Control": "no-cache"
         }
+    });
+
+    if (!json.ok) throw new Error(json.message || "即時股價 API 回傳失敗");
+
+    return json.data || {};
+}
+
 
         async function fetchDailyCloseFromNetlify(symbol) {
             const startDate = getDateBeforeDays(60);
@@ -5380,32 +5390,39 @@ async function updateStockNamesByInfoApi(symbols) {
             const failedSymbols = [];
 
 async function applyDailyClose(symbols) {
-    for (const sym of [...new Set(symbols)]) {
+    for (const sym of [...new Set(symbols)].map(normalizeSymbol)) {
         try {
             const daily = await fetchDailyCloseFromNetlify(sym);
             const latest = daily.latest;
 
             if (latest && Number(latest.close) > 0) {
                 const price = Number(latest.close);
-                currentPrices[sym] = price;
-const resolvedName =
-    daily.name ||
-    daily.stockName ||
-    daily.stock_name ||
-    latest.name ||
-    latest.stockName ||
-    latest.stock_name ||
-    "";
 
-if (resolvedName) {
-    stockNames[sym] = resolvedName;
-}
+                currentPrices[sym] = price;
+
+                const resolvedName =
+                    daily.name ||
+                    daily.stockName ||
+                    daily.stock_name ||
+                    latest.name ||
+                    latest.stockName ||
+                    latest.stock_name ||
+                    "";
+
+                if (resolvedName) {
+                    stockNames[sym] = resolvedName;
+                }
 
                 historicalPrices[latest.date] = historicalPrices[latest.date] || {};
                 historicalPrices[latest.date][sym] = price;
-                historicalPrices[today][sym] = price;
 
-              
+                /*
+                    注意：
+                    daily close 只在收盤 / 非交易日使用。
+                    這裡仍寫入 today，是為了資產圖表可用。
+                    但 priceMeta 會明確標記為每日收盤。
+                */
+                historicalPrices[today][sym] = price;
 
                 priceMeta[sym] = {
                     source: "FinMind",
@@ -5413,7 +5430,8 @@ if (resolvedName) {
                     label: "每日收盤",
                     date: latest.date,
                     time: "",
-                    marketStatus: marketStatus.label
+                    marketStatus: marketStatus.label,
+                    updatedAt: new Date().toISOString()
                 };
 
                 updatedCount++;
@@ -5435,53 +5453,185 @@ function normalizeSymbol(sym) {
         .replace(".TWO", "");
 }
 
+/*
+    台股即時報價解析：
+    只接受真正盤中欄位，不再把 close / previousClose 當作即時價。
+*/
+function parseRealtimeQuotePrice(q) {
+    if (!q) return 0;
+
+    /*
+        TWSE MIS 常見欄位：
+        z = 最近成交價
+        a = 五檔委賣價，字串例如 "100.5_101.0_..."
+        b = 五檔委買價
+        y = 昨日收盤價，不可當盤中現價
+    */
+
+    const candidateValues = [
+        q.z,
+        q.last,
+        q.lastPrice,
+        q.current,
+        q.currentPrice,
+        q.realtimePrice
+    ];
+
+    for (const val of candidateValues) {
+        const price = Number(String(val ?? "").replace(",", "").trim());
+        if (Number.isFinite(price) && price > 0) {
+            return price;
+        }
+    }
+
+    /*
+        如果 z 是 "-"，有些 API 仍有 best ask / bid。
+        盤中若尚無成交，可退而求其次用買賣中間價。
+    */
+    const askRaw = String(q.a || "").split("_").find(v => Number(v) > 0);
+    const bidRaw = String(q.b || "").split("_").find(v => Number(v) > 0);
+
+    const ask = Number(askRaw);
+    const bid = Number(bidRaw);
+
+    if (Number.isFinite(ask) && ask > 0 && Number.isFinite(bid) && bid > 0) {
+        return (ask + bid) / 2;
+    }
+
+    if (Number.isFinite(ask) && ask > 0) return ask;
+    if (Number.isFinite(bid) && bid > 0) return bid;
+
+    return 0;
+}
+
+function isRealtimeQuoteFresh(q) {
+    if (!q) return false;
+
+    const todayDash = getTaiwanTodayString();
+    const todaySlash = todayDash.replaceAll("-", "/");
+
+    const quoteDate = String(
+        q.date ||
+        q.d ||
+        q.tradeDate ||
+        q.timeDate ||
+        ""
+    ).trim();
+
+    /*
+        如果 API 有日期欄位，盤中必須是今天。
+        若沒有日期欄位，先不擋，避免部分 proxy 沒回傳日期。
+    */
+    if (quoteDate) {
+        const normalizedDate = quoteDate.replaceAll("/", "-").substring(0, 10);
+        if (normalizedDate !== todayDash && quoteDate.substring(0, 10) !== todaySlash) {
+            return false;
+        }
+    }
+
+    /*
+        若有 y / previousClose，但沒有 z / last 類欄位，代表很可能只有昨日收盤。
+    */
+    const realtimePrice = parseRealtimeQuotePrice(q);
+    return realtimePrice > 0;
+}
+
 async function applyRealtimeFirst(symbols) {
+    const normalizedSymbols = [...new Set(symbols.map(normalizeSymbol))];
     const missing = [];
 
     try {
-        const normalizedSymbols = symbols.map(normalizeSymbol);
-        const realtimeMap = await fetchRealtimeQuotesFromNetlify(normalizedSymbols);
+        /*
+            加 cache busting，避免 Netlify / browser / CDN 快取造成拿到舊資料。
+        */
+        const query = encodeURIComponent(normalizedSymbols.join(","));
+        const url = `/.netlify/functions/quotes?symbols=${query}&t=${Date.now()}`;
+
+        const json = await fetchJsonWithTimeout(url, {
+            timeout: 10000,
+            cache: "no-store",
+            headers: {
+                "Cache-Control": "no-cache"
+            }
+        });
+
+        if (!json.ok) {
+            throw new Error(json.message || "即時股價 API 回傳失敗");
+        }
+
+        const realtimeMap = json.data || {};
 
         console.log("即時報價回傳：", realtimeMap);
 
-        symbols.forEach(sym => {
-            const key = normalizeSymbol(sym);
-            const q = realtimeMap[sym] || realtimeMap[key];
-            const price = Number(q?.price || q?.z || q?.close || q?.currentPrice);
+        normalizedSymbols.forEach(sym => {
+            const q =
+                realtimeMap[sym] ||
+                realtimeMap[`${sym}.TW`] ||
+                realtimeMap[`${sym}.TWO`];
+
+            const price = parseRealtimeQuotePrice(q);
 
             console.log("即時報價解析：", sym, q, price);
 
-            if (q && Number.isFinite(price) && price > 0) {
+            if (q && isRealtimeQuoteFresh(q) && Number.isFinite(price) && price > 0) {
                 currentPrices[sym] = price;
-                currentPrices[key] = price;
+
+                historicalPrices[today] = historicalPrices[today] || {};
+                historicalPrices[today][sym] = price;
 
                 priceMeta[sym] = {
-                    source: "realtime",
+                    source: q.source || "TWSE realtime",
+                    type: "realtime",
                     label: "盤中即時",
-                    time: q.time || "",
-                    date: q.date || "",
+                    date: q.date || q.d || today,
+                    time: q.time || q.t || "",
+                    marketStatus: marketStatus.label,
                     updatedAt: new Date().toISOString()
                 };
 
-                priceMeta[key] = priceMeta[sym];
+                const resolvedName =
+                    q.name ||
+                    q.stockName ||
+                    q.stock_name ||
+                    "";
 
-                if (q.name) {
-                    stockNames[sym] = q.name;
-                    stockNames[key] = q.name;
+                if (resolvedName) {
+                    stockNames[sym] = resolvedName;
                 }
+
+                updatedCount++;
             } else {
+                /*
+                    盤中時，如果拿不到真正即時價，不直接用昨日收盤價覆蓋。
+                    避免你看到的問題：盤中全部變昨天收盤。
+                */
                 missing.push(sym);
             }
         });
     } catch (err) {
         console.warn("即時報價失敗", err);
-        missing.push(...symbols);
+        missing.push(...normalizedSymbols);
     }
 
+    /*
+        關鍵修正：
+        - 盤中交易時間，不 fallback daily close，避免顯示昨天收盤價。
+        - 收盤後資料整理中，可以 fallback daily close。
+        - 非交易時間原本就會走 applyDailyClose，不會進到這裡。
+    */
     if (missing.length) {
-        await applyDailyClose(missing.map(normalizeSymbol));
+        if (marketStatus.status === "trading") {
+            failedSymbols.push(...missing);
+
+            if (statusEl) {
+                statusEl.innerText = `盤中交易：${missing.join(", ")} 尚未取得有效即時價，已保留原價格`;
+            }
+        } else {
+            await applyDailyClose(missing);
+        }
     }
 }
+
 
 
             if (marketStatus.preferredSource === "realtime") {
