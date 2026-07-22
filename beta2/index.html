@@ -3028,17 +3028,24 @@ function showToast(message, type = "info") {
             }));
 
             try {
-                currentPrices = JSON.parse(localStorage.getItem("stock_v6_prices")) || {};
-                historicalPrices = JSON.parse(localStorage.getItem("stock_v7_historical_prices")) || {};
-                priceMeta = JSON.parse(localStorage.getItem("stock_v10_price_meta")) || {};
-                const savedNames = JSON.parse(localStorage.getItem("stock_v6_names")) || {};
-                stockNames = { ...defaultNames, ...savedNames };
-            } catch (err) {
-                currentPrices = {};
-                historicalPrices = {};
-                priceMeta = {};
-                stockNames = { ...defaultNames };
-            }
+    currentPrices = JSON.parse(localStorage.getItem("stock_v6_prices")) || {};
+    priceMeta = JSON.parse(localStorage.getItem("stock_v10_price_meta")) || {};
+    const savedNames = JSON.parse(localStorage.getItem("stock_v6_names")) || {};
+    stockNames = { ...defaultNames, ...savedNames };
+
+    const localHistoricalPrices = JSON.parse(localStorage.getItem("stock_v7_historical_prices")) || {};
+    const cloudHistoricalPrices = await loadHistoricalPricesFromSupabase();
+
+    historicalPrices = mergeHistoricalPricesMap(localHistoricalPrices, cloudHistoricalPrices);
+
+    localStorage.setItem("stock_v7_historical_prices", JSON.stringify(historicalPrices));
+} catch (err) {
+    currentPrices = {};
+    historicalPrices = {};
+    priceMeta = {};
+    stockNames = { ...defaultNames };
+}
+
 
             renderBrokers();
             renderBrokerSelectOptions();
@@ -3329,15 +3336,112 @@ async function importTransactionsToCloud(importedTx) {
     await loadAllDataFromSupabase();
     render();
 
-    alert(
-        `Excel 已成功匯入雲端。\n\n` +
-        `成功新增：${txsToInsert.length} 筆\n` +
-        `格式無效：${invalidCount} 筆\n` +
-        `Excel 內重複：${duplicateInExcelCount} 筆\n` +
-        `雲端已存在：${duplicateInCloudCount} 筆`
-    );
+   let historicalSyncCount = 0;
+
+try {
+    const localHistoricalPrices = JSON.parse(localStorage.getItem("stock_v7_historical_prices")) || {};
+    const result = await syncHistoricalPricesToSupabaseFromMap(localHistoricalPrices);
+    historicalSyncCount = result.count || 0;
+} catch (err) {
+    console.error("同步歷史收盤價失敗：", err);
+    alert("交易已同步，但歷史收盤價同步失敗：" + err.message);
+}
+
+await loadAllDataFromSupabase();
+render();
+
+alert(
+    `同步完成。\n\n` +
+    `成功新增交易：${successCount} 筆\n` +
+    `交易新增失敗：${failCount} 筆\n` +
+    `歷史收盤價同步：${historicalSyncCount} 筆\n` +
+    `略過本地重複：${duplicateInLocalCount} 筆\n` +
+    `雲端已存在：${duplicateInCloudCount} 筆`
+);
 
     return true;
+}
+async function syncHistoricalPricesToSupabaseFromMap(histMap) {
+    if (!currentUser) {
+        return {
+            success: false,
+            count: 0
+        };
+    }
+
+    const rows = historicalPricesMapToRows(histMap).map(item => ({
+        user_id: currentUser.id,
+        date: item.date,
+        symbol: item.symbol,
+        close_price: Number(item.close_price) || 0
+    })).filter(row =>
+        row.date &&
+        row.symbol &&
+        Number.isFinite(row.close_price) &&
+        row.close_price > 0
+    );
+
+    if (!rows.length) {
+        return {
+            success: true,
+            count: 0
+        };
+    }
+
+    const batchSize = 500;
+    let total = 0;
+
+    for (let i = 0; i < rows.length; i += batchSize) {
+        const batch = rows.slice(i, i + batchSize);
+
+        const { error } = await supabaseClient
+            .from("historical_prices")
+            .upsert(batch, {
+                onConflict: "user_id,date,symbol"
+            });
+
+        if (error) {
+            console.error("同步歷史收盤價到 Supabase 失敗：", error);
+            throw error;
+        }
+
+        total += batch.length;
+    }
+
+    return {
+        success: true,
+        count: total
+    };
+}
+
+async function loadHistoricalPricesFromSupabase() {
+    if (!currentUser) return {};
+
+    const { data, error } = await supabaseClient
+        .from("historical_prices")
+        .select("date, symbol, close_price")
+        .eq("user_id", currentUser.id)
+        .order("date", { ascending: true });
+
+    if (error) {
+        console.error("讀取雲端歷史收盤價失敗：", error);
+        return {};
+    }
+
+    const map = {};
+
+    (data || []).forEach(row => {
+        const date = String(row.date || "").substring(0, 10);
+        const sym = String(row.symbol || "").trim().toUpperCase();
+        const price = Number(row.close_price) || 0;
+
+        if (!date || !sym || price <= 0) return;
+
+        map[date] = map[date] || {};
+        map[date][sym] = price;
+    });
+
+    return map;
 }
 
 
@@ -3689,6 +3793,166 @@ function getTxFingerprint(tx) {
         n.tradeMode
     ].join("|");
 }
+    function normalizeImportedHistoricalDate(val) {
+    if (val === undefined || val === null || val === "") return "";
+
+    if (val instanceof Date) {
+        if (isNaN(val.getTime())) return "";
+
+        const offset = val.getTimezoneOffset();
+        const corrected = new Date(val.getTime() - offset * 60 * 1000);
+
+        return corrected.toISOString().split("T")[0];
+    }
+
+    if (typeof val === "number" && typeof XLSX !== "undefined") {
+        const parsed = XLSX.SSF.parse_date_code(val);
+        if (parsed) {
+            const y = parsed.y;
+            const m = String(parsed.m).padStart(2, "0");
+            const d = String(parsed.d).padStart(2, "0");
+            return `${y}-${m}-${d}`;
+        }
+    }
+
+    const str = String(val).trim();
+
+    if (/^\d{4}-\d{1,2}-\d{1,2}/.test(str)) {
+        const parts = str.substring(0, 10).split("-");
+        return `${parts[0]}-${String(parts[1]).padStart(2, "0")}-${String(parts[2]).padStart(2, "0")}`;
+    }
+
+    if (/^\d{4}\/\d{1,2}\/\d{1,2}/.test(str)) {
+        const parts = str.substring(0, 10).split("/");
+        return `${parts[0]}-${String(parts[1]).padStart(2, "0")}-${String(parts[2]).padStart(2, "0")}`;
+    }
+
+    // 支援民國年，例如 113/01/02
+    if (/^\d{2,3}\/\d{1,2}\/\d{1,2}$/.test(str)) {
+        const parts = str.split("/");
+        const y = Number(parts[0]) + 1911;
+        return `${y}-${String(parts[1]).padStart(2, "0")}-${String(parts[2]).padStart(2, "0")}`;
+    }
+
+    return "";
+}
+
+function getHistoricalSheet(workbook) {
+    const possibleNames = [
+        "歷史收盤價庫",
+        "歷史收盤價",
+        "歷史價格",
+        "收盤價",
+        "Historical Prices",
+        "historical_prices",
+        "historicalPrices"
+    ];
+
+    const sheetName = possibleNames.find(name => workbook.SheetNames.includes(name));
+
+    if (!sheetName) return null;
+
+    return workbook.Sheets[sheetName];
+}
+
+function parseHistoricalPricesSheet(workbook) {
+    const wsHist = getHistoricalSheet(workbook);
+
+    if (!wsHist) {
+        return {
+            map: {},
+            count: 0
+        };
+    }
+
+    const rows = XLSX.utils.sheet_to_json(wsHist, {
+        defval: "",
+        raw: true
+    });
+
+    const map = {};
+    let count = 0;
+
+    rows.forEach((row, index) => {
+        const date = normalizeImportedHistoricalDate(
+            row["日期"] ||
+            row["date"] ||
+            row["Date"] ||
+            row["交易日期"]
+        );
+
+        const sym = String(
+            row["股票代號"] ||
+            row["symbol"] ||
+            row["Symbol"] ||
+            row["代號"] ||
+            row["證券代號"] ||
+            ""
+        ).trim().toUpperCase();
+
+        const price = Number(
+            row["收盤價"] ||
+            row["最後收盤價"] ||
+            row["目前價格"] ||
+            row["close_price"] ||
+            row["closePrice"] ||
+            row["price"] ||
+            row["Price"] ||
+            row["收盤"] ||
+            0
+        );
+
+        if (!date || !sym || !Number.isFinite(price) || price <= 0) {
+            console.warn(`歷史收盤價第 ${index + 2} 列格式錯誤，已略過`, row);
+            return;
+        }
+
+        map[date] = map[date] || {};
+        map[date][sym] = price;
+        count++;
+    });
+
+    return {
+        map,
+        count
+    };
+}
+
+function mergeHistoricalPricesMap(baseMap, importedMap) {
+    const merged = {
+        ...(baseMap || {})
+    };
+
+    Object.keys(importedMap || {}).forEach(date => {
+        merged[date] = {
+            ...(merged[date] || {}),
+            ...(importedMap[date] || {})
+        };
+    });
+
+    return merged;
+}
+
+function historicalPricesMapToRows(map) {
+    const rows = [];
+
+    Object.keys(map || {}).forEach(date => {
+        Object.keys(map[date] || {}).forEach(sym => {
+            const closePrice = Number(map[date][sym]) || 0;
+
+            if (!date || !sym || closePrice <= 0) return;
+
+            rows.push({
+                date,
+                symbol: sym,
+                close_price: closePrice
+            });
+        });
+    });
+
+    return rows;
+}
+    
 
         /* =========================
            交易 CRUD
@@ -5390,6 +5654,17 @@ async function applyDailyClose(symbols) {
                 const price = Number(latest.close);
 
                 currentPrices[sym] = price;
+                const closeDate =
+    latest.date ||
+    latest.tradeDate ||
+    daily.date ||
+    getTaiwanTodayString();
+
+const normalizedCloseDate = String(closeDate).replaceAll("/", "-").substring(0, 10);
+
+historicalPrices[normalizedCloseDate] = historicalPrices[normalizedCloseDate] || {};
+historicalPrices[normalizedCloseDate][sym] = price;
+
 
                 const resolvedName =
                     daily.name ||
@@ -5917,18 +6192,18 @@ function toggleThemeMode() {
 
             XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(nameData), "自訂中文名稱");
 
-            const histData = [];
-            Object.keys(historicalPrices).forEach(date => {
-                Object.keys(historicalPrices[date]).forEach(sym => {
-                    histData.push({
-                        "日期": date,
-                        "股票代號": sym,
-                        "目前價格": Number(historicalPrices[date][sym]) || 0
-                    });
-                });
-            });
+        const histData = [];
+Object.keys(historicalPrices).forEach(date => {
+    Object.keys(historicalPrices[date]).forEach(sym => {
+        histData.push({
+            "日期": date,
+            "股票代號": sym,
+            "收盤價": Number(historicalPrices[date][sym]) || 0
+        });
+    });
+});
 
-            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(histData), "歷史收盤價庫");
+XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(histData), "歷史收盤價");
 
             const filename = "stock_backup_" + new Date().toISOString().split("T")[0] + ".xlsx";
             XLSX.writeFile(wb, filename);
@@ -6012,20 +6287,9 @@ function toggleThemeMode() {
 
                     stockNames = { ...defaultNames, ...importedNames };
 
-                    const wsHist = workbook.Sheets["歷史收盤價庫"];
-                    historicalPrices = {};
-                    if (wsHist) {
-                        XLSX.utils.sheet_to_json(wsHist).forEach(row => {
-                            const date = String(row["日期"] || row["date"] || "").trim().replaceAll("/", "-");
-                            const sym = String(row["股票代號"] || row["symbol"] || "").trim();
-                            const price = Number(row["目前價格"] || row["price"]) || 0;
+const parsedHistorical = parseHistoricalPricesSheet(workbook);
+historicalPrices = mergeHistoricalPricesMap(historicalPrices, parsedHistorical.map);
 
-                            if (date && sym) {
-                                historicalPrices[date] = historicalPrices[date] || {};
-                                historicalPrices[date][sym] = price;
-                            }
-                        });
-                    }
 
 if (isCloudMode()) {
     const ok = await importTransactionsToCloud(importedTx);
@@ -6033,11 +6297,38 @@ if (isCloudMode()) {
         event.target.value = "";
         return;
     }
+
+    let historicalSyncCount = 0;
+
+    if (parsedHistorical.count > 0) {
+        try {
+            const result = await syncHistoricalPricesToSupabaseFromMap(parsedHistorical.map);
+            historicalSyncCount = result.count || 0;
+        } catch (err) {
+            console.error("歷史收盤價同步雲端失敗：", err);
+            alert("交易已匯入雲端，但歷史收盤價同步失敗：" + err.message);
+        }
+    }
+
+    saveLocalData();
+    await loadAllDataFromSupabase();
+    render();
+
+    alert(
+        `匯入成功。\n\n` +
+        `歷史收盤價：${parsedHistorical.count} 筆\n` +
+        `同步雲端歷史收盤價：${historicalSyncCount} 筆`
+    );
 } else {
     saveLocalData();
     render();
-    alert("匯入成功");
+
+    alert(
+        `匯入成功。\n\n` +
+        `歷史收盤價：${parsedHistorical.count} 筆`
+    );
 }
+
 
 event.target.value = "";
 
@@ -6102,12 +6393,30 @@ function closeExcelImportRulesModal() {
                 transactions = [];
                 brokers = [];
                 await createDefaultBrokerInSupabase();
-            } else {
-                localStorage.removeItem("stock_v6_tx");
-                localStorage.removeItem("stock_v9_brokers");
-                transactions = [];
-                initLocalBrokers();
-            }
+            } 
+            const historicalResult = await supabaseClient
+    .from("historical_prices")
+    .delete()
+    .eq("user_id", userId);
+
+if (historicalResult.error) {
+    alert("刪除歷史收盤價失敗：" + historicalResult.error.message);
+    return;
+} else {
+    localStorage.removeItem("stock_v6_tx");
+    localStorage.removeItem("stock_v9_brokers");
+    localStorage.removeItem("stock_v7_historical_prices");
+    localStorage.removeItem("stock_v6_prices");
+    localStorage.removeItem("stock_v10_price_meta");
+
+    transactions = [];
+    currentPrices = {};
+    historicalPrices = {};
+    priceMeta = {};
+
+    initLocalBrokers();
+}
+
 
             renderBrokers();
             renderBrokerSelectOptions();
