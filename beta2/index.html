@@ -3192,16 +3192,29 @@ async function syncLocalDataToCloud() {
         else failCount++;
     }
 
-    await loadAllDataFromSupabase();
-    render();
+   let historicalSyncCount = 0;
 
-    alert(
-        `同步完成。\n\n` +
-        `成功新增：${successCount} 筆\n` +
-        `新增失敗：${failCount} 筆\n` +
-        `略過本地重複：${duplicateInLocalCount} 筆\n` +
-        `略過雲端已存在：${duplicateInCloudCount} 筆`
-    );
+try {
+    const localHistoricalPrices = JSON.parse(localStorage.getItem("stock_v7_historical_prices")) || {};
+    const result = await syncHistoricalPricesToSupabaseFromMap(localHistoricalPrices);
+    historicalSyncCount = result.count || 0;
+} catch (err) {
+    console.error("同步歷史收盤價失敗：", err);
+    alert("交易已同步，但歷史收盤價同步失敗：" + err.message);
+}
+
+await loadAllDataFromSupabase();
+render();
+
+alert(
+    `同步完成。\n\n` +
+    `成功新增交易：${successCount} 筆\n` +
+    `交易新增失敗：${failCount} 筆\n` +
+    `歷史收盤價同步：${historicalSyncCount} 筆\n` +
+    `略過本地重複：${duplicateInLocalCount} 筆\n` +
+    `雲端已存在：${duplicateInCloudCount} 筆`
+);
+
 }
 async function importTransactionsToCloud(importedTx) {
     if (!currentUser) return false;
@@ -3334,33 +3347,19 @@ async function importTransactionsToCloud(importedTx) {
     }
 
     await loadAllDataFromSupabase();
-    render();
-
-   let historicalSyncCount = 0;
-
-try {
-    const localHistoricalPrices = JSON.parse(localStorage.getItem("stock_v7_historical_prices")) || {};
-    const result = await syncHistoricalPricesToSupabaseFromMap(localHistoricalPrices);
-    historicalSyncCount = result.count || 0;
-} catch (err) {
-    console.error("同步歷史收盤價失敗：", err);
-    alert("交易已同步，但歷史收盤價同步失敗：" + err.message);
-}
-
-await loadAllDataFromSupabase();
 render();
 
 alert(
-    `同步完成。\n\n` +
-    `成功新增交易：${successCount} 筆\n` +
-    `交易新增失敗：${failCount} 筆\n` +
-    `歷史收盤價同步：${historicalSyncCount} 筆\n` +
-    `略過本地重複：${duplicateInLocalCount} 筆\n` +
+    `Excel 已成功匯入雲端。\n\n` +
+    `成功新增：${txsToInsert.length} 筆\n` +
+    `格式無效：${invalidCount} 筆\n` +
+    `Excel 內重複：${duplicateInExcelCount} 筆\n` +
     `雲端已存在：${duplicateInCloudCount} 筆`
 );
 
-    return true;
+return true;
 }
+
 async function syncHistoricalPricesToSupabaseFromMap(histMap) {
     if (!currentUser) {
         return {
@@ -5653,19 +5652,27 @@ async function applyDailyClose(symbols) {
             if (latest && Number(latest.close) > 0) {
                 const price = Number(latest.close);
 
+                // 1. 更新目前市價
                 currentPrices[sym] = price;
-                const closeDate =
-    latest.date ||
-    latest.tradeDate ||
-    daily.date ||
-    getTaiwanTodayString();
 
-const normalizedCloseDate = String(closeDate).replaceAll("/", "-").substring(0, 10);
+                // 2. 只更新「最新交易日」或今天，不覆蓋整個歷史價格庫
+                const closeDateRaw =
+                    latest.date ||
+                    latest.tradeDate ||
+                    latest.trade_date ||
+                    daily.date ||
+                    getTaiwanTodayString();
 
-historicalPrices[normalizedCloseDate] = historicalPrices[normalizedCloseDate] || {};
-historicalPrices[normalizedCloseDate][sym] = price;
+                const closeDate = String(closeDateRaw)
+                    .replaceAll("/", "-")
+                    .substring(0, 10);
 
+                if (closeDate) {
+                    historicalPrices[closeDate] = historicalPrices[closeDate] || {};
+                    historicalPrices[closeDate][sym] = price;
+                }
 
+                // 3. 更新股票名稱
                 const resolvedName =
                     daily.name ||
                     daily.stockName ||
@@ -5684,31 +5691,10 @@ historicalPrices[normalizedCloseDate][sym] = price;
         }
     }
 }
-        async function updatePricesByBestSource(activeSymbols, statusEl) {
-            const marketStatus = getTaiwanMarketStatus();
-            const today = getTaiwanTodayString();
 
-            historicalPrices[today] = historicalPrices[today] || {};
-            let updatedCount = 0;
-            const failedSymbols = [];
-}
+        
 
-async function updatePricesByBestSource(activeSymbols, statusEl) {
-    const marketStatus = getTaiwanMarketStatus();
-    const today = getTaiwanTodayString();
 
-    historicalPrices[today] = historicalPrices[today] || {};
-    let updatedCount = 0;
-    const failedSymbols = [];
-
-    // 這裡放你的更新股價邏輯
-
-    return {
-        updatedCount,
-        failedSymbols,
-        marketStatus
-    };
-}
 
 
 function normalizeSymbol(sym) {
@@ -5975,9 +5961,7 @@ const marketStatus = getTaiwanMarketStatus();
         updatedNameCount = await updateStockNamesByInfoApi(normalizedSymbols);
     }
 
-    if (typeof saveData === "function") {
-        saveData();
-    }
+saveLocalData();
 
     return {
         updatedCount: counter.updatedCount,
@@ -5991,7 +5975,11 @@ async function fetchTwsePrices() {
     const btn = document.getElementById("fetchPriceBtn");
     const status = document.getElementById("apiStatus") || document.getElementById("priceStatus");
 
+    // 防呆：更新價格前先備份完整歷史收盤價
+    const historicalBackupBeforeUpdate = JSON.parse(JSON.stringify(historicalPrices || {}));
+
     let activeSymbols = [];
+
 
     if (typeof getActiveSymbols === "function") {
         activeSymbols = getActiveSymbols();
@@ -6014,13 +6002,18 @@ async function fetchTwsePrices() {
     }
 
     try {
-        const result = await updatePricesByBestSource(activeSymbols, status);
+    const result = await updatePricesByBestSource(activeSymbols, status);
 
-        if (typeof render === "function") {
-            render();
-        } else if (typeof renderAll === "function") {
-            renderAll();
-        }
+    // 防呆：保留舊歷史收盤價，只合併本次更新產生的新日期 / 今日資料
+    historicalPrices = mergeHistoricalPricesMap(historicalBackupBeforeUpdate, historicalPrices);
+    saveLocalData();
+
+    if (typeof render === "function") {
+        render();
+    } else if (typeof renderAll === "function") {
+        renderAll();
+    }
+
 
         const failText = result.failedSymbols.length ? `，失敗 ${result.failedSymbols.length} 檔` : "";
         const nameText = result.updatedNameCount ? `，名稱 ${result.updatedNameCount} 檔` : "";
@@ -6028,15 +6021,20 @@ async function fetchTwsePrices() {
         if (status) {
             status.innerText = `${result.marketStatus.label}｜成功 ${result.updatedCount} 檔${nameText}${failText}｜${new Date().toLocaleTimeString("zh-TW")}`;
         }
-    } catch (err) {
-        console.error("更新股價失敗：", err);
+   } catch (err) {
+    console.error("更新股價失敗：", err);
 
-        if (status) {
-            status.innerText = "更新失敗";
-        }
+    // 更新失敗時還原歷史收盤價
+    historicalPrices = historicalBackupBeforeUpdate;
+    saveLocalData();
 
-        alert("更新股價失敗：" + (err.message || err));
-    } finally {
+    if (status) {
+        status.innerText = "更新失敗";
+    }
+
+    alert("更新股價失敗：" + (err.message || err));
+}
+ finally {
         if (btn) {
             btn.disabled = false;
             btn.innerText = "🔄 更新";
@@ -6364,65 +6362,75 @@ function closeExcelImportRulesModal() {
         /* =========================
            清除
         ========================= */
-        async function clearAllData() {
-            if (!confirm("確定清除目前模式的所有資料？此動作無法復原。")) return;
+async function clearAllData() {
+    if (!confirm("確定清除目前模式的所有資料？此動作無法復原。")) return;
 
-            if (isCloudMode()) {
-                const userId = currentUser.id;
+    if (isCloudMode()) {
+        const userId = currentUser.id;
 
-                const txResult = await supabaseClient
-                    .from("transactions")
-                    .delete()
-                    .eq("user_id", userId);
+        const txResult = await supabaseClient
+            .from("transactions")
+            .delete()
+            .eq("user_id", userId);
 
-                if (txResult.error) {
-                    alert("刪除交易資料失敗：" + txResult.error.message);
-                    return;
-                }
+        if (txResult.error) {
+            alert("刪除交易資料失敗：" + txResult.error.message);
+            return;
+        }
 
-                const brokerResult = await supabaseClient
-                    .from("brokers")
-                    .delete()
-                    .eq("user_id", userId);
+        const historicalResult = await supabaseClient
+            .from("historical_prices")
+            .delete()
+            .eq("user_id", userId);
 
-                if (brokerResult.error) {
-                    alert("刪除券商資料失敗：" + brokerResult.error.message);
-                    return;
-                }
+        if (historicalResult.error) {
+            alert("刪除歷史收盤價失敗：" + historicalResult.error.message);
+            return;
+        }
 
-                transactions = [];
-                brokers = [];
-                await createDefaultBrokerInSupabase();
-            } 
-            const historicalResult = await supabaseClient
-    .from("historical_prices")
-    .delete()
-    .eq("user_id", userId);
+        const brokerResult = await supabaseClient
+            .from("brokers")
+            .delete()
+            .eq("user_id", userId);
 
-if (historicalResult.error) {
-    alert("刪除歷史收盤價失敗：" + historicalResult.error.message);
-    return;
-} else {
-    localStorage.removeItem("stock_v6_tx");
-    localStorage.removeItem("stock_v9_brokers");
-    localStorage.removeItem("stock_v7_historical_prices");
-    localStorage.removeItem("stock_v6_prices");
-    localStorage.removeItem("stock_v10_price_meta");
+        if (brokerResult.error) {
+            alert("刪除券商資料失敗：" + brokerResult.error.message);
+            return;
+        }
 
-    transactions = [];
-    currentPrices = {};
-    historicalPrices = {};
-    priceMeta = {};
+        transactions = [];
+        brokers = [];
+        currentPrices = {};
+        historicalPrices = {};
+        priceMeta = {};
 
-    initLocalBrokers();
+        localStorage.removeItem("stock_v6_prices");
+        localStorage.removeItem("stock_v7_historical_prices");
+        localStorage.removeItem("stock_v10_price_meta");
+
+        await createDefaultBrokerInSupabase();
+    } else {
+        localStorage.removeItem("stock_v6_tx");
+        localStorage.removeItem("stock_v9_brokers");
+        localStorage.removeItem("stock_v7_historical_prices");
+        localStorage.removeItem("stock_v6_prices");
+        localStorage.removeItem("stock_v10_price_meta");
+
+        transactions = [];
+        brokers = [];
+        currentPrices = {};
+        historicalPrices = {};
+        priceMeta = {};
+
+        initLocalBrokers();
+    }
+
+    renderBrokers();
+    renderBrokerSelectOptions();
+    render();
+    alert("資料已清除。");
 }
 
-
-            renderBrokers();
-            renderBrokerSelectOptions();
-            render();
-            alert("資料已清除。");
-        }
 
         /* =========================
            啟動
