@@ -1929,6 +1929,37 @@ body.light-mode .privacy-mini-btn {
     flex: 0 0 auto !important;
     white-space: nowrap !important;
 }
+/* === Allocation row divider inset === */
+.allocation-row {
+    position: relative;
+    padding: 15px 0;
+}
+
+.allocation-row::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        rgba(100, 116, 139, 0.55),
+        rgba(100, 116, 139, 0.2)
+    );
+}
+
+.allocation-row:last-child::after {
+    display: none;
+}
+
+body.light-mode .allocation-row::after {
+    background: linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.55),
+        rgba(148, 163, 184, 0.2)
+    );
+}
 
     </style>
 </head>
