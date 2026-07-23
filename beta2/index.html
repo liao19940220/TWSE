@@ -2241,11 +2241,22 @@ body.light-mode .allocation-row::after {
 </div>
 
            <div class="grid grid-cols-1 gap-4">
-    <div class="soft-panel rounded-3xl p-4">
-        <h3 class="text-xs muted font-black mb-3">目前資產配置</h3>
-      <div id="allocationListContainer"></div>
+   <div class="soft-panel rounded-3xl p-4">
+    <div class="flex items-center justify-between gap-3 mb-3">
+        <h3 class="text-xs muted font-black">目前資產配置</h3>
+
+       <div 
+    id="portfolioExposureBadge" 
+    class="text-[11px] font-black text-amber-300 whitespace-nowrap"
+>
+    總曝險：0.0%
+</div>
 
     </div>
+
+    <div id="allocationListContainer"></div>
+</div>
+
 </div>
 
         </section>
@@ -5504,11 +5515,86 @@ const benchmarkData = labels.map(() => benchmarkValue);
                 }
             });
         }
+function isLeveragedEtfSymbol(symbol) {
+    const sym = String(symbol || "").trim().toUpperCase();
+    return sym.length >= 6 && sym[5] === "L";
+}
+
+function isInverseEtfSymbol(symbol) {
+    const sym = String(symbol || "").trim().toUpperCase();
+    return sym.length >= 6 && sym[5] === "R";
+}
+        function getPortfolioExposureStats(portfolio) {
+    let stockMarketValue = 0;
+    let leveragedMarketValue = 0;
+    let inverseMarketValue = 0;
+    let totalExposureValue = 0;
+
+    portfolio.holdingRows.forEach(row => {
+        const sym = String(row.sym || "").trim().toUpperCase();
+        const marketVal = Number(row.marketVal) || 0;
+
+        if (marketVal <= 0) return;
+
+        stockMarketValue += marketVal;
+
+        if (isLeveragedEtfSymbol(sym)) {
+            leveragedMarketValue += marketVal;
+
+            // 第六碼 L：正向槓桿 ETF，以 2 倍曝險計算
+            totalExposureValue += marketVal * 2;
+        } else if (isInverseEtfSymbol(sym)) {
+            inverseMarketValue += marketVal;
+
+            // 第六碼 R：反向型 ETF，這裡先以 1 倍反向曝險計入總曝險
+            totalExposureValue += marketVal * 1;
+        } else {
+            // 一般股票 / 一般 ETF：1 倍曝險
+            totalExposureValue += marketVal;
+        }
+    });
+
+    const totalAsset = Number(portfolio.totalAsset) || 0;
+
+    return {
+        stockMarketValue,
+        leveragedMarketValue,
+        inverseMarketValue,
+        totalExposureValue,
+
+        stockRatio: totalAsset > 0 ? stockMarketValue / totalAsset * 100 : 0,
+        leveragedRatio: totalAsset > 0 ? leveragedMarketValue / totalAsset * 100 : 0,
+        inverseRatio: totalAsset > 0 ? inverseMarketValue / totalAsset * 100 : 0,
+
+        totalExposureRatio: totalAsset > 0 ? totalExposureValue / totalAsset * 100 : 0
+    };
+}
+
+
 
 function renderAllocationCharts() {
     const p = calculatePortfolio();
 
+    // 依照 LETF 文章邏輯：
+    // 一般股票/ETF = 1 倍曝險
+    // 槓桿型 ETF，第六碼 L = 2 倍曝險
+    // 現金 = 0 倍曝險
+    const exposureStats = getPortfolioExposureStats(p);
+    const exposureBadge = document.getElementById("portfolioExposureBadge");
+
+    if (exposureBadge) {
+        exposureBadge.innerText = `總曝險：${exposureStats.totalExposureRatio.toFixed(1)}%`;
+
+        exposureBadge.className =
+            exposureStats.totalExposureRatio >= 150
+                ? "text-[11px] font-black text-rose-300 whitespace-nowrap"
+                : exposureStats.totalExposureRatio >= 100
+                    ? "text-[11px] font-black text-amber-300 whitespace-nowrap"
+                    : "text-[11px] font-black text-emerald-300 whitespace-nowrap";
+    }
+
     const items = [];
+
     const colors = [
         "#3b82f6",
         "#2dd4bf",
