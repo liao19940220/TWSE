@@ -5709,52 +5709,81 @@ function normalizeSymbol(sym) {
     台股即時報價解析：
     只接受真正盤中欄位，不再把 close / previousClose 當作即時價。
 */
+function parseNumberValue(value) {
+    if (value === undefined || value === null) return 0;
+
+    const text = String(value).trim().replaceAll(",", "");
+
+    if (!text || text === "-" || text.toLowerCase() === "nan") return 0;
+
+    const num = Number(text);
+    return Number.isFinite(num) && num > 0 ? num : 0;
+}
+
 function parseRealtimeQuotePrice(q) {
     if (!q) return 0;
 
     /*
-        價格優先順序：
-        1. q.price：Netlify function 已經整理好的價格
-        2. q.currentPrice
-        3. q.z：TWSE MIS 最近成交價
-        4. q.y / q.yesterday：昨收備援
+        真正成交價優先：
+        1. price
+        2. currentPrice
+        3. z
     */
-    const candidateValues = [
+    const realtimeCandidates = [
         q.price,
         q.currentPrice,
-        q.z,
-        q.y,
-        q.yesterday
+        q.z
     ];
 
-    for (const val of candidateValues) {
-        const price = Number(String(val ?? "").replace(",", "").trim());
-        if (Number.isFinite(price) && price > 0) {
-            return price;
-        }
+    for (const val of realtimeCandidates) {
+        const price = parseNumberValue(val);
+        if (price > 0) return price;
     }
 
     /*
-        如果 z 是 "-"，有些 API 仍有 best ask / bid。
-        盤中若尚無成交，可退而求其次用買賣價。
+        如果沒有 z，退而求其次用買賣價。
+        支援兩種格式：
+        - q.ask / q.bid：你的 Netlify function 整理後格式
+        - q.a / q.b：TWSE MIS 原始五檔格式
     */
-    const askRaw = String(q.a || "").split("_").find(v => Number(v) > 0);
-    const bidRaw = String(q.b || "").split("_").find(v => Number(v) > 0);
+    const askFromField = parseNumberValue(q.ask);
+    const bidFromField = parseNumberValue(q.bid);
 
-    const ask = Number(askRaw);
-    const bid = Number(bidRaw);
+    let ask = askFromField;
+    let bid = bidFromField;
 
-    /*
-    if (Number.isFinite(ask) && ask > 0 && Number.isFinite(bid) && bid > 0) {
+    if (!ask) {
+        ask = parseNumberValue(
+            String(q.a || "")
+                .split("_")
+                .find(v => parseNumberValue(v) > 0)
+        );
+    }
+
+    if (!bid) {
+        bid = parseNumberValue(
+            String(q.b || "")
+                .split("_")
+                .find(v => parseNumberValue(v) > 0)
+        );
+    }
+
+    if (ask > 0 && bid > 0) {
         return (ask + bid) / 2;
     }
-    */
 
-    if (Number.isFinite(ask) && ask > 0) return ask;
-    if (Number.isFinite(bid) && bid > 0) return bid;
+    if (ask > 0) return ask;
+    if (bid > 0) return bid;
+
+    /*
+        最後才用昨收，不建議標成 realtime。
+    */
+    const yesterday = parseNumberValue(q.y) || parseNumberValue(q.yesterday);
+    if (yesterday > 0) return yesterday;
 
     return 0;
 }
+
 
 function isRealtimeQuoteFresh(q) {
     if (!q) return false;
