@@ -109,13 +109,28 @@ async function fetchTwseMisQuotes(symbols) {
   const list = Array.isArray(json?.msgArray) ? json.msgArray : [];
 
   list.forEach(item => {
-    const symbol = normalizeSymbol(item.c);
-    if (!symbol) return;
+  const symbol = normalizeSymbol(item.c);
+  if (!symbol) return;
 
-    /*
-      如果同一檔同時查到 tse / otc，只保留有有效資料者。
-    */
-    const parsed = parseTwseMisItem(item);
+  console.log("TWSE RAW ITEM", {
+    symbol,
+    ex: item.ex,
+    c: item.c,
+    n: item.n,
+    z: item.z,
+    y: item.y,
+    o: item.o,
+    h: item.h,
+    l: item.l,
+    a: item.a,
+    b: item.b,
+    v: item.v,
+    t: item.t,
+    d: item.d,
+    raw: item
+  });
+
+  const parsed = parseTwseMisItem(item);
 
     if (!parsed) return;
 
