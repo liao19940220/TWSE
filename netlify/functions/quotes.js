@@ -150,20 +150,26 @@ function parseTwseMisItem(item) {
   const ask = parseFirstOrderPrice(item.a);
   const bid = parseFirstOrderPrice(item.b);
 
-  /*
-    價格邏輯：
-    只使用成交價 z。
-    若 z 無效，price = null，前端就不應更新。
-  */
-  let price = null;
-  let priceType = "none";
-  let isRealtimePrice = false;
+ /*
+  價格邏輯：
+  1. 優先使用最近成交價 z
+  2. 若 z 無效，使用昨收 y
+  3. 不使用 bid / ask
+*/
+let price = null;
+let priceType = "none";
+let isRealtimePrice = false;
 
-  if (Number.isFinite(z) && z > 0) {
-    price = z;
-    priceType = "last";
-    isRealtimePrice = true;
-  }
+if (Number.isFinite(z) && z > 0) {
+  price = z;
+  priceType = "last";
+  isRealtimePrice = true;
+} else if (Number.isFinite(y) && y > 0) {
+  price = y;
+  priceType = "yesterday";
+  isRealtimePrice = false;
+}
+
 
   let change = null;
   let changePercent = null;
