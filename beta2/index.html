@@ -4875,8 +4875,17 @@ if (cashAlertInline) {
 
 function renderHoldings() {
     const p = calculatePortfolio();
+
+    // 庫存依「佔總資產比例」由大到小排序
+    p.holdingRows.sort((a, b) => {
+        const ratioA = p.totalAsset > 0 ? a.marketVal / p.totalAsset : 0;
+        const ratioB = p.totalAsset > 0 ? b.marketVal / p.totalAsset : 0;
+        return ratioB - ratioA;
+    });
+
     const table = document.getElementById("holdingsTable");
     const cards = document.getElementById("holdingsCardContainer");
+
 
     if (table) table.innerHTML = "";
     if (cards) cards.innerHTML = "";
@@ -5546,8 +5555,12 @@ function renderAllocationCharts() {
         return;
     }
 
-    // 依佔比由大到小排序
-    items.sort((a, b) => b.value - a.value);
+    // 分析頁資產配置：依佔比由大到小排序
+    items.sort((items.sort((a, b) => {
+    if (a.label === "現金") return -1;
+    if (b.label === "現金") return 1;
+    return b.value - a.value;
+});a, b) => b.value - a.value);
 
     items.forEach((item, idx) => {
         const pct = total > 0 ? item.value / total * 100 : 0;
@@ -5557,28 +5570,26 @@ function renderAllocationCharts() {
         div.className = "allocation-row";
 
         div.innerHTML = `
-            <div class="flex justify-between items-start gap-3 mb-2">
-                <div class="min-w-0 flex items-start gap-2">
+            <div class="flex items-center justify-between gap-3 mb-2">
+                <div class="min-w-0 flex items-center gap-2">
                     <span 
-                        class="shrink-0 rounded-full mt-[5px]" 
+                        class="shrink-0 rounded-full" 
                         style="width:9px; height:9px; background:${color};"
                     ></span>
 
-                    <div class="min-w-0">
-                        <div class="text-sm font-black text-slate-100 truncate">
-                            ${escapeHtml(item.label)}
-                            ${item.name ? `<span class="muted text-xs font-black">(${escapeHtml(item.name)})</span>` : ""}
-                        </div>
+                    <div class="min-w-0 text-sm font-black text-slate-100 truncate">
+                        ${escapeHtml(item.label)}
+                        ${item.name ? `<span class="muted text-xs font-black"> ${escapeHtml(item.name)}</span>` : ""}
                     </div>
                 </div>
 
-                <div class="shrink-0 text-right">
-                    <div class="text-sm font-black text-slate-100">
+                <div class="shrink-0 text-right flex items-center gap-3">
+                    <span class="text-sm font-black text-slate-100">
                         ${pct.toFixed(1)}%
-                    </div>
-                    <div class="text-[11px] muted font-black mt-1">
+                    </span>
+                    <span class="text-xs muted font-black">
                         ${money(item.value)}
-                    </div>
+                    </span>
                 </div>
             </div>
 
@@ -5593,6 +5604,7 @@ function renderAllocationCharts() {
         list.appendChild(div);
     });
 }
+
 
 
 
