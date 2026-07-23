@@ -2200,18 +2200,13 @@ body.light-mode .privacy-mini-btn {
 
 </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div class="soft-panel rounded-3xl p-4 md:col-span-5">
-                    <h3 class="text-xs muted font-black mb-3">目前資產配置</h3>
-                    <div class="relative h-[220px]">
-                        <canvas id="allocationChart"></canvas>
-                    </div>
-                </div>
-                <div class="soft-panel rounded-3xl p-4 md:col-span-7">
-                    <h3 class="text-xs muted font-black mb-3">配置比例</h3>
-                    <div id="allocationListContainer" class="space-y-3"></div>
-                </div>
-            </div>
+           <div class="grid grid-cols-1 gap-4">
+    <div class="soft-panel rounded-3xl p-4">
+        <h3 class="text-xs muted font-black mb-3">目前資產配置</h3>
+        <div id="allocationListContainer" class="space-y-3"></div>
+    </div>
+</div>
+
         </section>
 
         <!-- History Tab -->
@@ -2602,7 +2597,6 @@ body.light-mode .privacy-mini-btn {
         let activeTab = "main";
         
         let assetChartInstance = null;
-let allocationChartInstance = null;
 let currentChartScale = "daily";
 let currentHistoryScale = "daily";
 
@@ -5461,97 +5455,80 @@ const benchmarkData = labels.map(() => benchmarkValue);
             });
         }
 
-        function renderAllocationCharts() {
-            if (typeof Chart === "undefined") return;
+function renderAllocationCharts() {
+    const p = calculatePortfolio();
 
-            const p = calculatePortfolio();
-            const labels = [];
-            const dataVals = [];
-            const colors = ["#3b82f6", "#2dd4bf", "#fb7185", "#fbbf24", "#a78bfa", "#38bdf8", "#f97316", "#22c55e"];
+    const labels = [];
+    const dataVals = [];
+    const colors = [
+        "#3b82f6",
+        "#2dd4bf",
+        "#fb7185",
+        "#fbbf24",
+        "#a78bfa",
+        "#38bdf8",
+        "#f97316",
+        "#22c55e",
+        "#14b8a6",
+        "#f472b6",
+        "#60a5fa"
+    ];
 
-            if (p.cash > 0) {
-                labels.push("現金");
-                dataVals.push(p.cash);
-            }
-
-            p.holdingRows.forEach(row => {
-                if (row.marketVal > 0) {
-                    labels.push(row.sym);
-                    dataVals.push(row.marketVal);
-                }
-            });
-
-            const total = dataVals.reduce((a, b) => a + b, 0);
-
-            const canvas = document.getElementById("allocationChart");
-            if (!canvas) return;
-
-            if (allocationChartInstance) {
-                allocationChartInstance.destroy();
-            }
-
-            allocationChartInstance = new Chart(canvas.getContext("2d"), {
-                type: "doughnut",
-                data: {
-                    labels: labels.length ? labels : ["無配置"],
-                    datasets: [{
-                        data: dataVals.length ? dataVals : [1],
-                        backgroundColor: colors,
-                        borderColor: "#0f172a",
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: "72%",
-                    plugins: {
-                        legend: {
-    position: window.innerWidth <= 768 ? "top" : "top",
-    align: "center",
-    labels: {
-        color: "#cbd5e1",
-        font: {
-            size: window.innerWidth <= 768 ? 10 : 11,
-            weight: "bold"
-        },
-        boxWidth: window.innerWidth <= 768 ? 28 : 40,
-        padding: window.innerWidth <= 768 ? 8 : 12
+    if (p.cash > 0) {
+        labels.push("現金");
+        dataVals.push(p.cash);
     }
+
+    p.holdingRows.forEach(row => {
+        if (row.marketVal > 0) {
+            labels.push(row.sym);
+            dataVals.push(row.marketVal);
+        }
+    });
+
+    const total = dataVals.reduce((a, b) => a + b, 0);
+
+    const list = document.getElementById("allocationListContainer");
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    if (!labels.length || total <= 0) {
+        list.innerHTML = `<p class="text-sm muted font-bold">目前沒有可顯示的配置。</p>`;
+        return;
+    }
+
+    labels.forEach((label, idx) => {
+        const val = dataVals[idx];
+        const pct = total > 0 ? val / total * 100 : 0;
+        const color = colors[idx % colors.length];
+
+        const div = document.createElement("div");
+
+        div.innerHTML = `
+            <div class="flex justify-between items-center text-xs font-black mb-1 gap-3">
+                <span class="truncate">
+                    ${label} ${stockNames[label] ? `(${escapeHtml(stockNames[label])})` : ""}
+                </span>
+                <span class="shrink-0">${pct.toFixed(1)}%</span>
+            </div>
+
+            <div class="h-3 bg-slate-800 rounded-full overflow-hidden">
+                <div 
+                    class="h-full rounded-full" 
+                    style="width:${pct.toFixed(1)}%; background:${color};"
+                ></div>
+            </div>
+
+            <div class="mt-1 text-[11px] muted font-bold text-right">
+                ${money(val)}
+            </div>
+        `;
+
+        list.appendChild(div);
+    });
 }
 
-                    }
-                }
-            });
-
-            const list = document.getElementById("allocationListContainer");
-            if (!list) return;
-
-            list.innerHTML = "";
-
-            if (!labels.length || total <= 0) {
-                list.innerHTML = `<p class="text-sm muted font-bold">目前沒有可顯示的配置。</p>`;
-                return;
-            }
-
-            labels.forEach((label, idx) => {
-                const val = dataVals[idx];
-                const pct = total > 0 ? val / total * 100 : 0;
-                const color = colors[idx % colors.length];
-
-                const div = document.createElement("div");
-                div.innerHTML = `
-                    <div class="flex justify-between text-xs font-black mb-1">
-                        <span>${label} ${stockNames[label] ? `(${escapeHtml(stockNames[label])})` : ""}</span>
-                        <span>${pct.toFixed(1)}%</span>
-                    </div>
-                    <div class="h-3 bg-slate-800 rounded-full overflow-hidden">
-                        <div class="h-full rounded-full" style="width:${pct.toFixed(1)}%;background:${color};"></div>
-                    </div>
-                `;
-                list.appendChild(div);
-            });
-        }
 
         /* =========================
            股價更新
