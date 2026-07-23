@@ -83,12 +83,16 @@ async function fetchTwseMisQuotes(symbols) {
   /*
     一次查多檔比 Promise.all 每檔打兩次穩定，也比較不容易被擋。
   */
-  const apiUrl =
-    `https://mis.twse.com.tw/stock/api/getStockInfo.jsp` +
-    `?ex_ch=${encodeURIComponent(exChList.join("|"))}` +
-    `&json=1` +
-    `&delay=0` +
-    `&_=${Date.now()}`;
+const apiUrl =
+  `https://mis.twse.com.tw/stock/api/getStockInfo.jsp` +
+  `?ex_ch=${exChList.join("|")}` +
+  `&json=1` +
+  `&delay=0` +
+  `&odd=1` +
+  `&_=${Date.now()}`;
+console.log("TWSE MIS API URL:", apiUrl);
+
+
 
   const apiRes = await fetch(apiUrl, {
     headers: {
