@@ -197,37 +197,40 @@ if (Number.isFinite(z) && z > 0) {
   const rawDate = String(item.d || "").trim();
   const normalizedDate = normalizeTwseDate(rawDate);
 
-  return {
-    symbol,
-    name: item.n || "",
-    market: String(item.ex || "").includes("otc") ? "otc" : "tse",
+return {
+  symbol,
+  name: item.n || "",
+  market: String(item.ex || "").includes("otc") ? "otc" : "tse",
 
-    /*
-      給前端相容用：
-      price/currentPrice 只會是成交價 z。
-      沒有成交價時是 null。
-    */
-    price,
-    currentPrice: price,
-    z,
-    y,
+  price,
+  currentPrice: price,
+  z,
+  y,
 
-    yesterday: y,
-    open,
-    high,
-    low,
-    ask,
-    bid,
-    volume: parseNumber(item.v),
-    time: item.t || "",
-    date: normalizedDate,
-    rawDate,
-    change,
-    changePercent,
-    priceType,
-    isRealtimePrice,
-    source: "TWSE MIS"
-  };
+  rawZ: item.z,
+  rawY: item.y,
+  rawA: item.a,
+  rawB: item.b,
+  rawTime: item.t,
+  rawEx: item.ex,
+
+  yesterday: y,
+  open,
+  high,
+  low,
+  ask,
+  bid,
+  volume: parseNumber(item.v),
+  time: item.t || "",
+  date: normalizedDate,
+  rawDate,
+  change,
+  changePercent,
+  priceType,
+  isRealtimePrice,
+  source: "TWSE MIS"
+};
+
 }
 
 
