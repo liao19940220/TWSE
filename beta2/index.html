@@ -5178,8 +5178,6 @@ ${(row.percent < -15 || row.percent > 50) ? `
 
                 if (cards) {
                   const div = document.createElement("div");
-div.className = "allocation-row";
-
                     div.className = "mobile-card p-4 space-y-3";
                     div.innerHTML = `
                         <div class="flex justify-between items-start gap-3">
@@ -5556,11 +5554,11 @@ function renderAllocationCharts() {
     }
 
     // 分析頁資產配置：依佔比由大到小排序
-    items.sort((items.sort((a, b) => {
+items.sort((a, b) => {
     if (a.label === "現金") return -1;
     if (b.label === "現金") return 1;
     return b.value - a.value;
-});a, b) => b.value - a.value);
+});
 
     items.forEach((item, idx) => {
         const pct = total > 0 ? item.value / total * 100 : 0;
