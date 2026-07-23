@@ -1960,6 +1960,15 @@ body.light-mode .allocation-row::after {
         rgba(148, 163, 184, 0.2)
     );
 }
+.allocation-row:first-child {
+    padding-top: 0;
+}
+
+@media (max-width: 768px) {
+    .allocation-row {
+        padding: 14px 0;
+    }
+}
 
     </style>
 </head>
@@ -2234,7 +2243,8 @@ body.light-mode .allocation-row::after {
            <div class="grid grid-cols-1 gap-4">
     <div class="soft-panel rounded-3xl p-4">
         <h3 class="text-xs muted font-black mb-3">目前資產配置</h3>
-        <div id="allocationListContainer" class="space-y-3"></div>
+      <div id="allocationListContainer"></div>
+
     </div>
 </div>
 
@@ -5158,7 +5168,9 @@ ${(row.percent < -15 || row.percent > 50) ? `
                 }
 
                 if (cards) {
-                    const div = document.createElement("div");
+                  const div = document.createElement("div");
+div.className = "allocation-row";
+
                     div.className = "mobile-card p-4 space-y-3";
                     div.innerHTML = `
                         <div class="flex justify-between items-start gap-3">
@@ -5489,8 +5501,7 @@ const benchmarkData = labels.map(() => benchmarkValue);
 function renderAllocationCharts() {
     const p = calculatePortfolio();
 
-    const labels = [];
-    const dataVals = [];
+    const items = [];
     const colors = [
         "#3b82f6",
         "#2dd4bf",
@@ -5506,59 +5517,83 @@ function renderAllocationCharts() {
     ];
 
     if (p.cash > 0) {
-        labels.push("現金");
-        dataVals.push(p.cash);
+        items.push({
+            label: "現金",
+            name: "",
+            value: p.cash
+        });
     }
 
     p.holdingRows.forEach(row => {
         if (row.marketVal > 0) {
-            labels.push(row.sym);
-            dataVals.push(row.marketVal);
+            items.push({
+                label: row.sym,
+                name: stockNames[row.sym] || "",
+                value: row.marketVal
+            });
         }
     });
 
-    const total = dataVals.reduce((a, b) => a + b, 0);
+    const total = items.reduce((sum, item) => sum + item.value, 0);
 
     const list = document.getElementById("allocationListContainer");
     if (!list) return;
 
     list.innerHTML = "";
 
-    if (!labels.length || total <= 0) {
+    if (!items.length || total <= 0) {
         list.innerHTML = `<p class="text-sm muted font-bold">目前沒有可顯示的配置。</p>`;
         return;
     }
 
-    labels.forEach((label, idx) => {
-        const val = dataVals[idx];
-        const pct = total > 0 ? val / total * 100 : 0;
+    // 依佔比由大到小排序
+    items.sort((a, b) => b.value - a.value);
+
+    items.forEach((item, idx) => {
+        const pct = total > 0 ? item.value / total * 100 : 0;
         const color = colors[idx % colors.length];
 
         const div = document.createElement("div");
+        div.className = "allocation-row";
 
         div.innerHTML = `
-            <div class="flex justify-between items-center text-xs font-black mb-1 gap-3">
-                <span class="truncate">
-                    ${label} ${stockNames[label] ? `(${escapeHtml(stockNames[label])})` : ""}
-                </span>
-                <span class="shrink-0">${pct.toFixed(1)}%</span>
+            <div class="flex justify-between items-start gap-3 mb-2">
+                <div class="min-w-0 flex items-start gap-2">
+                    <span 
+                        class="shrink-0 rounded-full mt-[5px]" 
+                        style="width:9px; height:9px; background:${color};"
+                    ></span>
+
+                    <div class="min-w-0">
+                        <div class="text-sm font-black text-slate-100 truncate">
+                            ${escapeHtml(item.label)}
+                            ${item.name ? `<span class="muted text-xs font-black">(${escapeHtml(item.name)})</span>` : ""}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="shrink-0 text-right">
+                    <div class="text-sm font-black text-slate-100">
+                        ${pct.toFixed(1)}%
+                    </div>
+                    <div class="text-[11px] muted font-black mt-1">
+                        ${money(item.value)}
+                    </div>
+                </div>
             </div>
 
-            <div class="h-3 bg-slate-800 rounded-full overflow-hidden">
+            <div class="h-2.5 bg-slate-800 rounded-full overflow-hidden">
                 <div 
                     class="h-full rounded-full" 
-                    style="width:${pct.toFixed(1)}%; background:${color};"
+                    style="width:${Math.max(pct, 1.2).toFixed(1)}%; background:${color};"
                 ></div>
-            </div>
-
-            <div class="mt-1 text-[11px] muted font-bold text-right">
-                ${money(val)}
             </div>
         `;
 
         list.appendChild(div);
     });
 }
+
 
 
         /* =========================
