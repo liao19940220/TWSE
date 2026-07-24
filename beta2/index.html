@@ -2634,6 +2634,7 @@ body.light-mode .allocation-row::after {
         ========================= */
         let currentUser = null;
         let transactions = [];
+        let pendingHistoricalPriceUpdates = {};
         let brokers = [];
         let currentPrices = {};
         let stockNames = {};
@@ -5234,26 +5235,39 @@ ${(row.percent < -15 || row.percent > 50) ? `
 
 
 
-        function updateCurrentPrice(symbol, value) {
-            const price = Number(value) || 0;
-            currentPrices[symbol] = price;
+function updateCurrentPrice(symbol, value) {
+    const price = Number(value) || 0;
+    const sym = normalizeSymbol(symbol);
 
-            const today = getTaiwanTodayString();
-            historicalPrices[today] = historicalPrices[today] || {};
-            historicalPrices[today][symbol] = price;
+    currentPrices[sym] = price;
 
-            priceMeta[symbol] = {
-                source: "Manual",
-                type: "manual",
-                label: "手動輸入",
-                date: today,
-                time: new Date().toLocaleTimeString("zh-TW", { hour12: false }),
-                marketStatus: "手動"
-            };
+    const today = getTaiwanTodayString();
+    setHistoricalClosePrice(today, sym, price);
 
-            saveLocalData();
-            render();
-        }
+    priceMeta[sym] = {
+        source: "Manual",
+        type: "manual",
+        label: "手動輸入",
+        date: today,
+        time: new Date().toLocaleTimeString("zh-TW", { hour12: false }),
+        marketStatus: "手動"
+    };
+
+    saveLocalData();
+
+    if (isCloudMode() && Object.keys(pendingHistoricalPriceUpdates).length > 0) {
+        syncHistoricalPricesToSupabaseFromMap(pendingHistoricalPriceUpdates)
+            .then(() => {
+                pendingHistoricalPriceUpdates = {};
+            })
+            .catch(err => {
+                console.error("手動現價同步雲端失敗：", err);
+            });
+    }
+
+    render();
+}
+
 
         /* =========================
            History
@@ -5928,10 +5942,10 @@ async function applyDailyClose(symbols) {
                     .replaceAll("/", "-")
                     .substring(0, 10);
 
-                if (closeDate) {
-                    historicalPrices[closeDate] = historicalPrices[closeDate] || {};
-                    historicalPrices[closeDate][sym] = price;
-                }
+if (closeDate) {
+    setHistoricalClosePrice(closeDate, sym, price);
+}
+
 
                 // 3. 更新股票名稱
                 const resolvedName =
@@ -5964,6 +5978,24 @@ function normalizeSymbol(sym) {
         .toUpperCase()
         .replace(".TW", "")
         .replace(".TWO", "");
+}
+function setHistoricalClosePrice(date, symbol, price) {
+    const normalizedDate = String(date || "")
+        .replaceAll("/", "-")
+        .substring(0, 10);
+
+    const sym = normalizeSymbol(symbol);
+    const closePrice = Number(price) || 0;
+
+    if (!normalizedDate || !sym || closePrice <= 0) return false;
+
+    historicalPrices[normalizedDate] = historicalPrices[normalizedDate] || {};
+    historicalPrices[normalizedDate][sym] = closePrice;
+
+    pendingHistoricalPriceUpdates[normalizedDate] = pendingHistoricalPriceUpdates[normalizedDate] || {};
+    pendingHistoricalPriceUpdates[normalizedDate][sym] = closePrice;
+
+    return true;
 }
 
 /*
@@ -6085,11 +6117,11 @@ async function applyRealtimeFirst(symbols, context = {}) {
                 currentPrices[sym] = finalPrice;
 
                 const today = typeof getTaiwanTodayString === "function"
-                    ? getTaiwanTodayString()
-                    : new Date().toISOString().slice(0, 10);
+    ? getTaiwanTodayString()
+    : new Date().toISOString().slice(0, 10);
 
-                historicalPrices[today] = historicalPrices[today] || {};
-                historicalPrices[today][sym] = finalPrice;
+setHistoricalClosePrice(today, sym, finalPrice);
+
 
                 if (typeof priceMeta !== "undefined") {
                    const priceType = q.priceType || "none";
@@ -6256,8 +6288,19 @@ async function fetchTwsePrices() {
     const result = await updatePricesByBestSource(activeSymbols, status);
 
     // 防呆：保留舊歷史收盤價，只合併本次更新產生的新日期 / 今日資料
-    historicalPrices = mergeHistoricalPricesMap(historicalBackupBeforeUpdate, historicalPrices);
-    saveLocalData();
+   historicalPrices = mergeHistoricalPricesMap(historicalBackupBeforeUpdate, historicalPrices);
+saveLocalData();
+
+if (isCloudMode() && Object.keys(pendingHistoricalPriceUpdates).length > 0) {
+    try {
+        await syncHistoricalPricesToSupabaseFromMap(pendingHistoricalPriceUpdates);
+        pendingHistoricalPriceUpdates = {};
+    } catch (err) {
+        console.error("同步本次收盤價到雲端失敗：", err);
+        showToast("收盤價已更新本地，但同步雲端失敗", "warning");
+    }
+}
+
 
     if (typeof render === "function") {
         render();
