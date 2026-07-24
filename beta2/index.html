@@ -3459,32 +3459,50 @@ async function syncHistoricalPricesToSupabaseFromMap(histMap) {
 async function loadHistoricalPricesFromSupabase() {
     if (!currentUser) return {};
 
-    const { data, error } = await supabaseClient
-        .from("historical_prices")
-        .select("date, symbol, close_price")
-        .eq("user_id", currentUser.id)
-        .order("date", { ascending: true });
-
-    if (error) {
-        console.error("讀取雲端歷史收盤價失敗：", error);
-        return {};
-    }
-
     const map = {};
+    const pageSize = 1000;
+    let from = 0;
+    let to = pageSize - 1;
+    let hasMore = true;
 
-    (data || []).forEach(row => {
-        const date = String(row.date || "").substring(0, 10);
-        const sym = String(row.symbol || "").trim().toUpperCase();
-        const price = Number(row.close_price) || 0;
+    while (hasMore) {
+        const { data, error } = await supabaseClient
+            .from("historical_prices")
+            .select("date, symbol, close_price")
+            .eq("user_id", currentUser.id)
+            .order("date", { ascending: true })
+            .order("symbol", { ascending: true })
+            .range(from, to);
 
-        if (!date || !sym || price <= 0) return;
+        if (error) {
+            console.error("讀取雲端歷史收盤價失敗：", error);
+            return map;
+        }
 
-        map[date] = map[date] || {};
-        map[date][sym] = price;
-    });
+        const rows = data || [];
+
+        rows.forEach(row => {
+            const date = String(row.date || "").substring(0, 10);
+            const sym = String(row.symbol || "").trim().toUpperCase();
+            const price = Number(row.close_price) || 0;
+
+            if (!date || !sym || price <= 0) return;
+
+            map[date] = map[date] || {};
+            map[date][sym] = price;
+        });
+
+        if (rows.length < pageSize) {
+            hasMore = false;
+        } else {
+            from += pageSize;
+            to += pageSize;
+        }
+    }
 
     return map;
 }
+
 
 
         /* =========================
@@ -6495,7 +6513,15 @@ Object.keys(historicalPrices).forEach(date => {
     });
 });
 
+histData.sort((a, b) => {
+    const dateCompare = String(a["日期"] || "").localeCompare(String(b["日期"] || ""));
+    if (dateCompare !== 0) return dateCompare;
+
+    return String(a["股票代號"] || "").localeCompare(String(b["股票代號"] || ""));
+});
+
 XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(histData), "歷史收盤價");
+
 
             const filename = "stock_backup_" + new Date().toISOString().split("T")[0] + ".xlsx";
             XLSX.writeFile(wb, filename);
