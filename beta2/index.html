@@ -3747,11 +3747,27 @@ function calculateTransactionTax(amount, type, assetType, tradeMode) {
             const sortedTxs = [...transactions]
                 .filter(tx => tx.id !== excludeTxId)
                 .filter(tx => tx.date <= targetDate)
-                .sort((a, b) => {
-                    const dateCompare = (a.date || "").localeCompare(b.date || "");
-                    if (dateCompare !== 0) return dateCompare;
-                    return String(a.id || "").localeCompare(String(b.id || ""));
-                });
+               .sort((a, b) => {
+    const dateCompare = String(a.date || "").localeCompare(String(b.date || ""));
+    if (dateCompare !== 0) return dateCompare;
+
+    const symCompare = String(a.symbol || "").localeCompare(String(b.symbol || ""));
+    if (symCompare !== 0) return symCompare;
+
+    const priority = tx => {
+        if (tx.tradeMode === "DAY_TRADE" && tx.type === "BUY") return 1;
+        if (tx.tradeMode === "DAY_TRADE" && tx.type === "SELL") return 2;
+        if (tx.type === "BUY") return 3;
+        if (tx.type === "SELL") return 4;
+        return 99;
+    };
+
+    const pCompare = priority(a) - priority(b);
+    if (pCompare !== 0) return pCompare;
+
+    return String(a.id || "").localeCompare(String(b.id || ""));
+});
+
 
             sortedTxs.forEach(tx => {
                 if (!["BUY", "SELL"].includes(tx.type)) return;
@@ -4323,141 +4339,251 @@ function historicalPricesMapToRows(map) {
         /* =========================
            計算資產
         ========================= */
-        function calculatePortfolio() {
-            let cash = 0;
-            let stockMarketValue = 0;
-            let totalRealizedPnl = 0;
-            let totalDividends = 0;
-            const holdings = {};
+       /* =========================
+   計算資產
+========================= */
 
-            transactions.forEach(tx => {
-                const price = Number(tx.price) || 0;
-                const quantity = Number(tx.quantity) || 0;
-                const fee = Number(tx.fee) || 0;
-                const tax = Number(tx.tax) || 0;
+/* ✅ 新增 1：會計排序，當沖買進優先於當沖賣出 */
+function getAccountingSortedTransactions(sourceTxs = transactions) {
+    return [...sourceTxs].sort((a, b) => {
+        const dateCompare = String(a.date || "").localeCompare(String(b.date || ""));
+        if (dateCompare !== 0) return dateCompare;
 
-                if (tx.type === "DEPOSIT") {
-                    cash += price;
-                } else if (tx.type === "WITHDRAW") {
-                    cash -= price;
-                } else if (tx.type === "DIVIDEND") {
-                    cash += price;
-                    totalDividends += price;
-                } else if (tx.type === "BUY") {
-                    const totalCost = Math.floor(price * quantity) + fee;
-                    cash -= totalCost;
+        const symCompare = String(a.symbol || "").localeCompare(String(b.symbol || ""));
+        if (symCompare !== 0) return symCompare;
 
-                    if (!holdings[tx.symbol]) holdings[tx.symbol] = { qty: 0, totalCost: 0, avgCost: 0 };
-                    holdings[tx.symbol].qty += quantity;
-                    holdings[tx.symbol].totalCost += totalCost;
-                    holdings[tx.symbol].avgCost = holdings[tx.symbol].qty > 0 ? holdings[tx.symbol].totalCost / holdings[tx.symbol].qty : 0;
-                               } else if (tx.type === "SELL") {
-                    const hold = holdings[tx.symbol];
+        /*
+            同一天同股票：
+            1. 當沖買進
+            2. 當沖賣出
+            3. 一般買進
+            4. 一般賣出
+            5. 其他
+        */
+        const priority = tx => {
+            if (tx.tradeMode === "DAY_TRADE" && tx.type === "BUY") return 1;
+            if (tx.tradeMode === "DAY_TRADE" && tx.type === "SELL") return 2;
+            if (tx.type === "BUY") return 3;
+            if (tx.type === "SELL") return 4;
+            if (tx.type === "DEPOSIT") return 5;
+            if (tx.type === "WITHDRAW") return 6;
+            if (tx.type === "DIVIDEND") return 7;
+            return 99;
+        };
 
-                    /*
-                        安全修正：
-                        如果沒有持股，或賣出超過持股，不能把整筆賣出收入直接灌進現金。
-                        這可以避免舊資料錯誤造成現金被憑空增加。
-                    */
-                    if (!hold || hold.qty <= 0) {
-                       // console.warn("忽略無持股賣出交易：", tx);
-                        return;
-                    }
+        const pCompare = priority(a) - priority(b);
+        if (pCompare !== 0) return pCompare;
 
-                    const sellQty = Math.min(quantity, hold.qty);
-
-                    if (sellQty <= 0) {
-                        console.warn("忽略無效賣出股數：", tx);
-                        return;
-                    }
-
-                    if (quantity > hold.qty) {
-                        console.warn(`賣出股數超過持股，僅以可賣股數 ${sellQty} 股計算：`, tx);
-                    }
-
-                    const grossRevenue = price * sellQty;
-                    const feeRatio = quantity > 0 ? sellQty / quantity : 1;
-                    const adjustedFee = fee * feeRatio;
-                    const adjustedTax = tax * feeRatio;
-                    const totalRevenue = grossRevenue - adjustedFee - adjustedTax;
-
-                    cash += totalRevenue;
-
-const oldQty = hold.qty;
-const oldTotalCost = hold.totalCost;
-const oldAvgCost = hold.avgCost;
-
-const soldCost = sellQty * oldAvgCost;
-const realized = totalRevenue - soldCost;
-totalRealizedPnl += realized;
-
-hold.qty -= sellQty;
-
-/*
-    真實剩餘投入資金：
-    原本總投入成本 - 本次賣出實際收回淨收入
-
-    賣出淨收入 = 賣出金額 - 賣出手續費 - 交易稅
-    所以賣出手續費與交易稅會被確實算進來。
-*/
-hold.totalCost = oldTotalCost - totalRevenue;
-
-if (hold.qty <= 0) {
-    hold.qty = 0;
-    hold.totalCost = 0;
-    hold.avgCost = 0;
-} else {
-    hold.totalCost = Math.max(0, hold.totalCost);
-    hold.avgCost = hold.totalCost / hold.qty;
+        return String(a.id || "").localeCompare(String(b.id || ""));
+    });
 }
 
-                }
+/* ✅ 新增 2：賣出時配對庫存 lots，當沖賣出優先沖同日當沖買進 */
+function matchSellLots(lots, sellTx, sellQty, totalRevenue) {
+    const sym = String(sellTx.symbol || "").toUpperCase();
+    const isDayTradeSell = sellTx.tradeMode === "DAY_TRADE";
 
-            });
+    let remainingQty = Number(sellQty) || 0;
+    let realized = 0;
 
-            let totalUnrealizedPnl = 0;
-            const holdingRows = [];
+    if (!lots[sym]) lots[sym] = [];
 
-            Object.keys(holdings).forEach(sym => {
-                const hold = holdings[sym];
+    const dayTradeLots = [];
+    const normalLots = [];
 
-                if (hold.qty > 0) {
-                    const currentPrice = Number(currentPrices[sym]) || 0;
-                    const marketVal = hold.qty * currentPrice;
-                    const costVal = hold.qty * hold.avgCost;
-                    const unrealized = currentPrice > 0 ? marketVal - costVal : 0;
-                    const percent = costVal > 0 ? unrealized / costVal * 100 : 0;
-
-                    stockMarketValue += marketVal;
-                    totalUnrealizedPnl += unrealized;
-
-                    holdingRows.push({
-                        sym,
-                        qty: hold.qty,
-                        avgCost: hold.avgCost,
-                        currentPrice,
-                        marketVal,
-                        costVal,
-                        unrealized,
-                        percent
-                    });
-                }
-            });
-
-            const totalAsset = cash + stockMarketValue;
-            const totalCombinedReturn = totalUnrealizedPnl + totalRealizedPnl + totalDividends;
-
-            return {
-                cash,
-                stockMarketValue,
-                totalRealizedPnl,
-                totalDividends,
-                totalUnrealizedPnl,
-                totalCombinedReturn,
-                totalAsset,
-                holdingRows
-            };
+    lots[sym].forEach((lot, index) => {
+        if (
+            isDayTradeSell &&
+            lot.tradeMode === "DAY_TRADE" &&
+            lot.date === sellTx.date &&
+            lot.qty > 0
+        ) {
+            dayTradeLots.push({ lot, index });
+        } else {
+            normalLots.push({ lot, index });
         }
+    });
+
+    const matchQueue = isDayTradeSell
+        ? [...dayTradeLots, ...normalLots]
+        : [...normalLots, ...dayTradeLots];
+
+    for (const item of matchQueue) {
+        if (remainingQty <= 0) break;
+
+        const lot = item.lot;
+        if (!lot || lot.qty <= 0) continue;
+
+        const matchedQty = Math.min(remainingQty, lot.qty);
+
+        const revenueRatio = sellQty > 0 ? matchedQty / sellQty : 0;
+        const revenuePart = totalRevenue * revenueRatio;
+
+        const costRatio = lot.qty > 0 ? matchedQty / lot.qty : 0;
+        const costPart = lot.totalCost * costRatio;
+
+        realized += revenuePart - costPart;
+
+        lot.qty -= matchedQty;
+        lot.totalCost -= costPart;
+
+        if (lot.qty <= 0.000001) {
+            lot.qty = 0;
+            lot.totalCost = 0;
+        }
+
+        remainingQty -= matchedQty;
+    }
+
+    lots[sym] = lots[sym].filter(lot => lot.qty > 0);
+
+    return {
+        realized,
+        unmatchedQty: remainingQty
+    };
+}
+
+function calculatePortfolio() {
+    let cash = 0;
+    let stockMarketValue = 0;
+    let totalRealizedPnl = 0;
+    let totalDividends = 0;
+
+    /*
+        lots 用來記錄每一批買進庫存。
+        這樣賣出時可以指定優先沖掉哪一批。
+    */
+    const lots = {};
+
+    const sortedTxs = getAccountingSortedTransactions(transactions);
+
+    sortedTxs.forEach(tx => {
+        const price = Number(tx.price) || 0;
+        const quantity = Number(tx.quantity) || 0;
+        const fee = Number(tx.fee) || 0;
+        const tax = Number(tx.tax) || 0;
+        const sym = String(tx.symbol || "").toUpperCase();
+
+        if (tx.type === "DEPOSIT") {
+            cash += price;
+            return;
+        }
+
+        if (tx.type === "WITHDRAW") {
+            cash -= price;
+            return;
+        }
+
+        if (tx.type === "DIVIDEND") {
+            cash += price;
+            totalDividends += price;
+            return;
+        }
+
+        if (tx.type === "BUY") {
+            if (!sym || quantity <= 0) return;
+
+            const totalCost = Math.floor(price * quantity) + fee;
+
+            cash -= totalCost;
+
+            if (!lots[sym]) lots[sym] = [];
+
+            lots[sym].push({
+                qty: quantity,
+                totalCost,
+                date: tx.date,
+                tradeMode: tx.tradeMode || "NORMAL"
+            });
+
+            return;
+        }
+
+        if (tx.type === "SELL") {
+            if (!sym || quantity <= 0) return;
+
+            const availableQty = (lots[sym] || []).reduce((sum, lot) => {
+                return sum + Number(lot.qty || 0);
+            }, 0);
+
+            if (availableQty <= 0) {
+                return;
+            }
+
+            const sellQty = Math.min(quantity, availableQty);
+
+            const feeRatio = quantity > 0 ? sellQty / quantity : 1;
+            const adjustedFee = fee * feeRatio;
+            const adjustedTax = tax * feeRatio;
+
+            const grossRevenue = price * sellQty;
+            const totalRevenue = grossRevenue - adjustedFee - adjustedTax;
+
+            cash += totalRevenue;
+
+            const matchResult = matchSellLots(lots, tx, sellQty, totalRevenue);
+
+            totalRealizedPnl += matchResult.realized;
+
+            return;
+        }
+    });
+
+    let totalUnrealizedPnl = 0;
+    const holdingRows = [];
+
+    Object.keys(lots).forEach(sym => {
+        const activeLots = lots[sym].filter(lot => lot.qty > 0);
+
+        const qty = activeLots.reduce((sum, lot) => {
+            return sum + Number(lot.qty || 0);
+        }, 0);
+
+        const totalCost = activeLots.reduce((sum, lot) => {
+            return sum + Number(lot.totalCost || 0);
+        }, 0);
+
+        if (qty <= 0) return;
+
+        const avgCost = totalCost / qty;
+        const currentPrice = Number(currentPrices[sym]) || 0;
+
+        const marketVal = qty * currentPrice;
+        const costVal = qty * avgCost;
+
+        const unrealized = currentPrice > 0 ? marketVal - costVal : 0;
+        const percent = costVal > 0 ? unrealized / costVal * 100 : 0;
+
+        stockMarketValue += marketVal;
+        totalUnrealizedPnl += unrealized;
+
+        holdingRows.push({
+            sym,
+            qty,
+            avgCost,
+            currentPrice,
+            marketVal,
+            costVal,
+            unrealized,
+            percent
+        });
+    });
+
+    const totalAsset = cash + stockMarketValue;
+    const totalCombinedReturn = totalUnrealizedPnl + totalRealizedPnl + totalDividends;
+
+    return {
+        cash,
+        stockMarketValue,
+        totalRealizedPnl,
+        totalDividends,
+        totalUnrealizedPnl,
+        totalCombinedReturn,
+        totalAsset,
+        holdingRows
+    };
+}
+
 
         function calculateAssetOnSpecificDate(targetDate) {
             let cash = 0;
